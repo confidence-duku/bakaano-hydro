@@ -9,7 +9,6 @@ An application that simulates nature-based solutions.
 ## Installation
 
 - Install VSCode on Windows
-- Install the following VSCode extensions (see vscode_extensions.txt). 
 - Install WSL (use Ubuntu 22.04.4 LTS). You can use the Microsoft store to install it.
 - Open a Linux terminal
 - Install miniforge on Linux for conda (https://github.com/conda-forge/miniforge)
