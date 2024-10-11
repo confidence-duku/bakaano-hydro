@@ -441,4 +441,4 @@ new_template = pn.Column(header, main, styles=styles, scroll=False, sizing_mode=
 
 # Serve the app via Python script
 if __name__ == '__main__':
-    pn.serve(new_template, title="EcoEffect Dashboard")
+    pn.serve(new_template, title="EcoEffect Dashboard", port=8000)
