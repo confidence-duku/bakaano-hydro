@@ -1,0 +1,37 @@
+cff-version: 1.2.0
+title: NBS Dashboard
+message: >-
+  If you use this software, please cite it using the
+  metadata from this file.
+type: software
+authors:
+  - given-names: Confidence
+    family-names: Duku
+    email: confidence.duku@wur.nl
+    affiliation: >-
+      Wageningen University & Research, Wageningen Food and
+      Biobased Research Wageningen NL
+    orcid: "https://orcid.org/0000-0002-1670-3451"
+  - given-names: Liza
+    family-names: Genke
+    email: liza.genke@wur.nl
+    affiliation: >-
+      Wageningen University & Research, Wageningen Food and
+      Biobased Research Wageningen NL
+    orcid: "https://orcid.org/0009-0006-9975-5754"
+  - given-names: William
+    name-particle: Fowler
+    family-names: Riley
+    name-suffix: III
+    email: william.riley@wur.nl
+    affiliation: >-
+      Wageningen University & Research, Wageningen Food and
+      Biobased Research Wageningen NL
+    orcid: "https://orcid.org/0000-0003-1822-6756"
+repository-code: >-
+  https://git.wur.nl/FoodInformatics/nature-based-solutions/nbs-dashboard
+abstract: >-
+  A dashboard for nature-based solutions.
+keywords:
+  - Simulation
+version: "1.0.0"
