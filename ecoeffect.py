@@ -1,7 +1,6 @@
 #import panel as pn
 import datetime as dt
 #import folium
-#import leafmap
 import time
 import heat.landsatxplore
 import json
