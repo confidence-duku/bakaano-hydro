@@ -28,6 +28,8 @@ conda activate nbs-dashboard
 - Install the Python libraries to that conda environment
 
 ```
+sudo apt-get update
+sudo apt-get install g++
 pip install -r requirements.txt
 ```
 
