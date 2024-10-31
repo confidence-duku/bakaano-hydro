@@ -2,49 +2,39 @@ import numpy as np
 import xarray as xr
 import os
 from pathlib import Path
+from rasterio.enums import Resampling
 import rasterio
 import rasterio.warp
 from rasterio.crs import CRS
 import rioxarray
-import matplotlib
+import matplotlib.pyplot as plt
 from operator import itemgetter
 import geopandas as gpd
 import fiona
-import glob
 from shapely.geometry import shape
-from shapely.geometry import box
 from functools import lru_cache
-#from raster_clipper import RasterClipper
-#from dem import DEM
 import warnings
-import dask
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWarning)
 
 
 class Utils:
     def __init__(self, project_name, study_area):
-        #self.orig_dem = f'./projects/{project_name}/elevation/dem_volta.tif'
+        self.orig_dem = f'./{project_name}/elevation/dem_volta.tif'
         self.study_area = study_area
         self.project_name = project_name
         
-        # self.clipped_dem ='./input_data/elevation/clipped_dem.tif'
-        # filetest = self.process_existing_file(self.clipped_dem)
-        # if filetest is False:
-        #     self.clip(orig_dem, 'EPSG:4326', self.clipped_dem, True)
-
     def process_existing_file(self, file_path):
         directory, filename = os.path.split(file_path)
         if os.path.exists(file_path):
             #print(f"     - The file {filename} already exists in the directory {directory}. Skipping further processing.")
-            # You can add your specific processing here if the file exists
             return True
         else:
             return False
 
     # Write output to a new GeoTIFF file
     def save_to_scratch(self,output_file_path, array_to_save):
-        with rasterio.open(f'./projects/{self.project_name}/elevation/dem_{self.project_name}.tif') as lc_src: 
+        with rasterio.open(f'./{self.project_name}/elevation/dem_{self.project_name}.tif') as lc_src: 
             luc = lc_src.profile
         lc_meta = lc_src.meta.copy()
         lc_meta.update({
@@ -82,9 +72,13 @@ class Utils:
                         dst_crs=dst_crs,
                         resampling=Resampling.nearest)
     
-    def align_rasters_30m(self, input_ras, elev, israster=True):
-        match = rioxarray.open_rasterio(elev)
-        match = match.rio.write_crs(4326)
+    def align_rasters_2km(self, input_ras, clipped_nc, israster=True):
+        #print('     - Aligning raster in terms of extent, resolution and projection')
+
+        # Open the DEM raster with caching to avoid reopening it multiple times
+        match = rioxarray.open_rasterio('niger/niger_template.tif')
+        #atch = match.rio.write_crs(4326)
+        
 
         # Read and align the input raster
         if israster:
@@ -98,11 +92,11 @@ class Utils:
             ds = ds.rio.reproject_match(match)
         return ds
     
-    def align_rasters_1km(self, input_ras, clipped_nc, israster=True):
+    def align_rasters(self, input_ras, clipped_nc, israster=True):
         #print('     - Aligning raster in terms of extent, resolution and projection')
 
         # Open the DEM raster with caching to avoid reopening it multiple times
-        match = clipped_nc.pr.sel()[0]
+        match = clipped_nc.tasmax.sel()[0]
         match = match.rio.write_crs(4326)
 
         # Read and align the input raster
@@ -114,7 +108,7 @@ class Utils:
             ds = input_ras
             ds = ds.rio.write_crs(4326)
             ds = ds.rename({'lon': 'x', 'lat': 'y'})
-            ds = ds.rio.reproject_match(match)
+            ds = ds.rio.reproject_match(match)[0]
         return ds
     
     def get_bbox(self, dst_crs):
@@ -136,20 +130,17 @@ class Utils:
             )
         bounds = prj_shp.geometry.apply(lambda x: x.bounds).tolist()
         self.minx, self.miny, self.maxx, self.maxy = min(bounds, key=itemgetter(0))[0], min(bounds, key=itemgetter(1))[1], max(bounds, key=itemgetter(2))[2], max(bounds, key=itemgetter(3))[3]
-        #self.minx = self.minx - 1
-        #self.miny = self.miny - 1
-        #self.maxx = self.maxx + 1
-        #self.maxy = self.maxy + 1
+
         
-    def clip_nc(self, files):
-        #ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override')
-        ds = xr.open_dataset(files)
-        #ds2 = ds.sortby('time')
-        data_var = ds.sel()
-        ds3 = data_var.rio.write_crs(4326)  # Ensure consistent CRS            
-        ds3 = data_var.rio.clip_box(self.study_area[0], self.study_area[1], 
-                                        self.study_area[2], self.study_area[3])
-        #ds3.to_netcdf('/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/clim/' + out_nc, mode='w')
+    def concat_nc(self, clim_dir, dataset_str):
+        #nc_list = []
+        self.get_bbox('EPSG:4326')
+        files = list(map(str, clim_dir.glob(dataset_str)))
+        ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override')
+        ds2 = ds.sortby('time')
+        data_var = ds2.sel()
+        data_var = data_var.rio.write_crs(4326)  # Ensure consistent CRS            
+        ds3 = data_var.rio.clip_box(self.minx, self.miny, self.maxx, self.maxy)
         return ds3
         
 
@@ -164,21 +155,28 @@ class Utils:
           clip_path (str): Path to the clip raster file.
           dst_path (str): Path to save the clipped raster file.
         """
-        #shp = gpd.read_file(self.study_area)
+        shp = gpd.read_file(self.study_area)
         #dst_crs = 'EPSG:4326'
         dst_crs = dst_crs
-
-        minx, miny, maxx, maxy = self.study_area
-
-        # Create a polygon from the bounding box
-        bbox_polygon = box(minx, miny, maxx, maxy)
-    
-        # Convert the polygon to a GeoDataFrame
-        gdf = gpd.GeoDataFrame({'geometry': bbox_polygon}, index=[0], crs=dst_crs)
-    
-        # Extract the geometry in GeoJSON format
-        shapes = [bbox_polygon.__geo_interface__]
+        if shp.crs.equals(dst_crs):
+            with fiona.open(self.study_area, "r") as shapefile:
+                shapes = [feature["geometry"] for feature in shapefile]
+        else:
+            geometry = rasterio.warp.transform_geom(
+                src_crs=shp.crs,
+                dst_crs=dst_crs,
+                geom=shp.geometry.values,
+            )
+            prj_shp = shp.set_geometry(
+                [shape(geom) for geom in geometry],
+                crs=dst_crs,
+            )
+            prj_shp_path = f'./{self.project_name}/shapes/prj_study_area.shp'
+            prj_shp.to_file(prj_shp_path)
         
+            with fiona.open(prj_shp_path, "r") as shapefile:
+                shapes = [feature["geometry"] for feature in shapefile]
+
         with rasterio.open(raster_path) as src:
             out_image, out_transform = rasterio.mask.mask(src, shapes, crop=True)
             out_meta = src.meta

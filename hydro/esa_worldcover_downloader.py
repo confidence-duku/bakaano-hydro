@@ -2,29 +2,29 @@ from pathlib import Path
 import sys
 import requests
 import geopandas as gpd
-#from tqdm.auto import tqdm
 from argparse import ArgumentParser
 from shapely.geometry import Polygon
+import os
 
 class WorldCoverDownloader:
-    def __init__(self, output_folder='.', country=None, bounds=None, year=2021, overwrite=False, dryrun=False):
+    def __init__(self, output_folder='.', shapefile=None, bounds=None, year=2021, overwrite=False, dryrun=False):
         self.output_folder = Path(output_folder)
         self.year = year
-        self.country = country
+        self.shapefile = shapefile
         self.bounds = bounds
         self.overwrite = overwrite
         self.dryrun = dryrun
         self.version = {2020: 'v100', 2021: 'v200'}[year]
         self.s3_url_prefix = "https://esa-worldcover.s3.eu-central-1.amazonaws.com"
-        self.ne = gpd.read_file(gpd.datasets.get_path("naturalearth_lowres"))
         self.grid_url = 'https://esa-worldcover.s3.eu-central-1.amazonaws.com/v100/2020/esa_worldcover_2020_grid.geojson'
-
+        wd = os.getcwd()
+        thisdir = os.path.join(wd, self.shapefile)
+        self.region_geom = gpd.read_file(thisdir)
+        
     def _get_selected_geom(self):
         geom = None
-        if self.country is not None:
-            if self.country not in self.ne.name.values:
-                sys.exit()
-            geom = self.ne[self.ne.name == self.country].iloc[0].geometry
+        if self.region_geom is not None:
+            geom = self.region_geom.unary_union  # Combine all geometries if multiple features
 
         if self.bounds is not None:
             geom_bounds = Polygon.from_bounds(*self.bounds)
@@ -32,7 +32,9 @@ class WorldCoverDownloader:
                 geom = geom_bounds
             else:
                 geom = geom.intersection(geom_bounds)
+
         return geom
+
 
     def download(self):
         grid = gpd.read_file(self.grid_url)

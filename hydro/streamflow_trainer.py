@@ -1,34 +1,30 @@
-### Use only weighted flow accumulation of runoff, regular flow accumulation and data augmentation variables as inputs
-### the model architecture comprises two separate inputs, one for dynamic inputs and the other for static inputs
-### model includes attention mechanism
 
+import os
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 import pandas as pd
 import xarray as xr
 import tensorflow as tf
-from tensorflow.keras.models import Sequential, Model
-from tensorflow.keras.layers import LSTM, Dense, BatchNormalization, Dropout, Reshape, Concatenate, Input, LeakyReLU
-from tensorflow.keras.callbacks import ModelCheckpoint
+tf.get_logger().setLevel('ERROR')
+from tensorflow.keras.models import Model # type: ignore
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU # type: ignore
+from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-#from sklearn.model_selection import train_test_split
-import math
-import os
+from tensorflow.keras.optimizers import Adam # type: ignore
 import glob
 import pysheds.grid
 import rasterio
 import rioxarray
 from rasterio.transform import rowcol
 from tcn import TCN
-from keras.models import load_model
+from keras.models import load_model # type: ignore
 import pickle
 import warnings
-import copy
 import pandas as pd
-from shapely.geometry import Point
 import geopandas as gpd
-import scipy as sp
 from scipy.spatial.distance import cdist
 warnings.filterwarnings("ignore", category=RuntimeWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
 #=====================================================================================================================================
 
 class DataPreprocessor:
@@ -103,7 +99,8 @@ class DataPreprocessor:
         self.grdc_subset = self.load_observed_streamflow()
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         self.data_list = []
-        self.catchment = []                                  
+        self.catchment = []    
+        self.sim_station_names= []
     
     def _extract_station_rowcol(self, lat, lon):
         """
@@ -127,7 +124,6 @@ class DataPreprocessor:
         """
         with rasterio.open(f'./{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
             data = src.read(1)
-            #data = np.where(data > 100, -1, data)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
             return row, col
@@ -173,7 +169,7 @@ class DataPreprocessor:
             snap_point = river_coords[nearest_index]
             return snap_point[1], snap_point[0]
 
-    def load_observed_streamflow(self):
+    def load_observed_streamflow(self, grdc_streamflow_nc_file):
         """
         Load and filter observed streamflow data based on the study area and simulation period.
 
@@ -183,7 +179,8 @@ class DataPreprocessor:
             The filtered GRDC dataset containing streamflow data for the specified
             simulation period and study area.
         """
-        grdc = xr.open_dataset('GRDC-Daily.nc')
+        grdc = xr.open_dataset(grdc_streamflow_nc_file) #africa
+        #grdc = xr.open_dataset('/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-aus.nc')
 
         # Create a GeoDataFrame from the GRDC dataset using geo_x and geo_y attributes
         stations_df = pd.DataFrame({
@@ -201,7 +198,7 @@ class DataPreprocessor:
         region_shape = gpd.read_file(self.study_area)
 
         # Perform spatial join to find stations within the region shape
-        stations_in_region = gpd.sjoin(stations_gdf, region_shape, how='inner', op='intersects')
+        stations_in_region = gpd.sjoin(stations_gdf, region_shape, how='inner', predicate='intersects')
 
         # Extract the station names that overlap
         overlapping_station_names = stations_in_region['station_name'].unique()
@@ -214,7 +211,7 @@ class DataPreprocessor:
             drop=True
         )
         
-        self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
+        #self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
         return filtered_grdc
     
                           
@@ -235,6 +232,9 @@ class DataPreprocessor:
         
         slope = f'./{self.project_name}/elevation/slope_{self.project_name}.tif'
         dem_filepath = f'./{self.project_name}/elevation/dem_{self.project_name}.tif'
+        land_cover = f'./{self.project_name}/land_cover/lc_{self.project_name}.tif'
+
+        
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -251,10 +251,13 @@ class DataPreprocessor:
         weight2 = grid.read_raster(slope)
         cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
         
+        
+        
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
         latlng_ras = latlng_ras.rio.write_crs(4326)
         lat = latlng_ras['y'].values
         lon = latlng_ras['x'].values
+        
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
@@ -263,7 +266,7 @@ class DataPreprocessor:
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
-        all_years_wfa = sorted(glob.glob(f'{self.project_name}/output_data/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'./{self.project_name}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -271,6 +274,8 @@ class DataPreprocessor:
             wfa_list = wfa_list + this_arr
         
         #extract station predictor and response variables based on station coordinates
+        acc_list = []
+        id_list = []
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
             
@@ -279,13 +284,20 @@ class DataPreprocessor:
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
+            snapped_y, snapped_x = self._snap_coordinates(station_y, station_x)
             
-            acc_data = acc.sel(lat=station_y, lon=station_x, method='nearest')
-            slp_data = cum_slp.sel(lat=station_y, lon=station_x, method='nearest')
+            acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
+            slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
             acc_data = acc_data.values
             slp_data = slp_data.values
-                          
-            snapped_y, snapped_x = self._snap_coordinates(station_y, station_x)
+            
+            # if acc_data > 5000:
+            #     continue
+                
+            id_list.append(k)
+
+            self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
+        
     
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
             
@@ -293,13 +305,15 @@ class DataPreprocessor:
             station_wfa = []
             for arr in wfa_list:
                 arr = arr.tocsr()
-                station_wfa.append(arr[row, col])
+                #station_wfa.append(arr[row, col])
+                station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
             #extract wfa data based on defined training period
             wfa_data = full_wfa_data[self.sim_start: self.sim_end]
+            #wfa_data = wfa_data/acc_data
             
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
 
@@ -308,12 +322,15 @@ class DataPreprocessor:
             response = station_discharge.drop(['id'], axis=1)
 
             self.data_list.append((predictors, response))
-            self.catchment.append((acc_data, slp_data))
+            catch_list = [acc_data, slp_data]
+            catch_tup = tuple(catch_list)
+            self.catchment.append(catch_tup)
+            acc_list.append(acc_data)
+            
             count = count + 1
             
-        return [self.data_list, self.catchment]
-#=====================================================================================================================================
-                                       
+        return [self.data_list, self.catchment, acc_list, id_list]
+#=====================================================================================================================================                          
 
 class StreamflowModel:
     """
@@ -360,11 +377,10 @@ class StreamflowModel:
         self.batch_size = 128
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 1
+        self.num_dynamic_features = 2
         self.num_static_features = 2
         self.scaled_trained_catchment = None
         self.project_name = project_name
-        #self.project_name = project_name
     
     def prepare_data(self, data_list):
         """
@@ -385,16 +401,19 @@ class StreamflowModel:
         train_predictors = predictors
         train_response = response
         train_catchment = np.array(data_list[1])
+        weight_list = 1/np.array(data_list[2])
+        weight_list = weight_list/np.sum(weight_list)
+        id_list = np.array(data_list[3])
                 
         full_train_predictors = []
         full_train_response = []
         full_val_predictors = []
         full_val_response = []
         train_catchment_list = []
-        val_catchment_list = []
+        full_weights = []
         
         catchment_scaler = MinMaxScaler()
-        pscaler = StandardScaler()
+        rscaler = StandardScaler()
         
         trained_catchment_scaler = catchment_scaler.fit(train_catchment)
         with open(f'./{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
@@ -403,24 +422,35 @@ class StreamflowModel:
         concatenated_predictors = pd.concat(train_predictors, axis=0)
         concatenated_response = pd.concat(train_response, axis=0)
         
-        scaler1 = pscaler.fit(concatenated_predictors)
+        scaler1 = rscaler.fit(concatenated_predictors)
         with open(f'./{self.project_name}/models/global_predictor_scaler.pkl', 'wb') as file:
             pickle.dump(scaler1, file)
 
-        #count =0
-        for x, y, z in zip(predictors, train_response, train_catchment):
+        for x, y, z, w, i in zip(predictors, train_response, train_catchment, weight_list, id_list):
+            pscaler = StandardScaler()
+            sid = str(i)
             
-            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['global']).values
-            scaled_train_response = y.values / 100
+            scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
+            scaler3 = pscaler.fit(x)
+            scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
+            with open(f'./{self.project_name}/models/station_{sid}_scaler.pkl', 'wb') as file3:
+                pickle.dump(scaler3, file3)
+            
+            scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
+            
+            scaled_train_response = y.values / 1
+           
             
             z2 = z.reshape(-1,self.num_static_features)
             scaled_train_catchment = trained_catchment_scaler.transform(z2)
+            
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
             predictor_samples = []
             response_samples = []
             catchment_samples = []
+            weight_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
@@ -436,6 +466,7 @@ class StreamflowModel:
                 response_samples.append(response_batch)
                 
                 catchment_samples.append(scaled_train_catchment)
+                weight_samples.append(w)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -446,16 +477,19 @@ class StreamflowModel:
             scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
             scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
+            filtered_weights = np.array(weight_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
+            full_weights.append(filtered_weights)
             #count = count + 1
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
         self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)   
-        
+        self.loss_weights = np.concatenate(full_weights, axis=0)
+    
               
     def build_model(self):
         """
@@ -472,17 +506,19 @@ class StreamflowModel:
 
         with strategy.scope():
             dynamic_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='dynamic_input')
-            static_input = Input(shape=(self.num_static_features), name='static_input')
+            static_input = Input(shape=(self.num_static_features,), name='static_input')
 
             tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
                              return_sequences=False)(dynamic_input)
             tcn_output = BatchNormalization()(tcn_output)
+            tcn_output = Dropout(0.4)(tcn_output)
 
             dense_output = Dense(16, activation='relu')(static_input)
             dense_output = BatchNormalization()(dense_output)
+            dense_output = Dropout(0.4)(dense_output)
 
             # Concatenate the LSTM and Dense outputs
-            merged_output = Concatenate()([tcn_output, dense_output])
+            merged_output = Concatenate()([tcn_output,  dense_output])
 
             output1 = Dense(16)(merged_output)
             output1 = LeakyReLU(alpha=0.01)(output1)
@@ -494,7 +530,9 @@ class StreamflowModel:
             self.regional_model = Model(inputs=[dynamic_input, static_input], outputs=output)
 
             # Compile the model
-            self.regional_model.compile(optimizer='adam', loss='mean_squared_error')
+            #optimizer = Adam(learning_rate=0.00001)
+            #self.regional_model.compile(optimizer='adam', loss=weighted_mse(self.loss_weights))
+            self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
 
     
     def train_model(self): 
@@ -509,7 +547,7 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'./{self.project_name}/models/{self.project_name}_model_tcn360.h5', shuffle=False,
+        checkpoint_callback = ModelCheckpoint(filepath=f'./{self.project_name}/models/{self.project_name}_model_tcn360.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
         self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, batch_size=self.batch_size, 
@@ -531,7 +569,7 @@ class StreamflowModel:
         #self.regional_model = load_model(path)
        
         from tcn import TCN  # Make sure to import TCN
-        from tensorflow.keras.utils import custom_object_scope
+        from tensorflow.keras.utils import custom_object_scope # type: ignore
         
         strategy = tf.distribute.MirroredStrategy()
         

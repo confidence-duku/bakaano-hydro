@@ -1,8 +1,10 @@
+
 import requests as r
-import getpass, pprint, time, os, cgi, json
 import geopandas as gpd
 import glob
 from shapely.geometry import Polygon
+import json, time, os
+import uuid
 
 class DEMDownloader:
     def __init__(self, project_name, study_area, earthexplorer_username, earthexplorer_password):
@@ -38,11 +40,11 @@ class DEMDownloader:
         projections = r.get('{}spatial/proj'.format(api)).json()  # Call to spatial API, return projs as json
         projs = {}                                  # Create an empty dictionary
         for p in projections: projs[p['Name']] = p  # Fill dictionary with `Name` as keys
-        task_name = 'niger2'
+        task_name = str(uuid.uuid4())
         task_type = ['area']        # Type of task, area or point
         proj = projs['geographic']['Name']  # Set output projection 
         outFormat = ['geotiff']  # Set output file format type
-        startDate = '01-01-1990'            # Start of the date range for which to extract data: MM-DD-YYYY
+        startDate = '01-01-2000'            # Start of the date range for which to extract data: MM-DD-YYYY
         endDate = '07-31-2017'              # End of the date range for which to extract data: MM-DD-YYYY
         recurring = False 
 
@@ -97,7 +99,7 @@ class DEMDownloader:
             with open(filepath, 'wb') as f:                                                                  # Write file to dest dir
                 for data in dl.iter_content(chunk_size=8192): f.write(data) 
         print('Downloaded files can be found at: {}'.format(destDir))
-        dem_file = glob.glob(f'./projects/{self.project_name}/elevation/SRTMGL1_NC.003*.tif')
+        dem_file = glob.glob(f'./{self.project_name}/elevation/SRTMGL1_NC.003*.tif')
         return dem_file
 
         

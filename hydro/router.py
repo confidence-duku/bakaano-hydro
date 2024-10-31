@@ -1,11 +1,6 @@
 import rasterio
 import pysheds.grid
-import numpy as np
-import glob
-import os
 import warnings
-import richdem as rd
-from rasterio.io import MemoryFile
 warnings.filterwarnings("ignore", category=RuntimeWarning, message="overflow encountered in exp")
 
 class RunoffRouter:
@@ -32,13 +27,6 @@ class RunoffRouter:
             self.dem_profile = dm.profile
             self.dem_nodata = dm.nodata
             
-    def convert_runoff_layers_mem(self, runoff_array):
-        
-        # Create a MemoryFile and manage resources properly
-        memfile = MemoryFile()
-        with memfile.open(**self.dem_profile) as dst:
-            dst.write(runoff_array, 1)
-        return memfile
     
     def convert_runoff_layers(self, runoff_array, runoff_out_name):
         """
@@ -53,7 +41,6 @@ class RunoffRouter:
         """
 
         self.dem_profile.update(dtype=rasterio.float32, count=1)
-        #runoff_tiff = f'./projects/{self.project_name}/scratch/runoff_scratch.tif'
         with rasterio.open(runoff_out_name, 'w', **self.dem_profile) as dst:
                 dst.write(runoff_array, 1)
                 
@@ -86,17 +73,8 @@ class RunoffRouter:
         return self.fdir2, acc
             
     def compute_weighted_flow_accumulation(self, runoff_tiff):
-            
-        #runoff_list = glob.glob(self.datadir + 'ERA5_runoff/*runoff*.tif')
-        #wacc_arr = np.memmap(os.path.join(self.datadir, 'coarse_weighted_flowacc.npy'), 
-        #                     dtype='float32', mode='w+', shape=(len(runoff_list), 751, 716))
         
         weight = self.grid.read_raster(runoff_tiff)
-        #weight = weight.astype(np.int32) 
         wacc = self.grid.accumulation(fdir=self.fdir2, weights=weight, routing='mfd')
         return wacc
-         # Add current weighted flow accumulation to the array   
-
-        #np.save(self.datadir + 'coarse_weighted_flowacc.npy', wacc_arr)
-        #np.save(self.datadir + 'coarse_flowacc.npy', acc)
-        
+ 
