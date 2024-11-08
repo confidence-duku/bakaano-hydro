@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class DeepSTRMM:
     """Generate an instance
     """
-    def __init__(self, project_name, study_area_path, start_date, end_date, rp=None):
+    def __init__(self, project_name, study_area_path, start_date, end_date, earthexplorer_username, earthexplorer_password, rp=None):
         """_summary_
 
         Args:
@@ -53,27 +53,29 @@ class DeepSTRMM:
         # Set the start and end dates for the project
         self.start_date = start_date
         self.end_date = end_date
+        self.earthexplorer_username = earthexplorer_username
+        self.earthexplorer_password = earthexplorer_password
 
         # Create necessary directories for the project structure
-        os.makedirs(f'./{self.project_name}/soil', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/elevation', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/models', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/runoff_output', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/land_cover', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/tasmax', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/tasmin', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/prep', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/tmean', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/scratch', exist_ok=True)
-        os.makedirs(f'./{self.project_name}/shapes', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/soil', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/elevation', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/models', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/runoff_output', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/land_cover', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/tasmax', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/tasmin', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/prep', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/tmean', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/scratch', exist_ok=True)
+        os.makedirs(f'../{self.project_name}/shapes', exist_ok=True)
         
         # Set the Curve Number coefficient
         self.cncoef = -1
         self.s = rp
         
         # File paths for soil data
-        self.hsg_filename = f'./{self.project_name}/soil/hsg.tif'
-        self.hsg_filename_prj = f'./{self.project_name}/soil/hsg_{self.project_name}.tif'
+        self.hsg_filename = f'../{self.project_name}/soil/hsg.tif'
+        self.hsg_filename_prj = f'../{self.project_name}/soil/hsg_{self.project_name}.tif'
         cwd  = os.getcwd() 
         self.clipped_dem = cwd + f'/{self.project_name}/elevation/dem_{self.project_name}.tif'
 #========================================================================================================================  
@@ -81,64 +83,60 @@ class DeepSTRMM:
     def _download_input_data(self):
         """_summary_
         """
-        print('     - Downloading and preprocessing climate data')
-        # cd = ChelsaDataDownloader(self.project_name, self.study_area)
-        # cd.get_chelsa_clim_data()
-     
-        # self.tasmax_nc = self.uw.concat_nc(Path(f'./{self.project_name}/tasmax/'), '*tasmax*.nc')
-        # self.tasmin_nc = self.uw.concat_nc(Path(f'./{self.project_name}/tasmin/'), '*tasmin*.nc')   
-        # self.tmean_nc = self.uw.concat_nc(Path(f'./{self.project_name}/tmean/'), '*tas_*.nc')
-        # self.prep_nc = self.uw.concat_nc(Path(f'./{self.project_name}/prep/'), '*pr_*.nc')
-        # self.lats = self.prep_nc.pr.sel()[0]['lat'].values
-        # self.lons = self.prep_nc.pr.sel()[0]['lon'].values
+        
 
         # # Define paths
-        # tasmax_path = Path(f'./{self.project_name}/tasmax/')
-        # tasmin_path = Path(f'./{self.project_name}/tasmin/')
-        # tmean_path = Path(f'./{self.project_name}/tmean/')
-        # prep_path = Path(f'./{self.project_name}/prep/')
+        tasmax_path = Path(f'../{self.project_name}/tasmax/')
+        tasmin_path = Path(f'../{self.project_name}/tasmin/')
+        tmean_path = Path(f'../{self.project_name}/tmean/')
+        prep_path = Path(f'../{self.project_name}/prep/')
 
-        # # Only download if all folders are empty
-        # if not any(folder.exists() and any(folder.iterdir()) for folder in [tasmax_path, tasmin_path, tmean_path, prep_path]):
-        #     cd = ChelsaDataDownloader(self.project_name, self.study_area)
-        #     cd.get_chelsa_clim_data()
-        # else:
-        #     print("Data already exists in one or more folders; skipping download.")
+        # Only download if all folders are empty
+        if not any(folder.exists() and any(folder.iterdir()) for folder in [tasmax_path, tasmin_path, tmean_path, prep_path]):
+            print('     - Downloading and preprocessing climate data')
+            cd = ChelsaDataDownloader(self.project_name, self.study_area)
+            cd.get_chelsa_clim_data()
+        else:
+            print(f"     - Climate data already exists in {tasmax_path}, {tasmin_path}, 
+                  {tmean_path} and {prep_path}; skipping download.")
 
-        # # Load the data
-        # self.tasmax_nc = self.uw.concat_nc(tasmax_path, '*tasmax*.nc')
-        # self.tasmin_nc = self.uw.concat_nc(tasmin_path, '*tasmin*.nc')   
-        # self.tmean_nc = self.uw.concat_nc(tmean_path, '*tas_*.nc')
-        # self.prep_nc = self.uw.concat_nc(prep_path, '*pr_*.nc')
-        # self.lats = self.prep_nc.pr.sel()[0]['lat'].values
-        # self.lons = self.prep_nc.pr.sel()[0]['lon'].values
+        # Load the data
+        self.tasmax_nc = self.uw.concat_nc(tasmax_path, '*tasmax*.nc')
+        self.tasmin_nc = self.uw.concat_nc(tasmin_path, '*tasmin*.nc')   
+        self.tmean_nc = self.uw.concat_nc(tmean_path, '*tas_*.nc')
+        self.prep_nc = self.uw.concat_nc(prep_path, '*pr_*.nc')
+        self.lats = self.prep_nc.pr.sel()[0]['lat'].values
+        self.lons = self.prep_nc.pr.sel()[0]['lon'].values
                 
-        print('     - Downloading soil data')
-        soil_folder = Path(f'./{self.project_name}/soil/')
+        
+        soil_folder = Path(f'../{self.project_name}/soil/')
         if not any(soil_folder.iterdir()):
+            print('     - Downloading soil data')
             sgd = SoilGridsData(self.project_name, self.study_area)
             sgd.get_soil_data()
-
-            
-        print('     - Downloading land cover data')
+        else:
+            print(f"     - Soil data already exists in {soil_folder}; skipping download.")          
+        
         ldc = LandCover(self.project_name, self.study_area)
-        self.clipped_lc = f'./{self.project_name}/land_cover/lc_{self.project_name}.tif'
+        self.clipped_lc = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         if not os.path.exists(self.clipped_lc):
+            print('     - Downloading land cover data')
             ldc.download_lc()
             ldc.mosaic_lc()
             self.lc = self.uw.align_rasters(ldc.out_fp, self.tasmax_nc)[0]
             self.lc.rio.to_raster(self.clipped_lc, dtype='float32')
         else:
+            print(f"     - Land cover data already exists in {self.clipped_lc}; skipping download.")
             self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
 
-        self.clipped_dem = f'./{self.project_name}/elevation/dem_{self.project_name}.tif'
+        self.clipped_dem = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
         if not os.path.exists(self.clipped_dem):
-            print('     - Preprocessing DEM data')
+            print('     - Downloading DEM data')
             dd = DEMDownloader(
                 self.project_name,
                 self.study_area,                 
-                self.username,                 
-                self.password
+                self.earthexplorer_username,                 
+                self.earthexplorer_password
             )
             dem = dd.download_dem()
 
@@ -146,13 +144,14 @@ class DeepSTRMM:
             self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
             align_dem.rio.to_raster(self.clipped_dem, dtype='float32')
         else:
+            print(f"     - DEM cover data already exists in {self.clipped_dem}; skipping download.")
             align_dem = rasterio.open(self.clipped_dem).read(1)
             self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
             
 #========================================================================================================================  
 
     def compute_HSG(self):
-        soil_dir = Path(f'./{self.project_name}/soil')
+        soil_dir = Path(f'../{self.project_name}/soil')
         clay_list = list(map(str, soil_dir.glob('clay*.tif')))
         sand_list = list(map(str, soil_dir.glob('sand*.tif')))
         hsg_list = []
@@ -239,7 +238,7 @@ class DeepSTRMM:
     def adjust_CN2_slp(self):
         #clip slope to study area
         
-        slp_name = f'./{self.project_name}/elevation/slope_{self.project_name}.tif'
+        slp_name = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
         self.slope = rd.TerrainAttribute(self.rd_dem, attrib='slope_riserun')
         self.uw.save_to_scratch(slp_name, self.slope)
         
@@ -379,7 +378,7 @@ class DeepSTRMM:
                     dst.write(data, indexes=1)
 
         # Save station weighted flow accumulation data
-        filename = f'./{self.project_name}/runoff_output/wacc_sparse_arrays_{self.project_name}_{year_name}.pkl'
+        filename = f'../{self.project_name}/runoff_output/wacc_sparse_arrays_{self.project_name}_{year_name}.pkl'
         
         with open(filename, 'wb') as f:
             pickle.dump(self.wacc_list, f)

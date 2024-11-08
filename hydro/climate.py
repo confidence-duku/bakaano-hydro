@@ -34,7 +34,7 @@ class ChelsaDataDownloader:
             poll=10
         )
         
-        download_path = f'./{self.project_name}/{output_folder}'
+        download_path = f'../{self.project_name}/{output_folder}'
         os.makedirs(download_path, exist_ok=True)
         self.client.download(ds['file_url'], path=download_path, validate=False, extract=True)
 

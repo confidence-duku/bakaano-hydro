@@ -5,6 +5,7 @@ import glob
 from shapely.geometry import Polygon
 import json, time, os
 import uuid
+from utils import Utils
 
 class DEMDownloader:
     def __init__(self, project_name, study_area, earthexplorer_username, earthexplorer_password):
@@ -12,8 +13,9 @@ class DEMDownloader:
         self.username = earthexplorer_username
         self.password = earthexplorer_password
         self.project_name = project_name
-
-        bbox_polygon = Polygon([(study_area[0], study_area[1]), (study_area[0], study_area[3]), (study_area[2], study_area[3]), (study_area[2], study_area[1]), (study_area[0], study_area[1])])
+        uw = Utils(self.project_name, self.study_area)
+        uw.get_bbox('EPSG:4326')
+        bbox_polygon = Polygon([(uw.minx, uw.miny), (uw.minx, uw.maxy), (uw.maxx, uw.maxy), (uw.maxx, uw.miny), (uw.minx, uw.miny)])
         self.nps = gpd.GeoDataFrame([1], geometry=[bbox_polygon], crs="EPSG:4326")
 
     def download_dem(self):
@@ -80,7 +82,7 @@ class DEMDownloader:
         print(r.get('{}task/{}'.format(api, task_id), headers=head).json()['status'])
 
         mydir = os.getcwd()
-        destDir = os.path.join(mydir, f'./projects/{self.project_name}/elevation')    
+        destDir = os.path.join(mydir, f'../{self.project_name}/elevation')    
         if not os.path.exists(destDir):
             os.makedirs(destDir)
 
@@ -99,7 +101,7 @@ class DEMDownloader:
             with open(filepath, 'wb') as f:                                                                  # Write file to dest dir
                 for data in dl.iter_content(chunk_size=8192): f.write(data) 
         print('Downloaded files can be found at: {}'.format(destDir))
-        dem_file = glob.glob(f'./{self.project_name}/elevation/SRTMGL1_NC.003*.tif')
+        dem_file = glob.glob(f'../{self.project_name}/elevation/SRTMGL1_NC.003*.tif')
         return dem_file
 
         

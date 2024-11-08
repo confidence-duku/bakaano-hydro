@@ -52,7 +52,7 @@ class PredictDataPreprocessor:
         self.catchment = []  
         
     def _extract_station_rowcol(self, lat, lon):
-        with rasterio.open(f'./{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
             data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
@@ -60,7 +60,7 @@ class PredictDataPreprocessor:
         
     def _snap_coordinates(self, lat, lon):
         coordinate_to_snap=(lon, lat)
-        with rasterio.open(f'./{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
             transform = src.transform
 
             river_coords = []
@@ -123,9 +123,9 @@ class PredictDataPreprocessor:
         all_responses = []
         count = 1
         
-        slope = f'./{self.project_name}/elevation/slope_{self.project_name}.tif'
-        dem_filepath = f'./{self.project_name}/elevation/dem_{self.project_name}.tif'
-        land_cover = f'./{self.project_name}/land_cover/lc_{self.project_name}.tif'
+        slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
+        dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
+        land_cover = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -221,9 +221,9 @@ class PredictDataPreprocessor:
         all_responses = []
         count = 1
         
-        slope = f'./{self.project_name}/elevation/slope_{self.project_name}.tif'
-        dem_filepath = f'./{self.project_name}/elevation/dem_{self.project_name}.tif'
-        land_cover = f'./{self.project_name}/land_cover/lc_{self.project_name}.tif'
+        slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
+        dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
+        land_cover = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -357,7 +357,7 @@ class PredictStreamflow:
         train_catchment_list = []
         val_catchment_list = []
         
-        with open(f'./{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
+        with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
         
         #catchment_num = catchment_num.reshape(-1,self.num_static_features)
@@ -366,7 +366,7 @@ class PredictStreamflow:
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
         scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
-        with open(f'./{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
+        with open(f'../{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
             scaler1 = pickle.load(file)
 
 
@@ -375,7 +375,7 @@ class PredictStreamflow:
             #scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['global']).values
             scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
             sid = str(i)
-            with open(f'./{self.project_name}/models/station_{sid}_scaler.pkl', 'rb') as file:
+            with open(f'../{self.project_name}/models/station_{sid}_scaler.pkl', 'rb') as file:
                 scaler3 = pickle.load(file)
             scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
             scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
@@ -444,13 +444,13 @@ class PredictStreamflow:
         train_catchment_list = []
         val_catchment_list = []
         
-        with open(f'./{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
+        with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
         
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
         scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
-        with open(f'./{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
+        with open(f'../{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
             scaler1 = pickle.load(file)
 
         for x, z in zip(predictors, scaled_trained_catchment):

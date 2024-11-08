@@ -44,7 +44,7 @@ class SoilGridsData:
                     meta = dataset.meta.copy()
             
                     # Specify the output filename
-                    filename = f'./{self.project_name}/soil/' + k + '.tif'
+                    filename = f'../{self.project_name}/soil/' + k + '.tif'
             
                     # Write the data to a new GeoTIFF file
                     with rasterio.open(filename, 'w', **meta) as dst:
@@ -67,7 +67,7 @@ class SoilGridsData:
                     meta = dataset.meta.copy()
             
                     # Specify the output filename
-                    filename = f'./{self.project_name}/soil/' + k + '.tif'
+                    filename = f'../{self.project_name}/soil/' + k + '.tif'
             
                     # Write the data to a new GeoTIFF file
                     with rasterio.open(filename, 'w', **meta) as dst:
