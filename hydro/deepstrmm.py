@@ -30,7 +30,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class DeepSTRMM:
     """Generate an instance
     """
-    def __init__(self, project_name, study_area_path, start_date, end_date, earthexplorer_username, earthexplorer_password, rp=None):
+    def __init__(self, project_name, study_area_path, start_date, end_date, earthexplorer_username, earthexplorer_password):
         """_summary_
 
         Args:
@@ -120,8 +120,8 @@ class DeepSTRMM:
         self.clipped_lc = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         if not os.path.exists(self.clipped_lc):
             print('     - Downloading land cover data')
-            ldc.download_lc()
-            ldc.mosaic_lc()
+            #ldc.download_lc()
+            #ldc.mosaic_lc()
             self.lc = self.uw.align_rasters(ldc.out_fp, self.tasmax_nc)[0]
             self.lc.rio.to_raster(self.clipped_lc, dtype='float32')
         else:
@@ -192,7 +192,8 @@ class DeepSTRMM:
             dst.write(hsg1, indexes=1)
 
         self.uw.reproject_raster(self.hsg_filename, self.hsg_filename_prj)
-        self.hsg = self.uw.align_rasters(self.hsg_filename_prj, self.tasmax_nc)
+        self.hsg = self.uw.align_rasters(self.hsg_filename_prj, self.tasmax_nc)[0]
+        self.hsg = np.where(self.lc !=50, self.hsg, 4) #adjusting soil for urban areas
 
 #============================================================================================================================        
     def compute_CN2(self):
@@ -215,21 +216,22 @@ class DeepSTRMM:
             ("100", "1"): 71,("100", "2"): 71,("100", "3"): 81,("100", "4"): 89
         }
                 
-        self.cn2 = 0
+        self.cn2 = np.zeros_like(self.lc)
+        self.lc = self.lc.astype(int)
         for keys, val in lookup_table.items():  
             lc_key, soil_key = keys
             #print('Processing for ' + lc_key + ' ' + soil_key)            
             pp = np.where((self.lc==int(lc_key)) & (self.hsg==int(soil_key)), val, 0)
             self.cn2 = np.add(self.cn2, pp)
-        self.cn2 = xr.DataArray(data=self.cn2[0], coords=[('lat', self.lats), ('lon', self.lons)])
-        chunk_size = {'lat': 1000, 'lon': 1000}  # Adjust chunk sizes based on your data and memory
-        self.cn2 = self.cn2.chunk(chunk_size)
-        self.cn2 = self.cn2.astype(np.int32)
-        self.cn2 = self.cn2.assign_coords(
-            lat=self.cn2['lat'].astype(np.float32),
-            lon=self.cn2['lon'].astype(np.float32)
-        )
-        self.cn2 = self.cn2.values
+        #self.cn2 = xr.DataArray(data=self.cn2, coords=[('lat', self.lats), ('lon', self.lons)])
+        # chunk_size = {'lat': 1000, 'lon': 1000}  # Adjust chunk sizes based on your data and memory
+        # self.cn2 = self.cn2.chunk(chunk_size)
+        # self.cn2 = self.cn2.astype(np.int32)
+        # self.cn2 = self.cn2.assign_coords(
+        #     lat=self.cn2['lat'].astype(np.float32),
+        #     lon=self.cn2['lon'].astype(np.float32)
+        # )
+        #self.cn2 = self.cn2.values
         #print(self.cn2)
 
 #========================================================================================================================  
@@ -271,10 +273,10 @@ class DeepSTRMM:
 
         # Initialize potential evapotranspiration and data preprocessor
         eto = PotentialEvapotranspiration(self.project_name, self.study_area, self.start_date, self.end_date)
-        sdp = DataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
+        #sdp = DataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
 
         # Load observed streamflow and climate data
-        roi_stations = sdp.station_ids
+        #roi_stations = sdp.station_ids
         tasmax_period = self.tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
         tasmin_period = self.tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
         tmean_period = self.tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15

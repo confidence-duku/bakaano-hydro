@@ -101,7 +101,7 @@ class DEMDownloader:
             with open(filepath, 'wb') as f:                                                                  # Write file to dest dir
                 for data in dl.iter_content(chunk_size=8192): f.write(data) 
         print('Downloaded files can be found at: {}'.format(destDir))
-        dem_file = glob.glob(f'../{self.project_name}/elevation/SRTMGL1_NC.003*.tif')
+        dem_file = glob.glob(f'../{self.project_name}/elevation/SRTMGL1_NC.003*.tif')[0]
         return dem_file
 
         

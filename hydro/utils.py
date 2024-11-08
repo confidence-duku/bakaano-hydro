@@ -83,7 +83,7 @@ class Utils:
         if israster:
             ds = rioxarray.open_rasterio(input_ras)
             ds = ds.rio.write_crs(4326)
-            ds = ds.rio.reproject_match(match)[0]
+            ds = ds.rio.reproject_match(match)
         else:
             ds = input_ras
             ds = ds.rio.write_crs(4326)
