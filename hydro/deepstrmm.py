@@ -97,8 +97,7 @@ class DeepSTRMM:
             cd = ChelsaDataDownloader(self.project_name, self.study_area)
             cd.get_chelsa_clim_data()
         else:
-            print(f"     - Climate data already exists in {tasmax_path}, {tasmin_path}, 
-                  {tmean_path} and {prep_path}; skipping download.")
+            print(f"     - Climate data already exists in {tasmax_path}, {tasmin_path}, {tmean_path} and {prep_path}; skipping download.")
 
         # Load the data
         self.tasmax_nc = self.uw.concat_nc(tasmax_path, '*tasmax*.nc')
@@ -144,7 +143,7 @@ class DeepSTRMM:
             self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
             align_dem.rio.to_raster(self.clipped_dem, dtype='float32')
         else:
-            print(f"     - DEM cover data already exists in {self.clipped_dem}; skipping download.")
+            print(f"     - DEM data already exists in {self.clipped_dem}; skipping download.")
             align_dem = rasterio.open(self.clipped_dem).read(1)
             self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
             
