@@ -71,7 +71,6 @@ class DeepSTRMM:
         
         # Set the Curve Number coefficient
         self.cncoef = -1
-        self.s = rp
         
         # File paths for soil data
         self.hsg_filename = f'../{self.project_name}/soil/hsg.tif'
@@ -223,16 +222,6 @@ class DeepSTRMM:
             #print('Processing for ' + lc_key + ' ' + soil_key)            
             pp = np.where((self.lc==int(lc_key)) & (self.hsg==int(soil_key)), val, 0)
             self.cn2 = np.add(self.cn2, pp)
-        #self.cn2 = xr.DataArray(data=self.cn2, coords=[('lat', self.lats), ('lon', self.lons)])
-        # chunk_size = {'lat': 1000, 'lon': 1000}  # Adjust chunk sizes based on your data and memory
-        # self.cn2 = self.cn2.chunk(chunk_size)
-        # self.cn2 = self.cn2.astype(np.int32)
-        # self.cn2 = self.cn2.assign_coords(
-        #     lat=self.cn2['lat'].astype(np.float32),
-        #     lon=self.cn2['lon'].astype(np.float32)
-        # )
-        #self.cn2 = self.cn2.values
-        #print(self.cn2)
 
 #========================================================================================================================  
 
