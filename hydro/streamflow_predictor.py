@@ -119,8 +119,6 @@ class PredictDataPreprocessor:
                           
     def get_data(self):
 
-        all_predictors = []
-        all_responses = []
         count = 1
         
         slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
@@ -217,13 +215,10 @@ class PredictDataPreprocessor:
     
     def get_data_latlng(self, olat, olon):
 
-        all_predictors = []
-        all_responses = []
         count = 1
         
         slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
         dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
-        land_cover = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -265,20 +260,11 @@ class PredictDataPreprocessor:
         #wfa_data = wfa.sel(lat=station_y, lon=station_x, method='nearest').to_dataframe(name='d8_weighted_flowacc')
         acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
         slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-        #wfa_data = wfa_data.drop(['lat', 'lon'], axis=1)
         acc_data = acc_data.values
         slp_data = slp_data.values
-
-        
-        
+   
         row, col = self._extract_station_rowcol(snapped_y, snapped_x)
 
-        # wlc = []
-        # for i in lc_list:
-        #     lc = i.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-        #     wlc.append(lc)
-            
-        
         station_wfa = []
         #col_name = f'mfd_wfa_{k}'
         for arr in wfa_list:
@@ -292,15 +278,11 @@ class PredictDataPreprocessor:
         #extract wfa data based on defined training period
         wfa_data = full_wfa_data[self.sim_start: self.sim_end]
 
-        ##station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
-
         predictors = wfa_data.copy()
         predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
-        #response = station_discharge.drop(['id'], axis=1)
 
         self.data_list.append(predictors)
         catch_list = [acc_data, slp_data]
-        #catch_list.extend(wlc)
         catch_tup = tuple(catch_list)
         self.catchment.append(catch_tup)
         count = count + 1
@@ -351,11 +333,7 @@ class PredictStreamflow:
         id_list = np.array(data_list[3])
                 
         full_train_predictors = []
-        full_train_response = []
-        full_val_predictors = []
-        full_val_response = []
         train_catchment_list = []
-        val_catchment_list = []
         
         with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)

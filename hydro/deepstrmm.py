@@ -83,7 +83,6 @@ class DeepSTRMM:
         """_summary_
         """
         
-
         # # Define paths
         tasmax_path = Path(f'../{self.project_name}/tasmax/')
         tasmin_path = Path(f'../{self.project_name}/tasmin/')
@@ -119,8 +118,8 @@ class DeepSTRMM:
         self.clipped_lc = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
         if not os.path.exists(self.clipped_lc):
             print('     - Downloading land cover data')
-            #ldc.download_lc()
-            #ldc.mosaic_lc()
+            ldc.download_lc()
+            ldc.mosaic_lc()
             self.lc = self.uw.align_rasters(ldc.out_fp, self.tasmax_nc)[0]
             self.lc.rio.to_raster(self.clipped_lc, dtype='float32')
         else:
@@ -350,7 +349,7 @@ class DeepSTRMM:
             
        
         # Save seasonal data using rasterio
-        year_name = datetime.strptime(self.start_date, '%Y-%m-%d').year
+        #year_name = datetime.strptime(self.start_date, '%Y-%m-%d').year
         with rasterio.open(self.clipped_dem) as out:
             s_meta = out.profile
 
@@ -362,24 +361,23 @@ class DeepSTRMM:
 
         for season in seasons:
             for attr in attributes:
-                filename = f'./{self.project_name}/runoff_output/{season}_{attr}_{self.project_name}_{year_name}.tif'
+                filename = f'./{self.project_name}/runoff_output/{season}_{attr}_{self.project_name}.tif'
                 data = getattr(self, f'{season}_{attr}')
                 with rasterio.open(filename, 'w', **out_meta) as dst:
                     dst.write(data, indexes=1)
 
         # Save station weighted flow accumulation data
-        filename = f'../{self.project_name}/runoff_output/wacc_sparse_arrays_{self.project_name}_{year_name}.pkl'
+        filename = f'../{self.project_name}/runoff_output/wacc_sparse_arrays_{self.project_name}.pkl'
         
         with open(filename, 'wb') as f:
             pickle.dump(self.wacc_list, f)
-        return s
     
 #=========================================================================================================================================
-    def train_streamflow_model(self):
+    def train_streamflow_model(self, grdc_netcdf):
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
         sdp = DataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, '1989-01-01', '2016-12-31')
         print(' 1. Loading observed streamflow')
-        sdp.load_observed_streamflow()
+        sdp.load_observed_streamflow(grdc_netcdf)
         #print('There are ')
         
         print(' 2. Loading runoff data and other predictors')
@@ -398,9 +396,9 @@ class DeepSTRMM:
         smodel.train_model()
 #========================================================================================================================  
                 
-    def simulate_streamflow(self, station_name, model_path):
+    def simulate_streamflow(self, station_name, model_path, grdc_netcdf):
         vdp = PredictDataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, '1981-01-01', '1988-12-31')
-        fulldata = vdp.load_observed_streamflow()
+        fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         #print(vdp.sim_station_names)
         self.stat_names = vdp.sim_station_names
         
@@ -422,9 +420,7 @@ class DeepSTRMM:
         self.vmodel.prepare_data(rawdata)
 
         self.vmodel.load_model(model_path)
-        y1 = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-        #y2 = y1
-        y2 = y1 * 1
+        y2 = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
         predicted_streamflow = np.where(y2<0, 0, y2)
         self.ps = predicted_streamflow
         
@@ -445,8 +441,7 @@ class DeepSTRMM:
         self.vmodel.prepare_data_latlng(rawdata)
 
         self.vmodel.load_model(model_path)
-        y1 = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-        y2 = y1 * 100
+        y2 = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
         predicted_streamflow = np.where(y2<0, 0, y2)
         return predicted_streamflow
         

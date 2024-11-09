@@ -438,7 +438,7 @@ class StreamflowModel:
             
             scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
             
-            scaled_train_response = y.values / 1
+            scaled_train_response = y.values
            
             
             z2 = z.reshape(-1,self.num_static_features)
