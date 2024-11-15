@@ -21,11 +21,11 @@ from pathlib import Path
 
 class ExposurePreprocessor:
     def __init__(self, project_name, local_climatedata_available=True):
-        self.project_name = project_name
-        rootdir = f'./projects/{self.project_name}/input_data'
+        self.working_dir = project_name
+        rootdir = f'./projects/{self.working_dir}/input_data'
         self.local_climatedata_available = local_climatedata_available
         self.rootdir = Path(rootdir)
-        self.lst_folder = Path(f'./projects/{self.project_name}/input_data/lst')
+        self.lst_folder = Path(f'./projects/{self.working_dir}/input_data/lst')
         
         #self.study_area= study_area_path
         self.lst_list = list(map(str, self.lst_folder.glob('L*B*.TIF')))
@@ -47,19 +47,19 @@ class ExposurePreprocessor:
             maxx, maxy = transformer.transform(bbox.right, bbox.top)
             self.bbox = [minx, miny, maxx, maxy]
         self.grids = range(1,(rt_data.shape[0]*rt_data.shape[1]+1))
-        self.landsat_indices_dir = Path(f'./projects/{self.project_name}/input_data/landsat_indices')
+        self.landsat_indices_dir = Path(f'./projects/{self.working_dir}/input_data/landsat_indices')
 
-        os.makedirs(f'./projects/{self.project_name}/input_data/static_data', exist_ok=True)
-        self.static_data_dir = Path(f'./projects/{self.project_name}/input_data/static_data')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/static_data', exist_ok=True)
+        self.static_data_dir = Path(f'./projects/{self.working_dir}/input_data/static_data')
 
-        os.makedirs(f'./projects/{self.project_name}/input_data/tasmax', exist_ok=True)
-        self.tasmax_dir = Path(f'./projects/{self.project_name}/input_data/tasmax')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/tasmax', exist_ok=True)
+        self.tasmax_dir = Path(f'./projects/{self.working_dir}/input_data/tasmax')
 
-        os.makedirs(f'./projects/{self.project_name}/input_data/tasmin', exist_ok=True)
-        self.tasmin_dir = Path(f'./projects/{self.project_name}/input_data/tasmin')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/tasmin', exist_ok=True)
+        self.tasmin_dir = Path(f'./projects/{self.working_dir}/input_data/tasmin')
 
-        os.makedirs(f'./projects/{self.project_name}/input_data/srad', exist_ok=True)
-        self.srad_dir = Path(f'./projects/{self.project_name}/input_data/srad')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/srad', exist_ok=True)
+        self.srad_dir = Path(f'./projects/{self.working_dir}/input_data/srad')
 
         # if self.local_climatedata_available == True:
         #     os.makedirs('./input_data/tasmax', exist_ok=True)
@@ -130,7 +130,7 @@ class ExposurePreprocessor:
         self.pndvi = Process_NDVI(self.landsat_indices_dir, self.study_area)
         self.pndbi = Process_NDBI(self.landsat_indices_dir, self.study_area)
         self.pndwi = Process_NDWI(self.landsat_indices_dir, self.study_area)
-        self.pcd = Process_ClimateData(self.project_name, self.bbox)
+        self.pcd = Process_ClimateData(self.working_dir, self.bbox)
         #self.psp = Process_StaticPredictors(static_data_dir, self.study_area)
 
         #print('Concatenating climate data')
@@ -203,7 +203,7 @@ class LstTrainer:
         xgb_model = XGBRegressor(**best_params)
         self.xgb_model = xgb_model.fit(self.X_train, self.y_train)
 
-        model_filepath = f'./projects/{self.project_name}/models/lst_model_{self.project_name}.h5'
+        model_filepath = f'./projects/{self.working_dir}/models/lst_model_{self.working_dir}.h5'
         self.xgb_model.save_model(model_filepath)
 
     def evaluate_model(self):

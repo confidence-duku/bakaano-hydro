@@ -6,15 +6,11 @@ from pathlib import Path
 import rioxarray
 import rasterio
 from datetime import datetime
-from utils import Utils
-from pet import PotentialEvapotranspiration
-from soil import SoilGridsData
-from land_cover import LandCover
-from dem import DEMDownloader
-from climate import ChelsaDataDownloader
-from router import RunoffRouter
-from streamflow_trainer import DataPreprocessor, StreamflowModel
-from streamflow_predictor import PredictDataPreprocessor, PredictStreamflow
+from deepstrmm.utils import Utils
+from deepstrmm.pet import PotentialEvapotranspiration
+from deepstrmm.router import RunoffRouter
+from deepstrmm.streamflow_trainer import DataPreprocessor, StreamflowModel
+from deepstrmm.streamflow_predictor import PredictDataPreprocessor, PredictStreamflow
 import richdem as rd
 import warnings
 import hydroeval
@@ -30,7 +26,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 class DeepSTRMM:
     """Generate an instance
     """
-    def __init__(self, project_name, study_area_path, start_date, end_date, earthexplorer_username, earthexplorer_password):
+    def __init__(self, working_dir, study_area_path, start_date, end_date):
         """_summary_
 
         Args:
@@ -41,114 +37,126 @@ class DeepSTRMM:
             rp (_type_, optional): _description_. Defaults to None.
         """
          # Initialize the project name
-        self.project_name = project_name
+        self.working_dir = working_dir
         
         # Initialize the study area
         self.study_area = study_area_path
         
         # Initialize utility class with project name and study area.
-        self.uw = Utils(self.project_name, self.study_area)
+        self.uw = Utils(self.working_dir, self.study_area)
         self.times = pd.date_range(start_date, end_date)
         
         # Set the start and end dates for the project
         self.start_date = start_date
         self.end_date = end_date
-        self.earthexplorer_username = earthexplorer_username
-        self.earthexplorer_password = earthexplorer_password
+        # self.earthexplorer_username = earthexplorer_username
+        # self.earthexplorer_password = earthexplorer_password
 
         # Create necessary directories for the project structure
-        os.makedirs(f'../{self.project_name}/soil', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/elevation', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/models', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/runoff_output', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/land_cover', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/tasmax', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/tasmin', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/prep', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/tmean', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/scratch', exist_ok=True)
-        os.makedirs(f'../{self.project_name}/shapes', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/soil', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/elevation', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/models', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/runoff_output', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/land_cover', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/tasmax', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/tasmin', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/prep', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/tmean', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/scratch', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
         
         # Set the Curve Number coefficient
         self.cncoef = -1
         
         # File paths for soil data
-        self.hsg_filename = f'../{self.project_name}/soil/hsg.tif'
-        self.hsg_filename_prj = f'../{self.project_name}/soil/hsg_{self.project_name}.tif'
-        cwd  = os.getcwd() 
-        self.clipped_dem = cwd + f'/{self.project_name}/elevation/dem_{self.project_name}.tif'
+        self.hsg_filename = f'{self.working_dir}/soil/hsg.tif'
+        self.hsg_filename_prj = f'{self.working_dir}/soil/hsg_clipped.tif'
+        self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
+        self.clipped_lc = f'{self.working_dir}/land_cover/lc_mosaic.tif'
 #========================================================================================================================  
 
     def _download_input_data(self):
         """_summary_
         """
-        
-        # # Define paths
-        tasmax_path = Path(f'../{self.project_name}/tasmax/')
-        tasmin_path = Path(f'../{self.project_name}/tasmin/')
-        tmean_path = Path(f'../{self.project_name}/tmean/')
-        prep_path = Path(f'../{self.project_name}/prep/')
+        align_dem = rasterio.open(self.clipped_dem).read(1)
+        self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
+        self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
 
-        # Only download if all folders are empty
-        if not any(folder.exists() and any(folder.iterdir()) for folder in [tasmax_path, tasmin_path, tmean_path, prep_path]):
-            print('     - Downloading and preprocessing climate data')
-            cd = ChelsaDataDownloader(self.project_name, self.study_area)
-            cd.get_chelsa_clim_data()
-        else:
-            print(f"     - Climate data already exists in {tasmax_path}, {tasmin_path}, {tmean_path} and {prep_path}; skipping download.")
+        # # Define paths
+        tasmax_path = Path(f'{self.working_dir}/tasmax/')
+        tasmin_path = Path(f'{self.working_dir}/tasmin/')
+        tmean_path = Path(f'{self.working_dir}/tmean/')
+        prep_path = Path(f'{self.working_dir}/prep/')
+
+        # # Only download if all folders are empty
+        # if not any(folder.exists() and any(folder.iterdir()) for folder in [tasmax_path, tasmin_path, tmean_path, prep_path]):
+        #     print('     - Downloading and preprocessing climate data')
+        #     cd = ChelsaDataDownloader(self.working_dir, self.study_area)
+        #     cd.get_chelsa_clim_data()
+        # else:
+        #     print(f"     - Climate data already exists in {tasmax_path}, {tasmin_path}, {tmean_path} and {prep_path}; skipping download.")
 
         # Load the data
         self.tasmax_nc = self.uw.concat_nc(tasmax_path, '*tasmax*.nc')
         self.tasmin_nc = self.uw.concat_nc(tasmin_path, '*tasmin*.nc')   
         self.tmean_nc = self.uw.concat_nc(tmean_path, '*tas_*.nc')
         self.prep_nc = self.uw.concat_nc(prep_path, '*pr_*.nc')
+
+        self.tasmax_nc = self.uw.align_rasters(self.tasmax_nc, israster=False)
+        self.tasmin_nc = self.uw.align_rasters(self.tasmin_nc, israster=False)
+        self.tmean_nc = self.uw.align_rasters(self.tmean_nc, israster=False)
+        self.prep_nc = self.uw.align_rasters(self.prep_nc, israster=False)
+
         self.lats = self.prep_nc.pr.sel()[0]['lat'].values
         self.lons = self.prep_nc.pr.sel()[0]['lon'].values
                 
         
-        soil_folder = Path(f'../{self.project_name}/soil/')
-        if not any(soil_folder.iterdir()):
-            print('     - Downloading soil data')
-            sgd = SoilGridsData(self.project_name, self.study_area)
-            sgd.get_soil_data()
-        else:
-            print(f"     - Soil data already exists in {soil_folder}; skipping download.")          
+        # soil_folder = Path(f'{self.working_dir}/soil/')
+        # if not any(soil_folder.iterdir()):
+        #     print('     - Downloading soil data')
+        #     sgd = SoilGridsData(self.working_dir, self.study_area)
+        #     sgd.get_soil_data()
+        # else:
+        #     print(f"     - Soil data already exists in {soil_folder}; skipping download.")          
         
-        ldc = LandCover(self.project_name, self.study_area)
-        self.clipped_lc = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
-        if not os.path.exists(self.clipped_lc):
-            print('     - Downloading land cover data')
-            ldc.download_lc()
-            ldc.mosaic_lc()
-            self.lc = self.uw.align_rasters(ldc.out_fp, self.tasmax_nc)[0]
-            self.lc.rio.to_raster(self.clipped_lc, dtype='float32')
-        else:
-            print(f"     - Land cover data already exists in {self.clipped_lc}; skipping download.")
-            self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
+        # ldc = LandCover(self.working_dir, self.study_area)
+        # self.clipped_lc = f'{self.working_dir}/land_cover/lc_mosaic.tif'
+        # if not os.path.exists(self.clipped_lc):
+        #     print('     - Downloading land cover data')
+        #     #ldc.download_lc()
+        #     ldc.mosaic_lc()
+        #     self.lc = self.uw.align_rasters(ldc.out_fp, self.tasmax_nc)[0]
+        #     self.lc.rio.to_raster(self.clipped_lc, dtype='float32')
+        # else:
+        #     print(f"     - Land cover data already exists in {self.clipped_lc}; skipping download.")
+        #     self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
 
-        self.clipped_dem = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
-        if not os.path.exists(self.clipped_dem):
-            print('     - Downloading DEM data')
-            dd = DEMDownloader(
-                self.project_name,
-                self.study_area,                 
-                self.earthexplorer_username,                 
-                self.earthexplorer_password
-            )
-            dem = dd.download_dem()
+        
+        
 
-            align_dem = self.uw.align_rasters(dem, self.tasmax_nc)
-            self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
-            align_dem.rio.to_raster(self.clipped_dem, dtype='float32')
-        else:
-            print(f"     - DEM data already exists in {self.clipped_dem}; skipping download.")
-            align_dem = rasterio.open(self.clipped_dem).read(1)
-            self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
+        # self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
+        # if not os.path.exists(self.clipped_dem):
+        #     print('     - Downloading DEM data')
+        #     dd = DEMDownloader(
+        #         self.working_dir,
+        #         self.study_area,                 
+        #         self.earthexplorer_username,                 
+        #         self.earthexplorer_password
+        #     )
+        #     dem = dd.download_dem()
+
+        #     align_dem = self.uw.align_rasters(dem, self.tasmax_nc)
+        #     self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
+        #     align_dem.rio.to_raster(self.clipped_dem, dtype='float32')
+        # else:
+        #     print(f"     - DEM data already exists in {self.clipped_dem}; skipping download.")
+        #     align_dem = rasterio.open(self.clipped_dem).read(1)
+        #     self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
             
 #========================================================================================================================  
 
     def compute_HSG(self):
-        soil_dir = Path(f'../{self.project_name}/soil')
+        soil_dir = Path(f'{self.working_dir}/soil')
         clay_list = list(map(str, soil_dir.glob('clay*.tif')))
         sand_list = list(map(str, soil_dir.glob('sand*.tif')))
         hsg_list = []
@@ -190,7 +198,7 @@ class DeepSTRMM:
             dst.write(hsg1, indexes=1)
 
         self.uw.reproject_raster(self.hsg_filename, self.hsg_filename_prj)
-        self.hsg = self.uw.align_rasters(self.hsg_filename_prj, self.tasmax_nc)[0]
+        self.hsg = self.uw.align_rasters(self.hsg_filename_prj, self.clipped_dem)[0]
         self.hsg = np.where(self.lc !=50, self.hsg, 4) #adjusting soil for urban areas
 
 #============================================================================================================================        
@@ -227,7 +235,7 @@ class DeepSTRMM:
     def adjust_CN2_slp(self):
         #clip slope to study area
         
-        slp_name = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
+        slp_name = f'{self.working_dir}/elevation/slope_clipped.tif'
         self.slope = rd.TerrainAttribute(self.rd_dem, attrib='slope_riserun')
         self.uw.save_to_scratch(slp_name, self.slope)
         
@@ -250,7 +258,7 @@ class DeepSTRMM:
 
 
 #========================================================================================================================  
-    def compute_runoff(self):        
+    def compute_runoff_route_flow(self):        
         self._download_input_data()
         self.compute_HSG()
         self.compute_CN2()
@@ -260,8 +268,8 @@ class DeepSTRMM:
         self.compute_CN1(self.cn2_slp)
 
         # Initialize potential evapotranspiration and data preprocessor
-        eto = PotentialEvapotranspiration(self.project_name, self.study_area, self.start_date, self.end_date)
-        #sdp = DataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
+        eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
+        #sdp = DataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
 
         # Load observed streamflow and climate data
         #roi_stations = sdp.station_ids
@@ -291,7 +299,7 @@ class DeepSTRMM:
         s = 0.9 * smax
 
         # Initialize runoff router and compute flow direction
-        rout = RunoffRouter(self.project_name, self.clipped_dem)
+        rout = RunoffRouter(self.working_dir, self.clipped_dem)
         fdir, acc = rout.compute_flow_dir()
         
         facc_thresh = np.nanmax(acc) * 0.0001
@@ -361,13 +369,13 @@ class DeepSTRMM:
 
         for season in seasons:
             for attr in attributes:
-                filename = f'./{self.project_name}/runoff_output/{season}_{attr}_{self.project_name}.tif'
+                filename = f'./{self.working_dir}/runoff_output/{season}_{attr}.tif'
                 data = getattr(self, f'{season}_{attr}')
                 with rasterio.open(filename, 'w', **out_meta) as dst:
                     dst.write(data, indexes=1)
 
         # Save station weighted flow accumulation data
-        filename = f'../{self.project_name}/runoff_output/wacc_sparse_arrays_{self.project_name}.pkl'
+        filename = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
         
         with open(filename, 'wb') as f:
             pickle.dump(self.wacc_list, f)
@@ -375,7 +383,7 @@ class DeepSTRMM:
 #=========================================================================================================================================
     def train_streamflow_model(self, grdc_netcdf):
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, '1989-01-01', '2016-12-31')
+        sdp = DataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, '1989-01-01', '2016-12-31')
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         #print('There are ')
@@ -384,20 +392,20 @@ class DeepSTRMM:
         self.rawdata = sdp.get_data()
         sn = str(len(sdp.sim_station_names))
         
-        print(f'     Training deepstrmm model for {self.project_name} based on {sn} stations in the GRDC database')
+        print(f'     Training deepstrmm model based on {sn} stations in the GRDC database')
         print(sdp.sim_station_names)
         
         print(' 3. Building neural network model')
-        smodel = StreamflowModel(self.project_name)
+        smodel = StreamflowModel(self.working_dir)
         smodel.prepare_data(self.rawdata)
         smodel.build_model()
-        #smodel.load_regional_model(f'./{self.project_name}/models/{self.project_name}_model_tcn360.keras')
+        #smodel.load_regional_model(f'./{self.working_dir}/models/deepstrmm_model_tcn360.keras')
         print(' 4. Training neural network model')
         smodel.train_model()
 #========================================================================================================================  
                 
     def simulate_streamflow(self, station_name, model_path, grdc_netcdf):
-        vdp = PredictDataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, '1981-01-01', '1988-12-31')
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, '1981-01-01', '1988-12-31')
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         #print(vdp.sim_station_names)
         self.stat_names = vdp.sim_station_names
@@ -416,7 +424,7 @@ class DeepSTRMM:
         rawdata = vdp.get_data()
         observed_streamflow = list(map(lambda xy: xy[1], rawdata[0]))
 
-        self.vmodel = PredictStreamflow(self.project_name)
+        self.vmodel = PredictStreamflow(self.working_dir)
         self.vmodel.prepare_data(rawdata)
 
         self.vmodel.load_model(model_path)
@@ -433,11 +441,11 @@ class DeepSTRMM:
 #========================================================================================================================  
 
     def simulate_streamflow_latlng(self, model_path, lat, lon):
-        vdp = PredictDataPreprocessor(self.project_name, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
         
         rawdata = vdp.get_data_latlng(lat, lon)
 
-        self.vmodel = PredictStreamflow(self.project_name)
+        self.vmodel = PredictStreamflow(self.working_dir)
         self.vmodel.prepare_data_latlng(rawdata)
 
         self.vmodel.load_model(model_path)
@@ -461,7 +469,7 @@ class DeepSTRMM:
         plt.plot(predicted_streamflow[:], color='blue', label='Predicted Streamflow')
         plt.plot(observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values[:], color='red', label='Observed Streamflow')
         #plt.plot(self.vmodel.this_wfa[self.vmodel.timesteps:], color='green', label='wfa')
-        plt.title('Comparison of observed and simulated streamflow for River ' + self.project_name)  # Add a title
+        plt.title('Comparison of observed and simulated streamflow for River ' + self.working_dir)  # Add a title
         plt.xlabel('Date')  # Label the x-axis
         plt.ylabel('River Discharge (m³/s)')
         plt.legend()  # Add a legend to label the lines

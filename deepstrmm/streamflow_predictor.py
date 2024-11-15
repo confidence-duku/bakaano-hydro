@@ -29,7 +29,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class PredictDataPreprocessor:
-    def __init__(self, project_name,  study_area, start_date, end_date, sim_start, sim_end):
+    def __init__(self, working_dir,  study_area, start_date, end_date, sim_start, sim_end):
         """
         Initialize directories, dates and relevant variables
         
@@ -44,7 +44,7 @@ class PredictDataPreprocessor:
         self.end_date = end_date
         self.sim_start = sim_start
         self.sim_end = sim_end
-        self.project_name = project_name
+        self.working_dir = working_dir
         self.times = pd.date_range(start_date, end_date)
         self.grdc_subset = self.load_observed_streamflow()
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
@@ -52,7 +52,7 @@ class PredictDataPreprocessor:
         self.catchment = []  
         
     def _extract_station_rowcol(self, lat, lon):
-        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
             data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
@@ -60,7 +60,7 @@ class PredictDataPreprocessor:
         
     def _snap_coordinates(self, lat, lon):
         coordinate_to_snap=(lon, lat)
-        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
             transform = src.transform
 
             river_coords = []
@@ -121,9 +121,9 @@ class PredictDataPreprocessor:
 
         count = 1
         
-        slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
-        dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
-        land_cover = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
+        slope = f'{self.working_dir}/elevation/slope_{self.working_dir}.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_{self.working_dir}.tif'
+        land_cover = f'{self.working_dir}/land_cover/lc_{self.working_dir}.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -153,7 +153,7 @@ class PredictDataPreprocessor:
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
-        all_years_wfa = sorted(glob.glob(f'./{self.project_name}/runoff_output/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -217,8 +217,8 @@ class PredictDataPreprocessor:
 
         count = 1
         
-        slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
-        dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
+        slope = f'{self.working_dir}/elevation/slope_{self.working_dir}.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_{self.working_dir}.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -248,7 +248,7 @@ class PredictDataPreprocessor:
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
-        all_years_wfa = sorted(glob.glob(f'./{self.project_name}/output_data/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/output_data/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -297,7 +297,7 @@ class PredictStreamflow:
     A class for preprocessing flow accumulation data and/or observed streamflow data for prediction and comparison. Preprocessing involves data augmentation, remove missing data and breaking them into sequences of specified length.
 
     """
-    def __init__(self, project_name):
+    def __init__(self, working_dir):
         self.regional_model = None
         self.train_data_list = []
         self.timesteps = 360
@@ -308,7 +308,7 @@ class PredictStreamflow:
         self.num_dynamic_features = 2
         self.num_static_features = 2
         self.scaled_trained_catchment = None
-        self.project_name = project_name
+        self.working_dir = working_dir
     
     
     def prepare_data(self, data_list):
@@ -335,7 +335,7 @@ class PredictStreamflow:
         full_train_predictors = []
         train_catchment_list = []
         
-        with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
+        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
         
         #catchment_num = catchment_num.reshape(-1,self.num_static_features)
@@ -344,7 +344,7 @@ class PredictStreamflow:
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
         scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
-        with open(f'../{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
+        with open(f'{self.working_dir}/models/global_predictor_scaler.pkl', 'rb') as file:
             scaler1 = pickle.load(file)
 
 
@@ -353,7 +353,7 @@ class PredictStreamflow:
             #scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['global']).values
             scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
             sid = str(i)
-            with open(f'../{self.project_name}/models/station_{sid}_scaler.pkl', 'rb') as file:
+            with open(f'{self.working_dir}/models/station_{sid}_scaler.pkl', 'rb') as file:
                 scaler3 = pickle.load(file)
             scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
             scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
@@ -422,13 +422,13 @@ class PredictStreamflow:
         train_catchment_list = []
         val_catchment_list = []
         
-        with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
+        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
         
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
         scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
-        with open(f'../{self.project_name}/models/global_predictor_scaler.pkl', 'rb') as file:
+        with open(f'{self.working_dir}/models/global_predictor_scaler.pkl', 'rb') as file:
             scaler1 = pickle.load(file)
 
         for x, z in zip(predictors, scaled_trained_catchment):

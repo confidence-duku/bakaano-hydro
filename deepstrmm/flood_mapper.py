@@ -25,21 +25,21 @@ class FloodMapper:
     def __init__(self, project_name):
         
         # Define the original and target projections
-        self.project_name = project_name
+        self.working_dir = project_name
         self.original_proj = Proj('epsg:4326')  # WGS84
         self.target_proj = Proj('epsg:3857')# Web Mercator
         #self.corrected_dem_name  = './niger/elevation/corrected_dem.tif'
         self.water_levels = [0.1, 0.23, 0.4, 0.75, 1, 1.36, 1.55, 1.79, 2, 2.29, 2.67, 2.88, 3, 
                              3.3, 3.66, 3.8, 4, 4.33, 4.57, 7]
         self.mannings_n = 0.05
-        self.ddir2 = os.getcwd() + f'/{self.project_name}/'
-        self.ddir = f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.project_name}/'
-        self.dem_filepath1 = self.ddir2 + f'elevation/dem_{self.project_name}.tif'
-        self.dem_filepath = self.ddir2 + f'elevation/dem_{self.project_name}_prj.tif'  
+        self.ddir2 = os.getcwd() + f'/{self.working_dir}/'
+        self.ddir = f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.working_dir}/'
+        self.dem_filepath1 = self.ddir2 + f'elevation/dem_{self.working_dir}.tif'
+        self.dem_filepath = self.ddir2 + f'elevation/dem_{self.working_dir}_prj.tif'  
 
-        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.project_name}/climate_normals', exist_ok=True)
-        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.project_name}/scenarios/subbasin_flood_maps', exist_ok=True)
-        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.project_name}/scratch', exist_ok=True)
+        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.working_dir}/climate_normals', exist_ok=True)
+        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.working_dir}/scenarios/subbasin_flood_maps', exist_ok=True)
+        os.makedirs(f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.working_dir}/scratch', exist_ok=True)
 #==========================================================================================================================================
     # Flip the DEM data along the vertical axis (latitude)
     def correct_inverted_dem(self, dem_data, profile):
@@ -376,7 +376,7 @@ class FloodMapper:
                 }            
             else:
                 continue
-        with open(f'{self.project_name}/models/{self.project_name}_rating_curve_dict.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/{self.working_dir}_rating_curve_dict.pkl', 'wb') as file:
             pickle.dump(self.rating_curve_dict, file)                     
         return self.rating_curve_dict
 #==========================================================================================================================================
@@ -386,8 +386,8 @@ class FloodMapper:
         
         from deepstrmm.hydro_scenarios import DeepSTRMM
         ds = DeepSTRMM(
-            project_name = self.project_name,
-            study_area = f'common_data/{self.project_name}.shp',
+            project_name = self.working_dir,
+            study_area = f'common_data/{self.working_dir}.shp',
             cncoef = -1
             )
         
@@ -410,7 +410,7 @@ class FloodMapper:
             lat, lon = self.convert_coords(lon, lat)
 
             #predict streamflow and get values for specific return period as Q
-            predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.project_name}/models/{self.project_name}_model_tcn360.keras', 
+            predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.working_dir}/models/{self.working_dir}_model_tcn360.keras', 
                                                                      lat, lon, scenario_name, runoff_data_path)
             flood_threshold = np.nanmax(predicted_streamflow)
             # if len(predicted_streamflow)>0:
@@ -456,8 +456,8 @@ class FloodMapper:
         
         from hydro.deepstrmm import DeepSTRMM
         ds = DeepSTRMM(
-            project_name = self.project_name,
-            study_area = f'common_data/{self.project_name}.shp',
+            project_name = self.working_dir,
+            study_area = f'common_data/{self.working_dir}.shp',
             start_date = "1981-01-01",
             end_date = "2016-12-31",
             cncoef = -1
@@ -480,7 +480,7 @@ class FloodMapper:
             lon = outlet_lon
 
             #predict streamflow and get values for specific return period as Q
-            predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.project_name}/models/{self.project_name}_model_tcn360.keras', lat, lon)
+            predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.working_dir}/models/{self.working_dir}_model_tcn360.keras', lat, lon)
 
             return_period_list = [10,20,50,75,100,200, 500]
             flood_threshold_list = []
@@ -513,7 +513,7 @@ class FloodMapper:
                 'outlet_lon':lon
             }  
 
-        with open(f'{self.project_name}/models/{self.project_name}_baseline_flood_threshold_dict.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/{self.working_dir}_baseline_flood_threshold_dict.pkl', 'wb') as file:
             pickle.dump(flood_threshold_dict, file)
         return flood_threshold_dict
 
@@ -551,7 +551,7 @@ class FloodMapper:
         return file_name
 #=====================================================================================================================================================
     def mosaic_glofas_flood_hazard_files(self):
-        reference_raster = f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.project_name}/scratch/subbasins.tif'
+        reference_raster = f'/lustre/backup/WUR/ESG/duku002/NBAT/hydro/{self.working_dir}/scratch/subbasins.tif'
 
         """Get the bounding box of the reference raster."""
         with rasterio.open(reference_raster) as src:
@@ -617,7 +617,7 @@ class FloodMapper:
                     this_file = glob.glob(fh_filepath + '*' + file_name)
                     files.append(this_file[0])
             #print(files)
-            full_flood_map = self.ddir + f'scratch/subbasin_flood_maps/{self.project_name}_glofas_flood_map_{rp}.tif'
+            full_flood_map = self.ddir + f'scratch/subbasin_flood_maps/{self.working_dir}_glofas_flood_map_{rp}.tif'
             # Check if the full flood map file already exists
             if not os.path.exists(full_flood_map):
                 if files:  # Proceed with mosaicking if there are files to mosaic
@@ -636,8 +636,8 @@ class FloodMapper:
 
         from deepstrmm.hydro_scenarios import DeepSTRMM
         ds = DeepSTRMM(
-            project_name = self.project_name,
-            study_area = f'common_data/{self.project_name}.shp',
+            project_name = self.working_dir,
+            study_area = f'common_data/{self.working_dir}.shp',
             cncoef = -1
             )
         if scenario_name == 'baseline':
@@ -687,8 +687,8 @@ class FloodMapper:
     def map_inundated_areas_glofas(self,  flood_threshold_dict, scenario_name, runoff_data_path, tchange, rchange):
         from deepstrmm.hydro_scenarios import DeepSTRMM
         ds = DeepSTRMM(
-            project_name = self.project_name,
-            study_area = f'common_data/{self.project_name}.shp',
+            project_name = self.working_dir,
+            study_area = f'common_data/{self.working_dir}.shp',
             cncoef = -1
             )
         
@@ -721,7 +721,7 @@ class FloodMapper:
 
             #predict streamflow and get values for specific return period as Q
            
-            self.predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.project_name}/models/{self.project_name}_model_tcn360.keras', 
+            self.predicted_streamflow = ds.simulate_streamflow_latlng(f'{self.working_dir}/models/{self.working_dir}_model_tcn360.keras', 
                                                                      self.lat, self.lon, scenario_name, runoff_data_path)
             
             
@@ -761,7 +761,7 @@ class FloodMapper:
                 #f"The discharge {discharge} is higher than the largest return period threshold {sorted_rps[-1][0]} ({sorted_rps[-1][1]})"
 
             if self.sub_rp is not None:
-                glofas_flood_reference = glob.glob(self.ddir + f'scratch/subbasin_flood_maps/{self.project_name}_glofas_flood_map_{self.sub_rp}.tif')
+                glofas_flood_reference = glob.glob(self.ddir + f'scratch/subbasin_flood_maps/{self.working_dir}_glofas_flood_map_{self.sub_rp}.tif')
    
                 subbasins = self.ddir + 'scratch/subbasins.tif'
                 self.clip_to_subbasin(subbasins, glofas_flood_reference[0], num)
@@ -803,7 +803,7 @@ class FloodMapper:
             #     #     dest.write(out_image)
                     
         files = glob.glob(self.ddir + 'scratch/subbasin_flood_maps/subbasin*.tif')
-        full_flood_map = self.ddir + f'scratch/subbasin_flood_maps/{self.project_name}_floodmap_{scenario_name}_t{tchange}_r{rchange}.tif'
+        full_flood_map = self.ddir + f'scratch/subbasin_flood_maps/{self.working_dir}_floodmap_{scenario_name}_t{tchange}_r{rchange}.tif'
         wbt.mosaic(full_flood_map, files, method="nn")
 #==========================================================================================================================================================        
     def extract_annual_peaks(self, streamflow_data, total_years, start_year):

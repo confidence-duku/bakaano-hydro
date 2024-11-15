@@ -5,7 +5,6 @@ from pathlib import Path
 from rasterio.enums import Resampling
 import rasterio
 import rasterio.warp
-from rasterio.crs import CRS
 import rioxarray
 import matplotlib.pyplot as plt
 from operator import itemgetter
@@ -19,10 +18,9 @@ warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWa
 
 
 class Utils:
-    def __init__(self, project_name, study_area):
-        self.orig_dem = f'../{project_name}/elevation/dem_volta.tif'
+    def __init__(self, working_dir, study_area):
         self.study_area = study_area
-        self.project_name = project_name
+        self.working_dir = working_dir
         
     def process_existing_file(self, file_path):
         directory, filename = os.path.split(file_path)
@@ -34,7 +32,7 @@ class Utils:
 
     # Write output to a new GeoTIFF file
     def save_to_scratch(self,output_file_path, array_to_save):
-        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as lc_src: 
+        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as lc_src: 
             luc = lc_src.profile
         lc_meta = lc_src.meta.copy()
         lc_meta.update({
@@ -72,11 +70,12 @@ class Utils:
                         dst_crs=dst_crs,
                         resampling=Resampling.nearest)
     
-    def align_rasters(self, input_ras, clipped_nc, israster=True):
+    def align_rasters(self, input_ras, israster=True):
         #print('     - Aligning raster in terms of extent, resolution and projection')
 
         # Open the DEM raster with caching to avoid reopening it multiple times
-        match = clipped_nc.tasmax.sel()[0]
+        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
+        match = rioxarray.open_rasterio(reference_data)
         match = match.rio.write_crs(4326)
 
         # Read and align the input raster
@@ -88,7 +87,7 @@ class Utils:
             ds = input_ras
             ds = ds.rio.write_crs(4326)
             ds = ds.rename({'lon': 'x', 'lat': 'y'})
-            ds = ds.rio.reproject_match(match)[0]
+            ds = ds.rio.reproject_match(match)
         return ds
     
     def get_bbox(self, dst_crs):
@@ -151,7 +150,7 @@ class Utils:
                 [shape(geom) for geom in geometry],
                 crs=dst_crs,
             )
-            prj_shp_path = f'../{self.project_name}/shapes/prj_study_area.shp'
+            prj_shp_path = f'{self.working_dir}/shapes/prj_study_area.shp'
             prj_shp.to_file(prj_shp_path)
         
             with fiona.open(prj_shp_path, "r") as shapefile:

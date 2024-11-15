@@ -38,8 +38,8 @@ class Process_ClimateData:
     """
     
     def __init__(self, project_name, study_area):
-        self.project_name = project_name
-        self.ras_template = glob.glob(f'./projects/{self.project_name}/input_data/lst/*')[0]
+        self.working_dir = project_name
+        self.ras_template = glob.glob(f'./projects/{self.working_dir}/input_data/lst/*')[0]
         self.match = rioxarray.open_rasterio(self.ras_template)
         self.client = ISIMIPClient()
         self.study_area = study_area

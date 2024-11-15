@@ -2,4 +2,6 @@ common_data
 **/*.pyc
 **/__pycache__
 volta
+hydrosheds_dem
+testing
 **/test

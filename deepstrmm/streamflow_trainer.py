@@ -69,7 +69,7 @@ class DataPreprocessor:
     get_data():
         Extracts predictors for multiple stations
     """
-    def __init__(self,  project_name, study_area, start_date, end_date, sim_start, sim_end):
+    def __init__(self,  working_dir, study_area, start_date, end_date, sim_start, sim_end):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -94,7 +94,7 @@ class DataPreprocessor:
         self.end_date = end_date
         self.sim_start = sim_start
         self.sim_end = sim_end
-        self.project_name = project_name
+        self.working_dir = working_dir
         self.times = pd.date_range(start_date, end_date)
         self.grdc_subset = self.load_observed_streamflow()
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
@@ -122,7 +122,7 @@ class DataPreprocessor:
             The column index corresponding to the given latitude and longitude.
 
         """
-        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
             data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
@@ -147,7 +147,7 @@ class DataPreprocessor:
             The longitude of the nearest river segment.
         """
         coordinate_to_snap=(lon, lat)
-        with rasterio.open(f'../{self.project_name}/elevation/dem_{self.project_name}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
             transform = src.transform
 
             river_coords = []
@@ -230,9 +230,9 @@ class DataPreprocessor:
         all_responses = []
         count = 1
         
-        slope = f'../{self.project_name}/elevation/slope_{self.project_name}.tif'
-        dem_filepath = f'../{self.project_name}/elevation/dem_{self.project_name}.tif'
-        land_cover = f'../{self.project_name}/land_cover/lc_{self.project_name}.tif'
+        slope = f'{self.working_dir}/elevation/slope_{self.working_dir}.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_{self.working_dir}.tif'
+        land_cover = f'{self.working_dir}/land_cover/lc_{self.working_dir}.tif'
 
         
         
@@ -266,7 +266,7 @@ class DataPreprocessor:
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
-        all_years_wfa = sorted(glob.glob(f'../{self.project_name}/runoff_output/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -361,7 +361,7 @@ class StreamflowModel:
     scaled_trained_catchment : object, optional
         The scaled catchment data used for training the model.
     """
-    def __init__(self, project_name):
+    def __init__(self, working_dir):
         """
         Initialize the StreamflowModel with project details.
 
@@ -380,7 +380,7 @@ class StreamflowModel:
         self.num_dynamic_features = 2
         self.num_static_features = 2
         self.scaled_trained_catchment = None
-        self.project_name = project_name
+        self.working_dir = working_dir
     
     def prepare_data(self, data_list):
         """
@@ -416,14 +416,14 @@ class StreamflowModel:
         rscaler = StandardScaler()
         
         trained_catchment_scaler = catchment_scaler.fit(train_catchment)
-        with open(f'../{self.project_name}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
             pickle.dump(trained_catchment_scaler, file)
 
         concatenated_predictors = pd.concat(train_predictors, axis=0)
         concatenated_response = pd.concat(train_response, axis=0)
         
         scaler1 = rscaler.fit(concatenated_predictors)
-        with open(f'../{self.project_name}/models/global_predictor_scaler.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/global_predictor_scaler.pkl', 'wb') as file:
             pickle.dump(scaler1, file)
 
         for x, y, z, w, i in zip(predictors, train_response, train_catchment, weight_list, id_list):
@@ -433,7 +433,7 @@ class StreamflowModel:
             scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
             scaler3 = pscaler.fit(x)
             scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
-            with open(f'../{self.project_name}/models/station_{sid}_scaler.pkl', 'wb') as file3:
+            with open(f'{self.working_dir}/models/station_{sid}_scaler.pkl', 'wb') as file3:
                 pickle.dump(scaler3, file3)
             
             scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
@@ -547,7 +547,7 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'../{self.project_name}/models/{self.project_name}_model_tcn360.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/deepstrmm_model_tcn360.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
         self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, batch_size=self.batch_size, 

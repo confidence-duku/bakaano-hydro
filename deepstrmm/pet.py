@@ -1,5 +1,5 @@
 import numpy as np
-from utils import Utils
+from deepstrmm.utils import Utils
 
 
 class PotentialEvapotranspiration:

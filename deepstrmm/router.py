@@ -8,7 +8,7 @@ class RunoffRouter:
     A class that performs runoff routing using Pysheds library.
     """
     
-    def __init__(self, project_name, dem):
+    def __init__(self, working_dir, dem):
         """
         Initialize the RunoffRouter object.
         
@@ -17,7 +17,7 @@ class RunoffRouter:
         datadir : str
             Directory path of the data.
         """
-        self.project_name = project_name
+        self.working_dir = working_dir
         self.grid = None
         self.dem_filepath = dem
         self.inflated_dem = None
