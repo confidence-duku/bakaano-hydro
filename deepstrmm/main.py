@@ -1,8 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import xarray as xr
-from pathlib import Path
 import rioxarray
 import rasterio
 from datetime import datetime
@@ -18,7 +16,6 @@ import matplotlib.pyplot as plt
 import pickle
 import gc
 import scipy as sp
-from whitebox import WhiteboxTools
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
@@ -50,109 +47,31 @@ class DeepSTRMM:
         self.start_date = start_date
         self.end_date = end_date
 
-        # Create necessary directories for the project structure
-        os.makedirs(f'{self.working_dir}/soil', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/elevation', exist_ok=True)
+        # Create necessary directories for the project structure   
         os.makedirs(f'{self.working_dir}/models', exist_ok=True)
         os.makedirs(f'{self.working_dir}/runoff_output', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/land_cover', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/tasmax', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/tasmin', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/prep', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/tmean', exist_ok=True)
         os.makedirs(f'{self.working_dir}/scratch', exist_ok=True)
         os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
         
         # Set the Curve Number coefficient
         self.cncoef = -1
         
-        # File paths for soil data
+        # File paths for input data
         self.hsg_filename = f'{self.working_dir}/soil/hsg.tif'
         self.hsg_filename_prj = f'{self.working_dir}/soil/hsg_clipped.tif'
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
-        self.clipped_lc = f'{self.working_dir}/land_cover/lc_mosaic.tif'
-#========================================================================================================================  
-
-    def _download_input_data(self):
-        """_summary_
-        """
-        align_dem = rasterio.open(self.clipped_dem).read(1)
-        self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
-        self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
-
-        # # Define paths
-        tasmax_path = Path(f'{self.working_dir}/tasmax/')
-        tasmin_path = Path(f'{self.working_dir}/tasmin/')
-        tmean_path = Path(f'{self.working_dir}/tmean/')
-        prep_path = Path(f'{self.working_dir}/prep/')
-
-        # Load the data
-        self.tasmax_nc = self.uw.concat_nc(tasmax_path, '*tasmax*.nc')
-        self.tasmin_nc = self.uw.concat_nc(tasmin_path, '*tasmin*.nc')   
-        self.tmean_nc = self.uw.concat_nc(tmean_path, '*tas_*.nc')
-        self.prep_nc = self.uw.concat_nc(prep_path, '*pr_*.nc')
-
-        self.tasmax_nc = self.uw.align_rasters(self.tasmax_nc, israster=False)
-        self.tasmin_nc = self.uw.align_rasters(self.tasmin_nc, israster=False)
-        self.tmean_nc = self.uw.align_rasters(self.tmean_nc, israster=False)
-        self.prep_nc = self.uw.align_rasters(self.prep_nc, israster=False)
-
-        self.lats = self.prep_nc.pr.sel()[0]['lat'].values
-        self.lons = self.prep_nc.pr.sel()[0]['lon'].values
-                
-            
-#========================================================================================================================  
-
-    def compute_HSG(self):
-        soil_dir = Path(f'{self.working_dir}/soil')
-        clay_list = list(map(str, soil_dir.glob('clay*.tif')))
-        sand_list = list(map(str, soil_dir.glob('sand*.tif')))
-        hsg_list = []
-        for cl, sd in zip(clay_list, sand_list):
-            with rasterio.open(cl) as src:
-                clay = src.read(1)
-                clay = np.divide(clay, 10)
-
-            with rasterio.open(sd) as src1:
-                sand = src1.read(1)
-                sand = np.divide(sand, 10)
-                
-            # Conditions for each group
-            conditions = [
-                (sand > 90) & (clay < 10),  # Group A
-                (sand >= 50) & (sand <= 90) & (clay >= 10) & (clay < 20),  # Group B
-                (sand < 50) & (clay >= 20) & (clay <= 40),  # Group C
-                (sand < 50) & (clay > 40)  # Group D
-            ]
-
-            # Corresponding group numbers
-            choices = [1, 2, 3, 4]
-
-            # Use np.select to classify the samples
-            this_hsg = np.select(conditions, choices, default=0)
-            hsg_list.append(this_hsg)
-
-        hsg1 = np.max(np.array(hsg_list), axis=0)
-
-        with rasterio.open(clay_list[0]) as slp:
-            slp_meta = slp.profile
-
-        out_meta = slp_meta.copy()
-        out_meta.update({            
-             "compress": "lzw"
-        })
-
-        with rasterio.open(self.hsg_filename, 'w', **out_meta) as dst:
-            dst.write(hsg1, indexes=1)
-
-        self.uw.reproject_raster(self.hsg_filename, self.hsg_filename_prj)
-        self.hsg = self.uw.align_rasters(self.hsg_filename_prj, self.clipped_dem)[0]
-        self.hsg = np.where(self.lc !=50, self.hsg, 4) #adjusting soil for urban areas
+        self.clipped_lc = f'{self.working_dir}/land_cover/lc_clipped.tif'
 
 #============================================================================================================================        
     def compute_CN2(self):
          #initialize land cover model and download land_cover data
         #print(' 3. Calculating CN2')
+        with rasterio.open(self.clipped_lc) as lcd:
+            lc = lcd.read(1)
+
+        with rasterio.open(self.hsg_filename_prj) as hd:
+            hsg = hd.read(1)
+            hsg = np.where(lc !=50, hsg, 4) #adjusting soil for urban areas
 
         # Define lookup table for computin cn2
         #land cover is based on esa world cover
@@ -171,11 +90,10 @@ class DeepSTRMM:
         }
                 
         self.cn2 = np.zeros_like(self.lc)
-        self.lc = self.lc.astype(int)
+        lc = lc.astype(int)
         for keys, val in lookup_table.items():  
-            lc_key, soil_key = keys
-            #print('Processing for ' + lc_key + ' ' + soil_key)            
-            pp = np.where((self.lc==int(lc_key)) & (self.hsg==int(soil_key)), val, 0)
+            lc_key, soil_key = keys          
+            pp = np.where((lc==int(lc_key)) & (hsg==int(soil_key)), val, 0)
             self.cn2 = np.add(self.cn2, pp)
 
 #========================================================================================================================  
@@ -206,9 +124,14 @@ class DeepSTRMM:
 
 
 #========================================================================================================================  
-    def compute_runoff_route_flow(self):        
-        self._download_input_data()
-        self.compute_HSG()
+    def compute_runoff_route_flow(self, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):  
+
+        align_dem = rasterio.open(self.clipped_dem).read(1)
+        self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
+        self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
+
+        #self._download_input_data()
+        #self.compute_HSG()
         self.compute_CN2()
         self.compute_CN3(self.cn2)
         self.adjust_CN2_slp()
@@ -219,10 +142,10 @@ class DeepSTRMM:
         eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
         # Load observed streamflow and climate data
-        tasmax_period = self.tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        tasmin_period = self.tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        tmean_period = self.tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        rf = self.prep_nc.pr.sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
+        tasmax_period = tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
+        tasmin_period = tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
+        tmean_period = tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
+        rf = prep_nc.pr.sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
         rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32)).values
         
         td = np.sqrt(tasmax_period - tasmin_period)

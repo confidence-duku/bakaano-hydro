@@ -10,7 +10,6 @@ from tensorflow.keras.models import Model # type: ignore
 from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU # type: ignore
 from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
-from tensorflow.keras.optimizers import Adam # type: ignore
 import glob
 import pysheds.grid
 import rasterio

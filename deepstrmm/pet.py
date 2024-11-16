@@ -10,8 +10,6 @@ class PotentialEvapotranspiration:
         self.end_date = end_date
         self.uw = Utils(project_name, self.study_area)
         self.uw.get_bbox('EPSG:4326')
-
-
     
     def compute_PET(self, day_pet_params, latgrids, tmean):
         
