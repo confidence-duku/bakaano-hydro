@@ -11,7 +11,7 @@ from concurrent.futures import ThreadPoolExecutor
 # class ChelsaDataDownloader:
 #     def __init__(self, project_name, study_area):
 #         self.study_area = study_area
-#         self.project_name = project_name
+#         self.working_dir = project_name
     
 #     def get_chelsa_clim_data(self):
 #         client = ISIMIPClient()
@@ -25,7 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 #         paths = [file['path'] for file in dataset['files']]
 #         ds = client.cutout(paths, bbox=[self.study_area[0], self.study_area[2], 
 #                                         self.study_area[1], self.study_area[3]], poll=10)
-#         client.download(ds['file_url'], path=f'./projects/{self.project_name}/input_data/tasmax', validate=False, extract=True)
+#         client.download(ds['file_url'], path=f'./projects/{self.working_dir}/input_data/tasmax', validate=False, extract=True)
 
 #         #downloading tasmin
 #         response = client.datasets(simulation_round='ISIMIP3a', product='InputData', climate_forcing='chelsa-w5e5',
@@ -36,7 +36,7 @@ from concurrent.futures import ThreadPoolExecutor
 #         paths = [file['path'] for file in dataset['files']]
 #         ds = client.cutout(paths, bbox=[self.study_area[0], self.study_area[2], 
 #                                         self.study_area[1], self.study_area[3]], poll=10)
-#         client.download(ds['file_url'], path=f'./projects/{self.project_name}/input_data/tasmin', validate=False, extract=True)
+#         client.download(ds['file_url'], path=f'./projects/{self.working_dir}/input_data/tasmin', validate=False, extract=True)
 
 #         #downloading srad
 #         response = client.datasets(simulation_round='ISIMIP3a', product='InputData', climate_forcing='chelsa-w5e5',
@@ -47,13 +47,13 @@ from concurrent.futures import ThreadPoolExecutor
 #         paths = [file['path'] for file in dataset['files']]
 #         ds = client.cutout(paths, bbox=[self.study_area[0], self.study_area[2], 
 #                                         self.study_area[1], self.study_area[3]], poll=10)
-#         client.download(ds['file_url'], path=f'./projects/{self.project_name}/input_data/srad', validate=False, extract=True)
+#         client.download(ds['file_url'], path=f'./projects/{self.working_dir}/input_data/srad', validate=False, extract=True)
 
 
 class ChelsaDataDownloader:
     def __init__(self, project_name, study_area):
         self.study_area = study_area
-        self.project_name = project_name
+        self.working_dir = project_name
         self.client = ISIMIPClient()
 
     def _download_data(self, climate_variable, output_folder):
@@ -76,7 +76,7 @@ class ChelsaDataDownloader:
             poll=10
         )
         
-        download_path = f'./projects/{self.project_name}/input_data/{output_folder}'
+        download_path = f'./projects/{self.working_dir}/input_data/{output_folder}'
         os.makedirs(download_path, exist_ok=True)
         self.client.download(ds['file_url'], path=download_path, validate=False, extract=True)
 

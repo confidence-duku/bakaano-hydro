@@ -23,7 +23,7 @@ class LandsatDownloader:
         self.output_dir = f'./projects/{project_name}/input_data'
         self.username = 'conficonfi'
         self.password = '1984@ConfiConfi'
-        self.project_name = project_name
+        self.working_dir = project_name
         #self.dataset_id = landsat_dataset_id
        
         self.study_area = study_area
@@ -57,11 +57,11 @@ class LandsatDownloader:
         ee = EarthExplorer(self.username, self.password)
         api = API(self.username, self.password)
         
-        os.makedirs(f'./projects/{self.project_name}/input_data/lst', exist_ok=True)
-        lst_path = Path(f'./projects/{self.project_name}/input_data/lst')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/lst', exist_ok=True)
+        lst_path = Path(f'./projects/{self.working_dir}/input_data/lst')
         
-        os.makedirs(f'./projects/{self.project_name}/input_data/landsat_indices', exist_ok=True)
-        landsat_indices_path = Path(f'./projects/{self.project_name}/input_data/landsat_indices')
+        os.makedirs(f'./projects/{self.working_dir}/input_data/landsat_indices', exist_ok=True)
+        landsat_indices_path = Path(f'./projects/{self.working_dir}/input_data/landsat_indices')
 
         lat, lon = self.getlatlng()
         

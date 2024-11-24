@@ -579,7 +579,7 @@ def analyse_scenario(event):
     create_project_structure(proj_name, nbs_type)
 
     if nbs_type not in ["Urban greening", "None"]:
-        from hydro.hydro import DeepSTRMM
+        from hydro.deepstrmm import DeepSTRMM
 
         ds = DeepSTRMM(proj_name, clicked_bbox)
 
