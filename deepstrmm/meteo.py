@@ -4,6 +4,7 @@ from isimip_client.client import ISIMIPClient
 from deepstrmm.utils import Utils
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
+import xarray as xr
 
 
 class Meteo:
@@ -99,10 +100,15 @@ class Meteo:
             tmean_nc = self.uw.concat_nc(self.tmean_path, '*tas_*.nc')
             prep_nc = self.uw.concat_nc(self.prep_path, '*pr_*.nc')
 
-            tasmax_nc = self.uw.align_rasters(tasmax_nc, israster=False)
-            tasmin_nc = self.uw.align_rasters(tasmin_nc, israster=False)
-            tmean_nc = self.uw.align_rasters(tmean_nc, israster=False)
-            prep_nc = self.uw.align_rasters(prep_nc, israster=False)
+            # prep_nc = prep_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
+            # tasmax_nc = tasmax_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
+            # tasmin_nc = tasmin_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
+            # tmean_nc = tmean_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
+
+            # tasmax_nc = self.uw.align_rasters(tasmax_nc, israster=False)
+            # tasmin_nc = self.uw.align_rasters(tasmin_nc, israster=False)
+            # tmean_nc = self.uw.align_rasters(tmean_nc, israster=False)
+            # prep_nc = self.uw.align_rasters(prep_nc, israster=False)
         else:
             try:
                 if not all([self.prep_path, self.tasmax_path, self.tasmin_path, self.tmean_path]):
@@ -125,10 +131,15 @@ class Meteo:
             except Exception as e:
                 print(f"An unexpected error occurred while processing local data: {e}")
 
-            tasmax_nc = self.uw.align_rasters(self.tasmax_path, israster=False)
-            tasmin_nc = self.uw.align_rasters(self.tasmin_path, israster=False)
-            tmean_nc = self.uw.align_rasters(self.tmean_path, israster=False)
-            prep_nc = self.uw.align_rasters(self.prep_path, israster=False)
+            # tasmax_nc = self.uw.align_rasters(self.tasmax_path, israster=False)
+            # tasmin_nc = self.uw.align_rasters(self.tasmin_path, israster=False)
+            # tmean_nc = self.uw.align_rasters(self.tmean_path, israster=False)
+            # prep_nc = self.uw.align_rasters(self.prep_path, israster=False)
+            
+            tasmax_nc = xr.open_dataset(self.tasmax_path)
+            tasmin_nc = xr.open_dataset(self.tasmin_path)
+            tmean_nc = xr.open_dataset(self.tmean_path)
+            prep_nc = xr.open_dataset(self.prep_path)
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 

@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+import xarray as xr
 import rioxarray
 import rasterio
 from datetime import datetime
@@ -16,6 +17,7 @@ import matplotlib.pyplot as plt
 import pickle
 import gc
 import scipy as sp
+from concurrent.futures import ProcessPoolExecutor
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
@@ -123,7 +125,7 @@ class DeepSTRMM:
         self.cn3 = np.multiply(cn2, np.exp(np.multiply(0.00673, p1)))
 
 
-#========================================================================================================================  
+#=================================================================================================================
     def compute_runoff_route_flow(self, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):  
 
         align_dem = rasterio.open(self.clipped_dem).read(1)
@@ -142,11 +144,16 @@ class DeepSTRMM:
         eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
         # Load observed streamflow and climate data
-        tasmax_period = tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        tasmin_period = tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        tmean_period = tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
-        rf = prep_nc.pr.sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
-        rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32)).values
+        tasmax_var = list(tasmax_nc.data_vars)[0]
+        tasmin_var = list(tasmin_nc.data_vars)[0]
+        tmean_var = list(tmean_nc.data_vars)[0]
+        prep_var = list(prep_nc.data_vars)[0]
+
+        tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
+        tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
+        tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
+        rf = prep_nc[prep_var].sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
+        rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
         
         td = np.sqrt(tasmax_period - tasmin_period)
         pet_params = 0.408 * 0.0023 * (tmean_period + 17.8) * td
@@ -154,14 +161,13 @@ class DeepSTRMM:
         self.pet_params = pet_params.assign_coords(
             lat=pet_params['lat'].astype(np.float32),
             lon=pet_params['lon'].astype(np.float32)
-        ).values
+        )
 
         #pet_params = pet_params.values
         # Extract latitude and expand dimensions to match the lon dimension
         latsg = tmean_period[0]['lat']
         latsg = latsg.astype(np.float32)
         self.latgrids = latsg.expand_dims(lon=tmean_period[0]['lon'], axis=[1]).values
-       
         
         # Initial soil moisture condition
         smax = ((1000 / self.cn1) - 10) * 25.4
@@ -178,11 +184,16 @@ class DeepSTRMM:
         self.wacc_list = []
         self.mam_ro, self.jja_ro, self.son_ro, self.djf_ro = 0, 0, 0, 0
         self.mam_wfa, self.jja_wfa, self.son_wfa, self.djf_wfa = 0, 0, 0, 0
-        this_date = datetime.strptime(self.start_date, '%Y-%m-%d')
+
         for count in range(rf.shape[0]):
-            #start_time = time.perf_counter()
+            if count % 365 == 0:
+                year_num = (count // 365) + 1
+                print(f'Computing surface runoff and routing flow to river channels in year {year_num}')
             this_rf = rf[count]
+            this_rf = self.uw.align_rasters(this_rf, israster=False)
+
             this_et = eto.compute_PET(self.pet_params[count], self.latgrids, tmean_period[count])
+            this_et = self.uw.align_rasters(this_et, israster=False)
             
             p1 = this_rf - (0.2 * s)
             p2 = p1**2
@@ -190,8 +201,7 @@ class DeepSTRMM:
             p4 = this_rf + (0.8 * s)
             q_surf = p3 / p4
             q_surf = np.where(q_surf>0, q_surf, 0)
-            
-            #self.qlist.append(q_surf)
+
             # Adjust retention parameter at the end of the day
             s1 = np.exp((self.cncoef * s) / smax)
             s = np.add(np.multiply(this_et, s1), s) - this_rf + q_surf
@@ -216,11 +226,8 @@ class DeepSTRMM:
                 
             wacc = wacc * facc_mask            
             wacc = sp.sparse.coo_array(wacc)
-            self.wacc_list.append(wacc)
-        
-            #end_time = time.perf_counter()
-            #print(f"     Execution time: for day {count} is {end_time - start_time} seconds")            
-            gc.collect()
+            self.wacc_list.append(wacc)            
+            #gc.collect()
             
        
         # Save seasonal data using rasterio
@@ -228,7 +235,10 @@ class DeepSTRMM:
             s_meta = out.profile
 
         out_meta = s_meta.copy()
-        out_meta.update({"compress": "lzw"})
+        out_meta.update({
+            "dtype": "float64",
+            "compress": "lzw"
+        })
 
         seasons = ['djf', 'mam', 'jja', 'son']
         attributes = ['wfa', 'ro']
@@ -249,7 +259,7 @@ class DeepSTRMM:
 #=========================================================================================================================================
     def train_streamflow_model(self, grdc_netcdf):
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, '1989-01-01', '2016-12-31')
+        sdp = DataPreprocessor(self.working_dir, self.study_area, self.start_date, self.start_date)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         #print('There are ')
@@ -270,8 +280,8 @@ class DeepSTRMM:
         smodel.train_model()
 #========================================================================================================================  
                 
-    def simulate_streamflow(self, station_name, model_path, grdc_netcdf):
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, '1981-01-01', '1988-12-31')
+    def evaluate_streamflow_model(self, station_name, model_path, grdc_netcdf):
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.start_date)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         #print(vdp.sim_station_names)
         self.stat_names = vdp.sim_station_names
@@ -296,18 +306,13 @@ class DeepSTRMM:
         self.vmodel.load_model(model_path)
         y2 = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
         predicted_streamflow = np.where(y2<0, 0, y2)
-        self.ps = predicted_streamflow
-        
-        lat = vdp.y
-        lon = vdp.x
         self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow)
-        #return predicted_streamflow
        
         
 #========================================================================================================================  
 
     def simulate_streamflow_latlng(self, model_path, lat, lon):
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, self.start_date, self.end_date)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
         
         rawdata = vdp.get_data_latlng(lat, lon)
 

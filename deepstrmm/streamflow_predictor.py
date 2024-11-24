@@ -22,7 +22,7 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area, start_date, end_date, sim_start, sim_end):
+    def __init__(self, working_dir,  study_area, start_date, end_date):
         """
         Initialize directories, dates and relevant variables
         
@@ -35,8 +35,6 @@ class PredictDataPreprocessor:
         self.study_area = study_area
         self.start_date = start_date
         self.end_date = end_date
-        self.sim_start = sim_start
-        self.sim_end = sim_end
         self.working_dir = working_dir
         self.times = pd.date_range(start_date, end_date)
         self.grdc_subset = self.load_observed_streamflow()
@@ -102,8 +100,8 @@ class PredictDataPreprocessor:
 
         # Filter the GRDC dataset based on time and station names
         filtered_grdc = grdc.where(
-            (grdc['time'] >= pd.to_datetime(self.sim_start)) &
-            (grdc['time'] <= pd.to_datetime(self.sim_end)) &
+            (grdc['time'] >= pd.to_datetime(self.start_date)) &
+            (grdc['time'] <= pd.to_datetime(self.end_date)) &
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
@@ -114,9 +112,8 @@ class PredictDataPreprocessor:
 
         count = 1
         
-        slope = f'{self.working_dir}/elevation/slope_{self.working_dir}.tif'
-        dem_filepath = f'{self.working_dir}/elevation/dem_{self.working_dir}.tif'
-        land_cover = f'{self.working_dir}/land_cover/lc_{self.working_dir}.tif'
+        slope = f'{self.working_dir}/elevation/slope_clipped.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -188,7 +185,13 @@ class PredictDataPreprocessor:
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
             #extract wfa data based on defined training period
-            wfa_data = full_wfa_data[self.sim_start: self.sim_end]
+            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data2 = wfa_data1/acc_data
+            wfa_data2.rename(columns={'mfd_wfa': 'scaled_with_acc'}, inplace=True)
+            wfa_data3 = wfa_data1 / slp_data
+            wfa_data3.rename(columns={'mfd_wfa': 'scaled_with_slp'}, inplace=True)
+            wfa_data4 = wfa_data1.join([wfa_data2])
+            wfa_data = wfa_data4.join([wfa_data3])
             #wfa_data = wfa_data / acc_data
             all_wfa.append(wfa_data)
 
@@ -269,7 +272,13 @@ class PredictDataPreprocessor:
         full_wfa_data.index.name = 'time'  # Rename the index to 'time'
 
         #extract wfa data based on defined training period
-        wfa_data = full_wfa_data[self.sim_start: self.sim_end]
+        wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+        wfa_data2 = wfa_data1/acc_data
+        wfa_data2.rename(columns={'mfd_wfa': 'scaled_with_acc'}, inplace=True)
+        wfa_data3 = wfa_data1 / slp_data
+        wfa_data3.rename(columns={'mfd_wfa': 'scaled_with_slp'}, inplace=True)
+        wfa_data4 = wfa_data1.join([wfa_data2])
+        wfa_data = wfa_data4.join([wfa_data3])
 
         predictors = wfa_data.copy()
         predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -298,7 +307,7 @@ class PredictStreamflow:
         self.batch_size = 64
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 2
+        self.num_dynamic_features = 3
         self.num_static_features = 2
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
@@ -319,11 +328,8 @@ class PredictStreamflow:
         predictors = list(map(lambda xy: xy[0], data_list[0]))
         response = list(map(lambda xy: xy[1], data_list[0]))
 
-        train_predictors = predictors
-        train_response = response
         train_catchment = np.array(data_list[1])
         all_wfa = data_list[2]
-        id_list = np.array(data_list[3])
                 
         full_train_predictors = []
         train_catchment_list = []
@@ -331,9 +337,7 @@ class PredictStreamflow:
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
         
-        #catchment_num = catchment_num.reshape(-1,self.num_static_features)
         
-        #trained_catchment_scaler = catchment_scaler.fit(catchment_num)
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
         scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
@@ -341,36 +345,16 @@ class PredictStreamflow:
             scaler1 = pickle.load(file)
 
 
-        for x, y, z, g, i in zip(predictors, response, scaled_trained_catchment, all_wfa, id_list):
-            
-            #scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['global']).values
-            scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
-            sid = str(i)
-            with open(f'{self.working_dir}/models/station_{sid}_scaler.pkl', 'rb') as file:
-                scaler3 = pickle.load(file)
-            scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
-            scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
-
-            
-            # Calculate the 
+        for x, y, z, g in zip(predictors, response, scaled_trained_catchment, all_wfa):
+            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['mfd_wfa', 'scaled_acc', 'scaled_slp']).values 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps
             predictor_samples = []
-            #response_samples = []
             catchment_samples = []
             
-            # Iterate over each batch
             for i in range(num_samples):
-                # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-                
-                #response_batch = scaled_train_response[i+self.timesteps]
-                #response_batch = response_batch.reshape(1)
-                
-                # Append the batch to the list
                 predictor_samples.append(predictor_batch)
-                #response_samples.append(response_batch)
-                
                 catchment_samples.append(z)
             
             timesteps_to_keep = []
@@ -380,16 +364,13 @@ class PredictStreamflow:
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)
-            #scaled_train_response_filtered = np.array(response_samples)
             scaled_train_catchment_filtered = np.array(catchment_samples)
             
             full_train_predictors.append(scaled_train_predictor_filtered)
-            #full_train_response.append(scaled_train_response_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
             
         self.predictors = np.concatenate(full_train_predictors, axis=0)
         self.this_wfa = g.values
-        #self.response = np.concatenate(full_train_response, axis=0)
         self.catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1,self.num_static_features)
         
     

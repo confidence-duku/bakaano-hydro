@@ -75,5 +75,6 @@ class DEM:
     def plot_dem(self):
         dem_data = rioxarray.open_rasterio(self.out_path)
         dem_data = dem_data.where(dem_data > 0)
+        #dem_data = dem_data.where(dem_data < 32000)
         dem_data.plot(cmap='terrain')
         

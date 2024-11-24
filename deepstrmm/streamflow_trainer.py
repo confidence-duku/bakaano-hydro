@@ -68,7 +68,7 @@ class DataPreprocessor:
     get_data():
         Extracts predictors for multiple stations
     """
-    def __init__(self,  working_dir, study_area, start_date, end_date, sim_start, sim_end):
+    def __init__(self,  working_dir, study_area, start_date, end_date):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -91,10 +91,8 @@ class DataPreprocessor:
         self.study_area = study_area
         self.start_date = start_date
         self.end_date = end_date
-        self.sim_start = sim_start
-        self.sim_end = sim_end
         self.working_dir = working_dir
-        self.times = pd.date_range(start_date, end_date)
+        #self.times = pd.date_range(start_date, end_date)
         self.grdc_subset = self.load_observed_streamflow()
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         self.data_list = []
@@ -121,7 +119,7 @@ class DataPreprocessor:
             The column index corresponding to the given latitude and longitude.
 
         """
-        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
             data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
@@ -146,7 +144,7 @@ class DataPreprocessor:
             The longitude of the nearest river segment.
         """
         coordinate_to_snap=(lon, lat)
-        with rasterio.open(f'{self.working_dir}/elevation/dem_{self.working_dir}.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
             transform = src.transform
 
             river_coords = []
@@ -204,13 +202,12 @@ class DataPreprocessor:
 
         # Filter the GRDC dataset based on time and station names
         filtered_grdc = grdc.where(
-            (grdc['time'] >= pd.to_datetime(self.sim_start)) &
-            (grdc['time'] <= pd.to_datetime(self.sim_end)) &
+            (grdc['time'] >= pd.to_datetime(self.start_date)) &
+            (grdc['time'] <= pd.to_datetime(self.end_date)) &
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
         
-        #self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
         return filtered_grdc
     
                           
@@ -225,21 +222,16 @@ class DataPreprocessor:
             - self.data_list: A list of tuples, each containing predictors (DataFrame) and response (DataFrame).
             - self.catchment: A list of tuples, each containing catchment data (accumulation and slope values).
         """
-        all_predictors = []
-        all_responses = []
         count = 1
         
-        slope = f'{self.working_dir}/elevation/slope_{self.working_dir}.tif'
-        dem_filepath = f'{self.working_dir}/elevation/dem_{self.working_dir}.tif'
-        land_cover = f'{self.working_dir}/land_cover/lc_{self.working_dir}.tif'
-
+        slope = f'{self.working_dir}/elevation/slope_clipped.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
         
         flooded_dem = grid.fill_depressions(dem)
-        # Resolve flats
         inflated_dem = grid.resolve_flats(flooded_dem)
         fdir = grid.flowdir(inflated_dem, routing='mfd')
         acc = grid.accumulation(fdir=fdir, routing='mfd')
@@ -250,13 +242,10 @@ class DataPreprocessor:
         weight2 = grid.read_raster(slope)
         cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
         
-        
-        
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
         latlng_ras = latlng_ras.rio.write_crs(4326)
         lat = latlng_ras['y'].values
         lon = latlng_ras['x'].values
-        
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
@@ -310,9 +299,13 @@ class DataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
-            #extract wfa data based on defined training period
-            wfa_data = full_wfa_data[self.sim_start: self.sim_end]
-            #wfa_data = wfa_data/acc_data
+            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data2 = wfa_data1/acc_data
+            wfa_data2.rename(columns={'mfd_wfa': 'scaled_with_acc'}, inplace=True)
+            wfa_data3 = wfa_data1 / slp_data
+            wfa_data3.rename(columns={'mfd_wfa': 'scaled_with_slp'}, inplace=True)
+            wfa_data4 = wfa_data1.join([wfa_data2])
+            wfa_data = wfa_data4.join([wfa_data3])
             
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
 
@@ -376,7 +369,7 @@ class StreamflowModel:
         self.batch_size = 128
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 2
+        self.num_dynamic_features = 3
         self.num_static_features = 2
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
@@ -406,8 +399,6 @@ class StreamflowModel:
                 
         full_train_predictors = []
         full_train_response = []
-        full_val_predictors = []
-        full_val_response = []
         train_catchment_list = []
         full_weights = []
         
@@ -419,23 +410,14 @@ class StreamflowModel:
             pickle.dump(trained_catchment_scaler, file)
 
         concatenated_predictors = pd.concat(train_predictors, axis=0)
-        concatenated_response = pd.concat(train_response, axis=0)
         
         scaler1 = rscaler.fit(concatenated_predictors)
         with open(f'{self.working_dir}/models/global_predictor_scaler.pkl', 'wb') as file:
             pickle.dump(scaler1, file)
 
         for x, y, z, w, i in zip(predictors, train_response, train_catchment, weight_list, id_list):
-            pscaler = StandardScaler()
-            sid = str(i)
             
-            scaled_train_predictor1 = pd.DataFrame(scaler1.transform(x), columns=['global'])
-            scaler3 = pscaler.fit(x)
-            scaled_train_predictor3 = pd.DataFrame(scaler3.transform(x), columns=['independent'])
-            with open(f'{self.working_dir}/models/station_{sid}_scaler.pkl', 'wb') as file3:
-                pickle.dump(scaler3, file3)
-            
-            scaled_train_predictor = scaled_train_predictor1.join([scaled_train_predictor3]).values
+            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['mfd_wfa', 'scaled_acc', 'scaled_slp']).values 
             
             scaled_train_response = y.values
            

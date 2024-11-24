@@ -18,6 +18,9 @@ class Utils:
     def __init__(self, working_dir, study_area):
         self.study_area = study_area
         self.working_dir = working_dir
+        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
+        self.match = rioxarray.open_rasterio(reference_data)
+        self.match = self.match.rio.write_crs(4326)
         
     def process_existing_file(self, file_path):
         directory, filename = os.path.split(file_path)
@@ -70,21 +73,17 @@ class Utils:
     def align_rasters(self, input_ras, israster=True):
         #print('     - Aligning raster in terms of extent, resolution and projection')
 
-        # Open the DEM raster with caching to avoid reopening it multiple times
-        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
-        match = rioxarray.open_rasterio(reference_data)
-        match = match.rio.write_crs(4326)
-
         # Read and align the input raster
         if israster:
             ds = rioxarray.open_rasterio(input_ras)
             ds = ds.rio.write_crs(4326)
-            ds = ds.rio.reproject_match(match)
+            ds = ds.rio.reproject_match(self.match, resampling=Resampling.nearest)
         else:
             ds = input_ras
             ds = ds.rio.write_crs(4326)
             ds = ds.rename({'lon': 'x', 'lat': 'y'})
-            ds = ds.rio.reproject_match(match)
+            # ds = ds.chunk({'x': 100, 'y': 100})
+            ds = ds.rio.reproject_match(self.match, resampling=Resampling.average)
         return ds
     
     def get_bbox(self, dst_crs):
@@ -112,7 +111,8 @@ class Utils:
         #nc_list = []
         self.get_bbox('EPSG:4326')
         files = list(map(str, clim_dir.glob(dataset_str)))
-        ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override')
+        #ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override')
+        ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override', chunks={'time': 100})
         ds2 = ds.sortby('time')
         data_var = ds2.sel()
         data_var = data_var.rio.write_crs(4326)  # Ensure consistent CRS            
@@ -156,17 +156,24 @@ class Utils:
         with rasterio.open(raster_path) as src:
             out_image, out_transform = rasterio.mask.mask(src, shapes, crop=True)
             out_meta = src.meta
-            out_image = np.where(out_image == src.nodata, np.nan, out_image)
+            #out_image = out_image.astype(np.float32)
+            #out_image = np.where(out_image == src.nodata, np.nan, out_image)
+            out_image[(out_image > 32600) | (out_image < -32600)] = -9999
 
         if save_output==True:
             if out_path!=None:
-                out_meta.update({"driver": "GTiff",
+                #out_image = np.where(np.isnan(out_image) | np.isinf(out_image), 0, out_image)  # Handle NaN/inf
+                #out_image = out_image.astype(np.float32)  # Ensure consistent dtype
+                out_meta.update({
+                    "driver": "GTiff",
                     "height": out_image.shape[1],
                     "width": out_image.shape[2],
-                    "transform": out_transform})
+                    "transform": out_transform,
+                    "nodata": -9999
+                })
         
                 with rasterio.open(out_path, "w", **out_meta) as dest:
                     dest.write(out_image)
             else:
                 print('out_path should not be None. Provide path where clipped raster should be saved')
-        return out_image.astype('float32')
+        return out_image
