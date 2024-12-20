@@ -18,9 +18,9 @@ class Utils:
     def __init__(self, working_dir, study_area):
         self.study_area = study_area
         self.working_dir = working_dir
-        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
-        self.match = rioxarray.open_rasterio(reference_data)
-        self.match = self.match.rio.write_crs(4326)
+        # reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
+        # self.match = rioxarray.open_rasterio(reference_data)
+        # self.match = self.match.rio.write_crs(4326)
         
     def process_existing_file(self, file_path):
         directory, filename = os.path.split(file_path)
@@ -72,7 +72,9 @@ class Utils:
     
     def align_rasters(self, input_ras, israster=True):
         #print('     - Aligning raster in terms of extent, resolution and projection')
-
+        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
+        self.match = rioxarray.open_rasterio(reference_data)
+        self.match = self.match.rio.write_crs(4326)
         # Read and align the input raster
         if israster:
             ds = rioxarray.open_rasterio(input_ras)
@@ -158,6 +160,7 @@ class Utils:
             out_meta = src.meta
             #out_image = out_image.astype(np.float32)
             #out_image = np.where(out_image == src.nodata, np.nan, out_image)
+            out_image = out_image.astype('float32')
             out_image[(out_image > 32600) | (out_image < -32600)] = -9999
 
         if save_output==True:

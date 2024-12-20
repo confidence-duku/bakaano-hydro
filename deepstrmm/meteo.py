@@ -81,7 +81,7 @@ class Meteo:
                 'pr': 'prep'
             }
             
-            with ThreadPoolExecutor(max_workers=3) as executor:
+            with ThreadPoolExecutor(max_workers=4) as executor:
                 futures = {
                     executor.submit(self._download_data, variable, folder): variable
                     for variable, folder in climate_variables.items()
@@ -100,10 +100,7 @@ class Meteo:
             tmean_nc = self.uw.concat_nc(self.tmean_path, '*tas_*.nc')
             prep_nc = self.uw.concat_nc(self.prep_path, '*pr_*.nc')
 
-            # prep_nc = prep_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
-            # tasmax_nc = tasmax_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
-            # tasmin_nc = tasmin_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
-            # tmean_nc = tmean_nc.chunk({'time': 100, 'lat': 100, 'lon': 100})
+        
 
             # tasmax_nc = self.uw.align_rasters(tasmax_nc, israster=False)
             # tasmin_nc = self.uw.align_rasters(tasmin_nc, israster=False)
@@ -142,6 +139,28 @@ class Meteo:
             prep_nc = xr.open_dataset(self.prep_path)
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
+    
+    def export_urls_for_download_manager(self):
+        climate_variables = ['tasmax', 'tasmin', 'tas', 'pr']
+        all_urls = []
+
+        for climate_variable in climate_variables:
+            response = self.client.datasets(
+                simulation_round='ISIMIP3a',
+                product='InputData',
+                climate_forcing='chelsa-w5e5',
+                climate_scenario='obsclim',
+                resolution='30arcsec',
+                time_step='daily',
+                climate_variable=climate_variable
+            )
+
+            dataset = response["results"][0]
+            urls = [file['file_url'] for file in dataset['files']]
+            #all_urls.extend(urls)
+
+            with open(os.path.join(f'{self.working_dir}/', f"{climate_variable}_download_urls.txt"), "w") as f:
+                f.write("\n".join(urls))
 
         
         
