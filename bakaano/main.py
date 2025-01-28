@@ -261,18 +261,6 @@ class BakaanoAI:
 #==========================================================================================================================================
     def compute_veget_runoff_route_flow(self, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):  
 
-        # align_dem = rasterio.open(self.clipped_dem).read(1)
-        # self.rd_dem = rd.rdarray(align_dem, no_data=-9999)
-        # self.lc = rioxarray.open_rasterio(self.clipped_lc)[0]
-
-        # #self._download_input_data()
-        # #self.compute_HSG()
-        # self.compute_CN2()
-        # self.compute_CN3(self.cn2)
-        # self.adjust_CN2_slp()
-        # self.compute_CN3(self.cn2_slp)
-        # self.compute_CN1(self.cn2_slp)
-
         # Initialize potential evapotranspiration and data preprocessor
         eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
@@ -519,10 +507,6 @@ class BakaanoAI:
         kge = hydroeval.kge(predicted, observed)
         return nse, kge
         
-
-
-    
-
 #===========================================================================================================      
 
     
