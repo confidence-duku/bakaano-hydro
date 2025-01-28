@@ -2,7 +2,7 @@ import rioxarray
 import rasterio
 import numpy as np
 from owslib.wcs import WebCoverageService
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 from rasterio.io import MemoryFile
 from pathlib import Path
 import os

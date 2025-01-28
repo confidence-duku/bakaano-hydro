@@ -28,7 +28,7 @@ class RunoffRouter:
             self.dem_nodata = dm.nodata
             
     
-    def convert_runoff_layers(self, runoff_array, runoff_out_name):
+    def convert_runoff_layers(self, runoff_array):
         """
         Convert simulated daily runoff numpy array to geotiff files, the format required by Pysheds module for weighted flow accumulation computation.
         
@@ -41,14 +41,15 @@ class RunoffRouter:
         """
 
         self.dem_profile.update(dtype=rasterio.float32, count=1)
-        with rasterio.open(runoff_out_name, 'w', **self.dem_profile) as dst:
+        runoff_tiff = f'{self.working_dir}/scratch/runoff_scratch.tif'
+        with rasterio.open(runoff_tiff, 'w', **self.dem_profile) as dst:
                 dst.write(runoff_array, 1)
                 
-        return runoff_out_name
+        return runoff_tiff
     
     def fill_dem(self):
-        self.grid = pysheds.grid.Grid.from_raster(self.dem_filepath)
-        dem = self.grid.read_raster(self.dem_filepath)
+        self.grid = pysheds.grid.Grid.from_raster(self.dem_filepath, nodata=-9999)
+        dem = self.grid.read_raster(self.dem_filepath, nodata=-9999)
         
         flooded_dem = self.grid.fill_depressions(dem)
 
