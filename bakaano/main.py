@@ -5,14 +5,14 @@ import xarray as xr
 import rioxarray
 import rasterio
 from datetime import datetime
-from deepstrmm.utils import Utils
-from deepstrmm.pet import PotentialEvapotranspiration
-from deepstrmm.router import RunoffRouter
-from deepstrmm.soil_veget import Soil
-from deepstrmm.ndvi import NDVI
-from deepstrmm.tree_cover import VCF
-from deepstrmm.streamflow_trainer import DataPreprocessor, StreamflowModel
-from deepstrmm.streamflow_predictor import PredictDataPreprocessor, PredictStreamflow
+from bakaano.utils import Utils
+from bakaano.pet import PotentialEvapotranspiration
+from bakaano.router import RunoffRouter
+from bakaano.soil_veget import Soil
+from bakaano.ndvi import NDVI
+from bakaano.tree_cover import VCF
+from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
+from bakaano.streamflow_predictor import PredictDataPreprocessor, PredictStreamflow
 import richdem as rd
 import warnings
 import hydroeval
@@ -25,7 +25,7 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 
 
 #========================================================================================================================  
-class DeepSTRMM:
+class BakaanoAI:
     """Generate an instance
     """
     def __init__(self, working_dir, study_area_path, start_date, end_date):
@@ -361,7 +361,9 @@ class DeepSTRMM:
             ks = np.where(soil_moisture < max_allowable_depletion, (soil_moisture/max_allowable_depletion), 1)
             ETa = this_et * ks * this_kcp
             soil_moisture = soil_moisture + eff_rain - ETa
+            soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0
             q_surf = np.where(soil_moisture > water_holding_capacity, (soil_moisture - water_holding_capacity), 0)
+            q_surf[np.isinf(q_surf) | np.isnan(q_surf)] = 0
 
             ETc = this_kcp * this_et
             total_ETa = total_ETa + ETa

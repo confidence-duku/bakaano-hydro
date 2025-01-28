@@ -2,7 +2,7 @@
 import requests as r
 import os
 import rioxarray
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 import zipfile
 
 class DEM:

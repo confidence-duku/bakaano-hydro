@@ -2,7 +2,7 @@
 import requests as r
 import os
 import rioxarray
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 
 class Soil:
     def __init__(self, working_dir, study_area):

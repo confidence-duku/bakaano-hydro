@@ -9,7 +9,7 @@ import xarray as xr
 import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 from rasterio.enums import Resampling
 from scipy.interpolate import interp1d
 

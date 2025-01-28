@@ -1,8 +1,8 @@
 
 import os
 import glob
-from deepstrmm.utils import Utils
-from deepstrmm.esa_worldcover_downloader import WorldCoverDownloader
+from bakaano.utils import Utils
+from bakaano.esa_worldcover_downloader import WorldCoverDownloader
 import rioxarray
 
 class LandCover:

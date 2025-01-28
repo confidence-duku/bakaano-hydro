@@ -5,7 +5,7 @@ import datetime
 import os
 import glob
 import rasterio
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 
 class VCF:
     def __init__(self, working_dir, study_area):

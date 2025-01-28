@@ -278,18 +278,12 @@ class DataPreprocessor:
             slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
             acc_data = acc_data.values
             slp_data = slp_data.values
-            
-            # if acc_data > 5000:
-            #     continue
-                
-            id_list.append(k)
 
             self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
         
     
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
             
-            col_name = f'mfd_wfa_{k}'
             station_wfa = []
             for arr in wfa_list:
                 arr = arr.tocsr()
@@ -299,10 +293,11 @@ class DataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
-            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
-            wfa_data2 = wfa_data1/acc_data
+            #extract wfa data based on defined training period
+            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
+            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_with_acc'}, inplace=True)
-            wfa_data3 = wfa_data1 / slp_data
+            wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
             wfa_data3.rename(columns={'mfd_wfa': 'scaled_with_slp'}, inplace=True)
             wfa_data4 = wfa_data1.join([wfa_data2])
             wfa_data = wfa_data4.join([wfa_data3])
@@ -313,15 +308,26 @@ class DataPreprocessor:
             predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
             response = station_discharge.drop(['id'], axis=1)
 
-            self.data_list.append((predictors, response))
-            catch_list = [acc_data, slp_data]
+            sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
+            catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon]
+            catch_list2 = np.tile(np.array(catch_list), (len(full_wfa_data),1))
+            catch_list2 = pd.DataFrame(catch_list2, columns=['acc_data', 'slp_data', 'sin_lat', 'cos_lat', 'sin_lon', 'cos_lon'])
+            catch_list2.set_index(time_index, inplace=True)
+            catch_list2.index.name = 'time'  # Rename the index to 'time'
+            catch_list2 = catch_list2[self.sim_start: self.sim_end]
+            predictors2 = predictors.join([catch_list2])
+
+            self.data_list.append((predictors2, response))
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
-            acc_list.append(acc_data)
+            #acc_list.append(acc_data)
             
             count = count + 1
+
+        with open(f'./{self.working_dir}/models/{self.working_dir}_predictor_response_data.pkl', 'wb') as file:
+                pickle.dump(self.data_list, file)
             
-        return [self.data_list, self.catchment, acc_list, id_list]
+        return [self.data_list, self.catchment]
 #=====================================================================================================================================                          
 
 class StreamflowModel:
@@ -364,13 +370,13 @@ class StreamflowModel:
         """
         self.regional_model = None
         self.train_data_list = []
-        self.timesteps = 360
-        self.num_epochs = 500
-        self.batch_size = 128
+        self.timesteps = 365
+        self.num_epochs = 200
+        self.batch_size = 256
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 3
-        self.num_static_features = 2
+        self.num_dynamic_features = 9
+        self.num_static_features = 6
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
     
@@ -392,39 +398,33 @@ class StreamflowModel:
 
         train_predictors = predictors
         train_response = response
-        train_catchment = np.array(data_list[1])
-        weight_list = 1/np.array(data_list[2])
-        weight_list = weight_list/np.sum(weight_list)
-        id_list = np.array(data_list[3])
+
                 
         full_train_predictors = []
         full_train_response = []
         train_catchment_list = []
-        full_weights = []
+        full_local_predictors = []
         
-        catchment_scaler = MinMaxScaler()
         rscaler = StandardScaler()
         
-        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
-        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
-            pickle.dump(trained_catchment_scaler, file)
-
         concatenated_predictors = pd.concat(train_predictors, axis=0)
-        
+        global_max = np.nanmax(concatenated_predictors.values[0])
+        with open(f'./{self.working_dir}/models/{self.working_dir}_global_max_mfd_wfa.pkl', 'wb') as file:
+                pickle.dump(global_max, file)
+
         scaler1 = rscaler.fit(concatenated_predictors)
-        with open(f'{self.working_dir}/models/global_predictor_scaler.pkl', 'wb') as file:
+        with open(f'./{self.working_dir}/models/global_predictor_scaler.pkl', 'wb') as file:
             pickle.dump(scaler1, file)
 
-        for x, y, z, w, i in zip(predictors, train_response, train_catchment, weight_list, id_list):
-            
-            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['mfd_wfa', 'scaled_acc', 'scaled_slp']).values 
-            
-            scaled_train_response = y.values
-           
-            
-            z2 = z.reshape(-1,self.num_static_features)
-            scaled_train_catchment = trained_catchment_scaler.transform(z2)
-            
+
+        for x, y in zip(predictors, train_response):
+            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['mfd_wfa', 'scaled_acc', 'scaled_slp', 'acc_data', 
+                                                                                 'slp_data', 'sin_lat', 'cos_lat', 'sin_lon', 'cos_lon']).values 
+            x2 = x['mfd_wfa'].values/global_max
+            #x2 = x['mfd_wfa'].values.reshape(-1,1)
+            log_local_predictor = pd.DataFrame(np.log(x2 + 0.0001), columns=['local_wfa']).values            
+            scaled_train_response = y.values /1
+                       
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
@@ -432,22 +432,24 @@ class StreamflowModel:
             response_samples = []
             catchment_samples = []
             weight_samples = []
+            local_predictor_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
                 # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
+
+                local_predictor_batch = log_local_predictor[i:i+self.timesteps, :]
+                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
                 
                 response_batch = scaled_train_response[i+self.timesteps]
                 response_batch = response_batch.reshape(1)
                 
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
+                local_predictor_samples.append(local_predictor_batch)
                 response_samples.append(response_batch)
-                
-                catchment_samples.append(scaled_train_catchment)
-                weight_samples.append(w)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -459,17 +461,15 @@ class StreamflowModel:
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
             scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
             filtered_weights = np.array(weight_samples)[timesteps_to_keep]
+            train_local_predictor_filtered = np.array(local_predictor_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
-            full_weights.append(filtered_weights)
-            #count = count + 1
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
-        self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)   
-        self.loss_weights = np.concatenate(full_weights, axis=0)
+        self.train_local_predictors = np.concatenate(full_local_predictors, axis=0)
     
               
     def build_model(self):
@@ -486,33 +486,30 @@ class StreamflowModel:
         strategy = tf.distribute.MirroredStrategy()
 
         with strategy.scope():
-            dynamic_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='dynamic_input')
-            static_input = Input(shape=(self.num_static_features,), name='static_input')
+            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
+            local_input = Input(shape=(self.timesteps, 1), name='local_input')
 
-            tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(dynamic_input)
+            tcn_output = TCN(nb_filters = 256, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(global_input)
             tcn_output = BatchNormalization()(tcn_output)
             tcn_output = Dropout(0.4)(tcn_output)
 
-            dense_output = Dense(16, activation='relu')(static_input)
-            dense_output = BatchNormalization()(dense_output)
-            dense_output = Dropout(0.4)(dense_output)
+            tcn_output1 = TCN(nb_filters = 256, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(local_input)
+            tcn_output1 = BatchNormalization()(tcn_output1)
+            tcn_output1 = Dropout(0.4)(tcn_output1)
 
-            # Concatenate the LSTM and Dense outputs
-            merged_output = Concatenate()([tcn_output,  dense_output])
+            merged_output = Concatenate()([tcn_output,  tcn_output1])
+            merged_output = BatchNormalization()(merged_output)
 
-            output1 = Dense(16)(merged_output)
+            output1 = Dense(32)(merged_output)
             output1 = LeakyReLU(alpha=0.01)(output1)
 
             # Final output layer
             output = Dense(1)(output1)
 
             # Create the model
-            self.regional_model = Model(inputs=[dynamic_input, static_input], outputs=output)
-
-            # Compile the model
-            #optimizer = Adam(learning_rate=0.00001)
-            #self.regional_model.compile(optimizer='adam', loss=weighted_mse(self.loss_weights))
+            self.regional_model = Model(inputs=[global_input, local_input], outputs=output)
             self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
 
     
@@ -528,10 +525,10 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/deepstrmm_model_tcn360.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/deepstrmm_model_tcn365.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, batch_size=self.batch_size, 
+        self.regional_model.fit(x=[self.train_predictors,self.train_local_predictors], y=self.train_response, batch_size=self.batch_size, 
                        epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
     def load_regional_model(self, path):

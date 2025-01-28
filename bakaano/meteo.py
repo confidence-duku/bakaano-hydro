@@ -1,7 +1,7 @@
 
 import os
 from isimip_client.client import ISIMIPClient
-from deepstrmm.utils import Utils
+from bakaano.utils import Utils
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import xarray as xr
