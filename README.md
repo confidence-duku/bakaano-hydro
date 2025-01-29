@@ -1,10 +1,10 @@
-# NBS Dashboard
+# Bakaano-AI
 
 ## Name
-NBS Dashboard
+Bakaano-AI
 
 ## Description
-An application that simulates nature-based solutions.
+A distributed hydrology-guided neural network modelling framework
 
 ## Installation
 
