@@ -1,7 +1,7 @@
 # Bakaano-Hydro
 
 ## Name
-Bakaano-AI
+Bakaano-Hydro
 
 ## Description
 Bakaano-Hydro  is a distributed hydrology-guided neural network modelling framework
