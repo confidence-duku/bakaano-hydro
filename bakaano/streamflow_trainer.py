@@ -336,8 +336,8 @@ class StreamflowModel:
 
     Attributes
     ----------
-    project_name : str
-        The name of the project.
+    working_dir : str
+        The working directory of the project.
     regional_model : object, optional
         The regional model used for streamflow prediction.
     train_data_list : list
@@ -356,8 +356,6 @@ class StreamflowModel:
         The number of dynamic features in the model.
     num_static_features : int
         The number of static features in the model.
-    scaled_trained_catchment : object, optional
-        The scaled catchment data used for training the model.
     """
     def __init__(self, working_dir):
         """

@@ -57,9 +57,7 @@ class BakaanoHydro:
         os.makedirs(f'{self.working_dir}/runoff_output', exist_ok=True)
         os.makedirs(f'{self.working_dir}/scratch', exist_ok=True)
         os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
-        
-        # Set the Curve Number coefficient
-        self.cncoef = -1
+      
         
         # File paths for input data
         self.hsg_filename = f'{self.working_dir}/soil/hsg.tif'
@@ -134,6 +132,7 @@ class BakaanoHydro:
         self.wacc_list = []
         self.mam_ro, self.jja_ro, self.son_ro, self.djf_ro = 0, 0, 0, 0
         self.mam_wfa, self.jja_wfa, self.son_wfa, self.djf_wfa = 0, 0, 0, 0
+        this_date = datetime.strptime(self.start_date, '%Y-%m-%d')
 
         for count in range(rf.shape[0]):
             if count % 365 == 0:
@@ -190,31 +189,33 @@ class BakaanoHydro:
             #gc.collect()
             
        
-        # Save seasonal data using rasterio
-        with rasterio.open(self.clipped_dem) as out:
-            s_meta = out.profile
+        # # Save seasonal data using rasterio
+        # year_name = datetime.strptime(self.start_date, '%Y-%m-%d').year
+        # with rasterio.open(self.clipped_dem) as out:
+        #     s_meta = out.profile
 
-        out_meta = s_meta.copy()
-        out_meta.update({
-            "dtype": "float64",
-            "compress": "lzw"
-        })
+        # out_meta = s_meta.copy()
+        # out_meta.update({
+        #     "dtype": "float64",
+        #     "compress": "lzw"
+        # })
 
-        seasons = ['djf', 'mam', 'jja', 'son']
-        attributes = ['wfa', 'ro']
+        # seasons = ['djf', 'mam', 'jja', 'son']
+        # attributes = ['wfa', 'ro']
 
-        for season in seasons:
-            for attr in attributes:
-                filename = f'{self.working_dir}/runoff_output/{season}_{attr}.tif'
-                data = getattr(self, f'{season}_{attr}')
-                with rasterio.open(filename, 'w', **out_meta) as dst:
-                    dst.write(data, indexes=1)
+        # for season in seasons:
+        #     for attr in attributes:
+        #         filename = f'{self.working_dir}/runoff_output/{season}_{attr}_{year_name}.tif'
+        #         data = getattr(self, f'{season}_{attr}')
+        #         with rasterio.open(filename, 'w', **out_meta) as dst:
+        #             dst.write(data, indexes=1)
 
         # Save station weighted flow accumulation data
         filename = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
         
         with open(filename, 'wb') as f:
-            pickle.dump(self.wacc_list, f)    
+            pickle.dump(self.wacc_list, f)
+        #return soil_moisture
 #=========================================================================================================================================
     def train_streamflow_model(self, grdc_netcdf):
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
