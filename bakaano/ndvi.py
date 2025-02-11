@@ -24,7 +24,7 @@ class NDVI:
 
     def download_ndvi(self):
 
-        #ee.Authenticate()
+        ee.Authenticate()
         ee.Initialize()
 
         ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
