@@ -1,28 +1,22 @@
-# Bakaano-AI
+# Bakaano-Hydro
 
 ## Name
-Bakaano-AI
+Bakaano-Hydro
 
 ## Description
-A distributed hydrology-guided neural network modelling framework
+Bakaano-Hydro  is a distributed hydrology-guided neural network modelling framework for simulating streamflows. It integrates the distributed hydrological representations of physical-based models with the capacity of deep learning techniques to learn and generalize across basins.Bakaano-Hydro provides a complete, integrated solution for simulating land surface hydrological processes, river flow routing, and streamflow, from raw data processing to model deployment.
+
+Bakaano-Hydro leverages extensive data inputs—ranging from digital elevation models (DEMs) to meteorological time-series—and processes them through a robust sequence of automated steps. This includes the download, preprocessing, and alignment of source data, as well as regridding inputs to the desired spatial resolution, ensuring consistency and accuracy across all datasets.
+
+It is highly adaptable, providing users with two primary options for data input: they can either let the model automatically download and preprocess all relevant input data or supply their own datasets. If users choose the latter, Bakaano-Hydro accommodates them by accepting data in the widely-used WGS84 geographic coordinate system (EPSG:4326), without the need for time-consuming clipping or regridding. The model seamlessly adjusts input data to match the DEM's spatial resolution, ensuring that all variables are consistently aligned for optimal performance.
 
 ## Installation
 
-- Install VSCode on Windows
-- Install WSL (use Ubuntu 22.04.4 LTS). You can use the Microsoft store to install it.
-- Open a Linux terminal
-- Install miniforge on Linux for conda (https://github.com/conda-forge/miniforge)
+- Create and activate a conda environment 
 
 ```
-curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh"
-bash Miniforge3-$(uname)-$(uname -m).sh
-```
-
-- Create and activate a conda environment called nbs-dashboard
-
-```
-conda create --name nbs-dashboard python=3.10.4
-conda activate nbs-dashboard
+conda create --name envname python=3.10.4
+conda activate envname
 ```
 
 - Install the Python libraries to that conda environment
@@ -33,26 +27,10 @@ sudo apt-get install g++
 pip install -r requirements.txt
 ```
 
-- Install common data files
-
-```
-git clone --depth 1 --branch v1.0.0 git@git.wur.nl:FoodInformatics/nature-based-solutions/nbs-dashboard-common-data.git ./common_data
-```
-
 ## Usage
 
-- Change to the project folder and then open the project with vscode
+- See Bakaano-Hydro Tutorials
 
-```
-cd nbs-dashboard
-code .
-```
-
-- Select the correct interpreter in VSCode. Press Ctl-shift-P, and pick "Python: Select Interpreter". Then choose intepreter associated with the nbs-dashboard conda environment.
-
-- To run, click the "Run and Debug" icon to the left and then click the green Play button for "Run App".
-
-- The server will be launched. Copy the link to the launched server and open it in a web browser.
 
 ## Support
 For assistance, please contact Confidence Duku (confidence.duku@wur.nl)
@@ -64,4 +42,4 @@ No contributions are currently accepted.
 See CITATION.cff file.
 
 ## License
-Unknown
+Apache License
