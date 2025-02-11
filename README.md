@@ -29,18 +29,8 @@ pip install -r requirements.txt
 
 ## Usage
 
-- Change to the project folder and then open the project with vscode
+- See Bakaano-Hydro Tutorials
 
-```
-cd nbs-dashboard
-code .
-```
-
-- Select the correct interpreter in VSCode. Press Ctl-shift-P, and pick "Python: Select Interpreter". Then choose intepreter associated with the nbs-dashboard conda environment.
-
-- To run, click the "Run and Debug" icon to the left and then click the green Play button for "Run App".
-
-- The server will be launched. Copy the link to the launched server and open it in a web browser.
 
 ## Support
 For assistance, please contact Confidence Duku (confidence.duku@wur.nl)
@@ -52,4 +42,4 @@ No contributions are currently accepted.
 See CITATION.cff file.
 
 ## License
-Unknown
+Apache License

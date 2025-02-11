@@ -186,30 +186,7 @@ class BakaanoHydro:
             wacc = wacc * facc_mask            
             wacc = sp.sparse.coo_array(wacc)
             self.wacc_list.append(wacc)            
-            #gc.collect()
             
-       
-        # # Save seasonal data using rasterio
-        # year_name = datetime.strptime(self.start_date, '%Y-%m-%d').year
-        # with rasterio.open(self.clipped_dem) as out:
-        #     s_meta = out.profile
-
-        # out_meta = s_meta.copy()
-        # out_meta.update({
-        #     "dtype": "float64",
-        #     "compress": "lzw"
-        # })
-
-        # seasons = ['djf', 'mam', 'jja', 'son']
-        # attributes = ['wfa', 'ro']
-
-        # for season in seasons:
-        #     for attr in attributes:
-        #         filename = f'{self.working_dir}/runoff_output/{season}_{attr}_{year_name}.tif'
-        #         data = getattr(self, f'{season}_{attr}')
-        #         with rasterio.open(filename, 'w', **out_meta) as dst:
-        #             dst.write(data, indexes=1)
-
         # Save station weighted flow accumulation data
         filename = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
         
