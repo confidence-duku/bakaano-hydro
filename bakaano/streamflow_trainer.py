@@ -5,11 +5,13 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import tensorflow as tf
+import tensorflow_probability as tfp
 tf.get_logger().setLevel('ERROR')
-from tensorflow.keras.models import Model # type: ignore
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU # type: ignore
-from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from tf.keras.models import Model # type: ignore
+from tf.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add
+from tf.keras.callbacks import ModelCheckpoint # type: ignore
+from tf.keras.utils import register_keras_serializable
+from sklearn.preprocessing import MinMaxScaler
 import glob
 import pysheds.grid
 import rasterio
@@ -24,6 +26,8 @@ import geopandas as gpd
 from scipy.spatial.distance import cdist
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
+
+tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
 class DataPreprocessor:
@@ -120,7 +124,7 @@ class DataPreprocessor:
 
         """
         with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
-            data = src.read(1)
+            #data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
             return row, col
@@ -176,8 +180,7 @@ class DataPreprocessor:
             The filtered GRDC dataset containing streamflow data for the specified
             simulation period and study area.
         """
-        grdc = xr.open_dataset(grdc_streamflow_nc_file) #africa
-        #grdc = xr.open_dataset('/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-aus.nc')
+        grdc = xr.open_dataset(grdc_streamflow_nc_file)
 
         # Create a GeoDataFrame from the GRDC dataset using geo_x and geo_y attributes
         stations_df = pd.DataFrame({
@@ -210,6 +213,17 @@ class DataPreprocessor:
         
         return filtered_grdc
     
+    def encode_lat_lon(self, latitude, longitude):
+        # Encode latitude
+        sin_latitude = np.sin(np.radians(latitude))
+        cos_latitude = np.cos(np.radians(latitude))
+        
+        # Encode longitude
+        sin_longitude = np.sin(np.radians(longitude))
+        cos_longitude = np.cos(np.radians(longitude))
+        
+        return sin_latitude, cos_latitude, sin_longitude, cos_longitude
+    
                           
     def get_data(self):
         """
@@ -226,7 +240,15 @@ class DataPreprocessor:
         
         slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
+        tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
+        herb_cover = f'./{self.working_dir}/vcf/mean_herb_cover.tif'
+        awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
+        sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
+        latlng_ras = rioxarray.open_rasterio(dem_filepath)
+        latlng_ras = latlng_ras.rio.write_crs(4326)
+        lat = latlng_ras['y'].values
+        lon = latlng_ras['x'].values
         
         grid = pysheds.grid.Grid.from_raster(dem_filepath)
         dem = grid.read_raster(dem_filepath)
@@ -238,19 +260,36 @@ class DataPreprocessor:
         
         facc_thresh = np.nanmax(acc) * 0.0001
         self.river_grid = np.where(acc < facc_thresh, 0, 1)
+        river_ras = xr.DataArray(data=self.river_grid, coords=[('lat', lat), ('lon', lon)])
+        
+        with rasterio.open(dem_filepath) as src:
+            ref_meta = src.meta.copy()  # Copy the metadata exactly as is
+
+        with rasterio.open(f'{self.working_dir}/catchment/river_grid.tif', 'w', **ref_meta) as dst:
+            dst.write(river_ras.values, 1)  # Write data to the first band
         
         weight2 = grid.read_raster(slope)
         cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
+
+        weight3 = grid.read_raster(tree_cover)
+        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing='mfd')
         
-        latlng_ras = rioxarray.open_rasterio(dem_filepath)
-        latlng_ras = latlng_ras.rio.write_crs(4326)
-        lat = latlng_ras['y'].values
-        lon = latlng_ras['x'].values
+        weight4 = grid.read_raster(herb_cover)
+        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing='mfd')
+
+        weight5 = grid.read_raster(awc)
+        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing='mfd')
+        
+        weight6 = grid.read_raster(sat_pt)
+        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing='mfd')
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
-                
-        #create time index for the station_wfa data extracted per station
+        cum_tree_cover = xr.DataArray(data=cum_tree_cover, coords=[('lat', lat), ('lon', lon)])
+        cum_herb_cover = xr.DataArray(data=cum_herb_cover, coords=[('lat', lat), ('lon', lon)])
+        cum_awc = xr.DataArray(data=cum_awc, coords=[('lat', lat), ('lon', lon)])
+        cum_satpt = xr.DataArray(data=cum_satpt, coords=[('lat', lat), ('lon', lon)])
+ 
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
@@ -262,12 +301,10 @@ class DataPreprocessor:
             wfa_list = wfa_list + this_arr
         
         #extract station predictor and response variables based on station coordinates
-        acc_list = []
-        id_list = []
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
             
-            if station_discharge['station_discharge'].notna().sum() < 1825:
+            if station_discharge['station_discharge'].notna().sum() < 1095:
                 continue
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
@@ -276,18 +313,20 @@ class DataPreprocessor:
             
             acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
             slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
+            tree_cover_data = cum_tree_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            herb_cover_data = cum_herb_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            awc_data = cum_awc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
             acc_data = acc_data.values
             slp_data = slp_data.values
 
             self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
         
-    
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
             
             station_wfa = []
             for arr in wfa_list:
                 arr = arr.tocsr()
-                #station_wfa.append(arr[row, col])
                 station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
             full_wfa_data.set_index(time_index, inplace=True)
@@ -295,10 +334,10 @@ class DataPreprocessor:
             
             #extract wfa data based on defined training period
             wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
-            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
-            wfa_data2.rename(columns={'mfd_wfa': 'scaled_with_acc'}, inplace=True)
+            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
+            wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
-            wfa_data3.rename(columns={'mfd_wfa': 'scaled_with_slp'}, inplace=True)
+            wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
             wfa_data4 = wfa_data1.join([wfa_data2])
             wfa_data = wfa_data4.join([wfa_data3])
             
@@ -309,27 +348,36 @@ class DataPreprocessor:
             response = station_discharge.drop(['id'], axis=1)
 
             sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
-            catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon]
-            catch_list2 = np.tile(np.array(catch_list), (len(full_wfa_data),1))
-            catch_list2 = pd.DataFrame(catch_list2, columns=['acc_data', 'slp_data', 'sin_lat', 'cos_lat', 'sin_lon', 'cos_lon'])
-            catch_list2.set_index(time_index, inplace=True)
-            catch_list2.index.name = 'time'  # Rename the index to 'time'
-            catch_list2 = catch_list2[self.sim_start: self.sim_end]
-            predictors2 = predictors.join([catch_list2])
+            catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, herb_cover_data, 
+                          awc_data, satpt_data]
 
-            self.data_list.append((predictors2, response))
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
-            #acc_list.append(acc_data)
+            self.data_list.append((predictors, response, catch_tup))
             
             count = count + 1
 
         with open(f'./{self.working_dir}/models/{self.working_dir}_predictor_response_data.pkl', 'wb') as file:
                 pickle.dump(self.data_list, file)
             
-        return [self.data_list, self.catchment]
+        return self.data_list
 #=====================================================================================================================================                          
+@register_keras_serializable(package="Custom", name="laplacian_nll")
+def laplacian_nll(y_true, y_pred):
 
+    mu = y_pred[:, 0]  # Mean prediction (original space)
+    b = tf.nn.softplus(y_pred[:, 1]) + 1e-3  # Scale parameter (uncertainty), ensuring positivity
+
+    # Define Laplace distribution in original space
+    laplace_dist = tfd.Laplace(loc=mu, scale=b)
+
+    nll = -tf.reduce_mean(laplace_dist.log_prob(y_true[:, 0]))
+
+    # ✅ Regularization to penalize large sigma values
+    reg_term = 0.0001 * tf.reduce_mean(tf.square(b))  # Adjust weight if needed
+
+    # Compute Negative Log-Likelihood (NLL)
+    return nll + reg_term
 class StreamflowModel:
     """
     A class used to create and train a streamflow prediction model.
@@ -373,10 +421,63 @@ class StreamflowModel:
         self.batch_size = 256
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 9
-        self.num_static_features = 6
+        self.num_dynamic_features = 3
+        self.num_static_features = 10
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
+
+    def compute_global_cdfs_pkl(self, df, variables):
+        """
+        Compute and save the empirical CDF for each variable separately as a pickle file.
+    
+        Args:
+            df (pd.DataFrame): DataFrame containing multiple variables.
+            variables (list): List of column names to apply quantile scaling.
+            filename (str): File to save the computed CDFs.
+        """
+        global_cdfs = {}
+    
+        for var in variables:
+            sorted_values = np.sort(df[var].dropna().values)  # Remove NaNs and sort
+            quantiles = np.linspace(0, 1, len(sorted_values))  # Generate percentiles
+            global_cdfs[var] = (sorted_values, quantiles)  # Store CDF mapping
+        
+        # Save as a pickle file
+        with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "wb") as f:
+            pickle.dump(global_cdfs, f)
+
+    def load_global_cdfs_pkl(self):
+        """Load the saved empirical CDFs for multiple variables from a pickle file."""
+        with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "rb") as f:
+            global_cdfs = pickle.load(f)
+        return global_cdfs
+
+    def quantile_transform(self, df, variables, global_cdfs):
+        """
+        Apply quantile scaling to multiple variables using precomputed global CDFs.
+    
+        Args:
+            df (pd.DataFrame): DataFrame to transform.
+            variables (list): List of column names to scale.
+            global_cdfs (dict): Dictionary of saved CDF mappings.
+        
+        Returns:
+            pd.DataFrame: Transformed DataFrame.
+        """
+        transformed_df = df.copy()
+    
+        for var in variables:
+            sorted_values, quantiles = global_cdfs[var]
+            
+            # Apply interpolation to transform values to the percentile space
+            transformed_df[var] = np.interp(df[var], sorted_values, quantiles)
+    
+            # Handle out-of-range values
+            transformed_df[var][df[var] < sorted_values[0]] = 0.001  # Assign near 0 for very low values
+            transformed_df[var][df[var] > sorted_values[-1]] = 0.999  # Assign near 1 for very high values
+    
+        return transformed_df
+
     
     def prepare_data(self, data_list):
         """
@@ -391,63 +492,55 @@ class StreamflowModel:
         -------
         None
         """
-        predictors = list(map(lambda xy: xy[0], data_list[0]))
-        response = list(map(lambda xy: xy[1], data_list[0]))
-
-        train_predictors = predictors
-        train_response = response
-
+        train_predictors = list(map(lambda xy: xy[0], data_list))
+        train_response = list(map(lambda xy: xy[1], data_list))
+        catchment = list(map(lambda xy: xy[2], data_list))
+        train_catchment = np.array(catchment)
                 
         full_train_predictors = []
         full_train_response = []
         train_catchment_list = []
-        full_local_predictors = []
         
-        rscaler = StandardScaler()
+        catchment_scaler = MinMaxScaler()
         
+        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
+        with open(f'./{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
+            pickle.dump(trained_catchment_scaler, file)
+
         concatenated_predictors = pd.concat(train_predictors, axis=0)
-        global_max = np.nanmax(concatenated_predictors.values[0])
-        with open(f'./{self.working_dir}/models/{self.working_dir}_global_max_mfd_wfa.pkl', 'wb') as file:
-                pickle.dump(global_max, file)
+        variables = ['mfd_wfa', 'scaled_acc', 'scaled_slp']  # Adjust as needed
+        self.compute_global_cdfs_pkl(concatenated_predictors, variables)
+        global_cdfs = self.load_global_cdfs_pkl()
 
-        scaler1 = rscaler.fit(concatenated_predictors)
-        with open(f'./{self.working_dir}/models/global_predictor_scaler.pkl', 'wb') as file:
-            pickle.dump(scaler1, file)
+        for x, y,z in zip(train_predictors, train_response, train_catchment):
+            scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
+            scaled_train_predictor = scaled_train_predictor.values
 
+            scaled_train_response = y.values/1
 
-        for x, y in zip(predictors, train_response):
-            scaled_train_predictor = pd.DataFrame(scaler1.transform(x), columns=['mfd_wfa', 'scaled_acc', 'scaled_slp', 'acc_data', 
-                                                                                 'slp_data', 'sin_lat', 'cos_lat', 'sin_lon', 'cos_lon']).values 
-            x2 = x['mfd_wfa'].values/global_max
-            #x2 = x['mfd_wfa'].values.reshape(-1,1)
-            log_local_predictor = pd.DataFrame(np.log(x2 + 0.0001), columns=['local_wfa']).values            
-            scaled_train_response = y.values /1
-                       
+            z2 = z.reshape(-1,self.num_static_features)
+            scaled_train_catchment = trained_catchment_scaler.transform(z2)    
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
             predictor_samples = []
             response_samples = []
             catchment_samples = []
-            weight_samples = []
-            local_predictor_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
                 # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-
-                local_predictor_batch = log_local_predictor[i:i+self.timesteps, :]
-                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
                 
                 response_batch = scaled_train_response[i+self.timesteps]
                 response_batch = response_batch.reshape(1)
                 
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
-                local_predictor_samples.append(local_predictor_batch)
                 response_samples.append(response_batch)
+
+                catchment_samples.append(scaled_train_catchment)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -458,8 +551,6 @@ class StreamflowModel:
             scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
             scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
-            filtered_weights = np.array(weight_samples)[timesteps_to_keep]
-            train_local_predictor_filtered = np.array(local_predictor_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
@@ -467,7 +558,7 @@ class StreamflowModel:
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
-        self.train_local_predictors = np.concatenate(full_local_predictors, axis=0)
+        self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)  
     
               
     def build_model(self):
@@ -484,31 +575,83 @@ class StreamflowModel:
         strategy = tf.distribute.MirroredStrategy()
 
         with strategy.scope():
-            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
-            local_input = Input(shape=(self.timesteps, 1), name='local_input')
-
-            tcn_output = TCN(nb_filters = 256, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(global_input)
+            dynamic_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='dynamic_input')
+            static_input = Input(shape=(self.num_static_features,), name="static_input")
+    
+            tcn_output = TCN(nb_filters = 64, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(dynamic_input)
             tcn_output = BatchNormalization()(tcn_output)
             tcn_output = Dropout(0.4)(tcn_output)
-
-            tcn_output1 = TCN(nb_filters = 256, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(local_input)
-            tcn_output1 = BatchNormalization()(tcn_output1)
-            tcn_output1 = Dropout(0.4)(tcn_output1)
-
-            merged_output = Concatenate()([tcn_output,  tcn_output1])
+        
+            static_dense = Dense(32, activation="relu")(static_input)
+            static_dense = BatchNormalization()(static_dense)
+            static_dense = Dropout(0.4)(static_dense)
+        
+            # --- Enhanced FiLM Conditioning ---
+            def enhanced_film_layer(static_input, feature_dim, hidden_dim=64):
+                """
+                Enhanced FiLM conditioning using a deeper MLP for gamma and beta modulation.
+                
+                Parameters:
+                    static_input: Tensor (Static catchment descriptors)
+                    feature_dim: int (Size of TCN output features)
+                    hidden_dim: int (Size of hidden layers in FiLM MLP)
+                
+                Returns:
+                    gamma, beta: Scaling and shifting parameters for FiLM conditioning
+                """
+                x = Dense(hidden_dim, activation="relu")(static_input)
+                x = BatchNormalization()(x)
+                x = Dense(hidden_dim, activation="relu")(x)
+                x = BatchNormalization()(x)
+        
+                gamma = Dense(feature_dim, activation="sigmoid")(x)  # Scaling
+                beta = Dense(feature_dim, activation="tanh")(x)  # Shifting
+                return gamma, beta
+        
+            # Apply FiLM at multiple levels
+            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=64)
+            tcn_output = Multiply()([tcn_output, gamma1])  # Scaling
+            tcn_output = Add()([tcn_output, beta1])  # Shifting
+        
+            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=64)
+            tcn_output = Multiply()([tcn_output, gamma2])  # Additional FiLM layer
+            tcn_output = Add()([tcn_output, beta2])
+    
+    
+            # --- Attention Mechanism ---
+            def attention_block(inputs):
+                attention_scores = Dense(1, activation="softmax")(inputs)
+                weighted_output = Multiply()([inputs, attention_scores])
+                return weighted_output
+    
+            tcn_output = attention_block(tcn_output)
+    
+            # Merge all outputs
+            merged_output = Concatenate()([tcn_output, static_dense])
             merged_output = BatchNormalization()(merged_output)
-
-            output1 = Dense(32)(merged_output)
-            output1 = LeakyReLU(alpha=0.01)(output1)
-
-            # Final output layer
-            output = Dense(1)(output1)
-
+    
+            # Fully connected layers
+            output3 = Dense(64, activation='relu')(merged_output)
+            output3 = BatchNormalization()(output3)
+            output3 = Dropout(0.4)(output3)
+    
+            output2 = Dense(32, activation='relu')(output3)
+            output2 = BatchNormalization()(output2)
+            output2 = Dropout(0.4)(output2)
+    
+            output1 = Dense(16)(output2)
+            output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
+    
+            # Probabilistic Output Layer - Predicting Mean and Standard Deviation
+            mu = Dense(1, name="mu")(output1)  # Mean prediction
+            sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
+            output = Concatenate(name="streamflow_distribution")([mu, sigma])
+    
             # Create the model
-            self.regional_model = Model(inputs=[global_input, local_input], outputs=output)
-            self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
+            self.regional_model = Model(inputs=[dynamic_input, static_input], outputs=output)
+            self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
+            return self.regional_model
 
     
     def train_model(self): 
@@ -526,7 +669,7 @@ class StreamflowModel:
         checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/deepstrmm_model_tcn365.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        self.regional_model.fit(x=[self.train_predictors,self.train_local_predictors], y=self.train_response, batch_size=self.batch_size, 
+        self.regional_model.fit(x=[self.train_predictors,self.train_catchment_size], y=self.train_response, batch_size=self.batch_size, 
                        epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
     def load_regional_model(self, path):
@@ -546,12 +689,14 @@ class StreamflowModel:
        
         from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope # type: ignore
+
+        custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
         
         strategy = tf.distribute.MirroredStrategy()
         
         with strategy.scope():
-            with custom_object_scope({'TCN': TCN}):
-                self.regional_model = load_model(path)
+            with custom_object_scope(custom_objects):  
+                self.regional_model = load_model(path, custom_objects=custom_objects)
         
     def regional_summary(self):
         """
