@@ -6,8 +6,7 @@ import pandas as pd
 import xarray as xr
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tensorflow.keras.saving import register_keras_serializable
-import math
+from tensorflow.keras.utils import register_keras_serializable
 import glob
 from tcn import TCN
 import pysheds.grid
