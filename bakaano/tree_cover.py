@@ -17,7 +17,7 @@ class VCF:
 
     def download_vcf(self):
 
-        #ee.Authenticate()
+        ee.Authenticate()
         ee.Initialize()
 
         vcf = ee.ImageCollection("MODIS/006/MOD44B")

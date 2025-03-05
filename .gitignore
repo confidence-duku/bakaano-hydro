@@ -19,3 +19,5 @@ brazil_multi_basins
 **/test
 heat
 ecoeffect.py
+bakaano/flood_mapper_old.py
+bakaano/flood_mapper.py
