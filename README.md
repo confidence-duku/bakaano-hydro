@@ -34,50 +34,90 @@ pip install -r requirements.txt
 
 ```mermaid
 classDiagram
-    %% Data Processing Modules
     class NDVI {
-        +download_ndvi()
-        +preprocess_ndvi()
+	    +download_ndvi()
+        +interpolate_daily_ndvi()
+	    +preprocess_ndvi()
     }
     class Soil {
-        +download_soil()
-        +preprocess_soil()
+	    +get_soil_data()
+	    +preprocess()
+        +plot_soil()
     }
     class DEM {
-        +download_dem()
-        +preprocess_dem()
+	    +get_dem_data()
+	    +preprocess()
+        +plot_dem()
     }
     class TreeCover {
-        +download_tree_cover()
-        +preprocess_tree_cover()
+	    +download_tree_cover()
+	    +preprocess_tree_cover()
+        +plot_tree_cover()
     }
     class Meteo {
-        +download_meteo()
-        +preprocess_meteo()
+	    +get_meteo_data()
     }
     class Utils {
-        +helper_functions()
+	    +reproject_raster()
+        +align_rasters()
+        +get_bbox()
+        +concat_nc()
+        +clip()
     }
-
-    %% NDVI, Soil, DEM, TreeCover, and Meteo use Utils
-    NDVI --> Utils
-    Soil --> Utils
-    DEM --> Utils
-    TreeCover --> Utils
-    Meteo --> Utils
-
-    %% VegET Model
     class VegET {
-        +compute_veget_runoff()
+	    +compute_veget_runoff_route_flow()
     }
     class PET {
-        +compute_pet()
+	    +compute_pet()
     }
     class Router {
-        +route_flow()
+	    +compute_flow_dir()
+        +compute_weighted_flow_accumulation()
     }
-
-    %% Connections for VegET
+    class BakaanoHydro {
+	    +train_streamflow_model()
+	    +evaluate_streamflow_model()
+        +compute_metrics()
+        +simulate_streamflow()
+    }
+    class DataPreprocessor {
+	    +get_data()
+        +encode_lat_lon()
+        +load_observed_streamflow()
+    }
+    class StreamflowModel {
+        +prepare_data()
+        +quantile_transform()
+	    +train_model()
+    }
+    class PredictDataPreprocessor {
+	    +get_data()
+        +encode_lat_lon()
+    }
+    class PredictStreamflow {
+	    +prepare_data()
+        +quantile_transform()
+        +load_model()
+    }
+	note for NDVI "Defined in ndvi.py"
+	note for Soil "Defined in soil.py"
+	note for DEM "Defined in dem.py"
+	note for TreeCover "Defined in tree_cover.py"
+	note for Meteo "Defined in meteo.py"
+	note for Utils "Defined in utils.py"
+	note for VegET "Defined in veget.py"
+	note for PET "Defined in pet.py"
+	note for Router "Defined in router.py"
+	note for BakaanoHydro "Defined in runner.py"
+	note for DataPreprocessor "Defined in streamflow_trainer.py"
+	note for StreamflowModel "Defined in streamflow_trainer.py"
+    note for PredictDataPreprocessor "Defined in streamflow_simulator.py"
+	note for PredictStreamflow "Defined in streamflow_simulator.py"
+    NDVI --|> Utils
+    Soil --|> Utils
+    DEM --|> Utils
+    TreeCover --|> Utils
+    Meteo --|> Utils
     VegET --> NDVI
     VegET --> Soil
     VegET --> DEM
@@ -85,71 +125,16 @@ classDiagram
     VegET --> Meteo
     VegET --> PET
     VegET --> Router
-
-    %% Router uses DEM outputs
     Router --> DEM
-
-    %% PET uses Meteo outputs
     PET --> Meteo
-
-    %% Main Script (Now with BakaanoHydro)
-    class BakaanoHydro {
-        +run_simulation()
-        +train_model()
-        +simulate_streamflow()
-    }
-
-    %% Streamflow Modules
-    class StreamflowTrainer {
-        +train_model()
-    }
-    class DataPreprocessor {
-        +prepare_training_data()
-    }
-    class StreamflowModel {
-        +train_streamflow_model()
-    }
-
-    %% Streamflow Trainer relationships
-    StreamflowTrainer --> DataPreprocessor
-    StreamflowTrainer --> StreamflowModel
-
-    class StreamflowSimulator {
-        +simulate_streamflow()
-    }
-    class PredictDataPreprocessor {
-        +prepare_prediction_data()
-    }
-    class PredictStreamflow {
-        +run_prediction()
-    }
-
-    %% Streamflow Simulator relationships
-    StreamflowSimulator --> PredictDataPreprocessor
-    StreamflowSimulator --> PredictStreamflow
-
-    %% Streamflow modules depend on VegET outputs
-    StreamflowTrainer --> VegET
-    StreamflowSimulator --> VegET
-    StreamflowSimulator --> StreamflowTrainer
-
-    %% BakaanoHydro in main.py calls StreamflowTrainer and StreamflowSimulator
-    BakaanoHydro --> StreamflowTrainer
-    BakaanoHydro --> StreamflowSimulator
-
-    %% File Names (Added as Notes)
-    note for NDVI "Defined in ndvi.py"
-    note for Soil "Defined in soil.py"
-    note for DEM "Defined in dem.py"
-    note for TreeCover "Defined in tree_cover.py"
-    note for Meteo "Defined in meteo.py"
-    note for Utils "Defined in utils.py"
-    note for VegET "Defined in veget.py"
-    note for PET "Defined in pet.py"
-    note for Router "Defined in router.py"
-    note for BakaanoHydro "Main script in main.py"
-    note for StreamflowTrainer "Part of main.py (Uses DataPreprocessor, StreamflowModel)"
-    note for StreamflowSimulator "Part of main.py (Uses PredictDataPreprocessor, PredictStreamflow)"
+    DataPreprocessor --> VegET
+    StreamflowModel --> VegET
+    PredictDataPreprocessor --> VegET
+    PredictStreamflow --> VegET
+    BakaanoHydro --> DataPreprocessor
+    BakaanoHydro --> StreamflowModel
+    BakaanoHydro --> PredictDataPreprocessor
+    BakaanoHydro --> PredictStreamflow
 ```
 
 ## Support
