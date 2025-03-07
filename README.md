@@ -30,7 +30,9 @@ pip install -r requirements.txt
 
 ## Usage
 
-- See Bakaano-Hydro Tutorials
+- See https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano%20Hydro%20Tutorials.ipynb
+
+## Code architecture
 
 ```mermaid
 classDiagram
