@@ -73,7 +73,7 @@ class BakaanoHydro:
         smodel.train_model()
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model(self, station_name, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
+    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.start_date)
@@ -82,6 +82,10 @@ class BakaanoHydro:
         vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.start_date)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
+        print("Available station names:")
+        print(self.stat_names)
+
+        station_name = input("Please enter the station name: ")
         
         extracted_data = fulldata.where(fulldata.station_name.astype(str) == station_name, drop=True)
         full_ids = list(extracted_data.id.values)
