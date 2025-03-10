@@ -179,8 +179,6 @@ class BakaanoHydro:
         nse = hydroeval.nse(predicted, observed)
         kge = hydroeval.kge(predicted, observed)
         return nse, kge
-        
-
-#===========================================================================================================      
+  
 
     
