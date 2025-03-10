@@ -25,36 +25,40 @@ class Soil:
         self.uw = Utils(self.working_dir, self.study_area)
         
     def get_soil_data(self):
-        urls = ['https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/AWCh3_M_sl6_1km_ll.tif',
-                'https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/WWP_M_sl6_1km_ll.tif', 
-                'https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/AWCtS_M_sl6_1km_ll.tif']
-        
-        local_filenames = ['AWCh3_M_sl6_1km_ll.tif', 'WWP_M_sl6_1km_ll.tif', 'AWCtS_M_sl6_1km_ll.tif']
-        
-        for url, filename in zip(urls, local_filenames):
-            local_filename = f'{self.working_dir}/soil/{filename}'
-            uw = Utils(self.working_dir, self.study_area)
-            uw.get_bbox('EPSG:4326')
-            response = r.get(url, stream=True)
-            if response.status_code == 200:
-                with open(local_filename, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        f.write(chunk)
-                print(f"File downloaded successfully and saved as '{local_filename}'")
-            else:
-                print(f"Failed to download the file. HTTP status code: {response.status_code}")
-
+        soil_check = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
+        if not os.path.exists(soil_check):
+            urls = ['https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/AWCh3_M_sl6_1km_ll.tif',
+                    'https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/WWP_M_sl6_1km_ll.tif', 
+                    'https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/AWCtS_M_sl6_1km_ll.tif']
             
-            #extraction_path = f'{self.working_dir}/soil'  # Directory where files will be extracted
-            out_path = f'{self.working_dir}/soil/clipped_{filename}'
-            self.preprocess(local_filename, out_path)
+            local_filenames = ['AWCh3_M_sl6_1km_ll.tif', 'WWP_M_sl6_1km_ll.tif', 'AWCtS_M_sl6_1km_ll.tif']
+            
+            for url, filename in zip(urls, local_filenames):
+                local_filename = f'{self.working_dir}/soil/{filename}'
+                uw = Utils(self.working_dir, self.study_area)
+                uw.get_bbox('EPSG:4326')
+                response = r.get(url, stream=True)
+                if response.status_code == 200:
+                    with open(local_filename, 'wb') as f:
+                        for chunk in response.iter_content(chunk_size=8192):
+                            f.write(chunk)
+                    print(f"File downloaded successfully and saved as '{local_filename}'")
+                else:
+                    print(f"Failed to download the file. HTTP status code: {response.status_code}")
+
+                
+                #extraction_path = f'{self.working_dir}/soil'  # Directory where files will be extracted
+                out_path = f'{self.working_dir}/soil/clipped_{filename}'
+                self.preprocess(local_filename, out_path)
+        else:
+            print(f"     - Soil data already exists in {self.working_dir}/soil; skipping download.")
             
 
     def preprocess(self, raster_dir, out_path):  
         self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True)
     
-    def plot_soil(self):
+    def plot_soil(self, vmax):
         soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
         soil_data = soil_data.where(soil_data > 0)
-        soil_data.plot(cmap='terrain')
+        soil_data.plot(cmap='copper', vmax=vmax)
         

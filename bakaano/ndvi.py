@@ -12,6 +12,7 @@ from collections import defaultdict
 from bakaano.utils import Utils
 from rasterio.enums import Resampling
 from scipy.interpolate import interp1d
+import matplotlib.pyplot as plt
 
 class NDVI:
     def __init__(self, working_dir, study_area):
@@ -24,19 +25,23 @@ class NDVI:
 
     def download_ndvi(self):
 
-        ee.Authenticate()
-        ee.Initialize()
+        ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
+        if not os.path.exists(ndvi_check):
+            ee.Authenticate()
+            ee.Initialize()
 
-        ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
+            ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
 
-        i_date = str(2001)+'-01-01'
-        f_date = str(2021)+'-01-01'
-        df = ndvi.select('NDVI').filterDate(i_date, f_date)
+            i_date = str(2001)+'-01-01'
+            f_date = str(2021)+'-01-01'
+            df = ndvi.select('NDVI').filterDate(i_date, f_date)
 
-        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-        out_path = f'{self.working_dir}/ndvi'
-        geemap.ee_export_image_collection(ee_object=df, out_dir=out_path, scale=1000, region=area, crs='EPSG:4326', file_per_band=True) 
-        print('Download completed')
+            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
+            out_path = f'{self.working_dir}/ndvi'
+            geemap.ee_export_image_collection(ee_object=df, out_dir=out_path, scale=1000, region=area, crs='EPSG:4326', file_per_band=True) 
+            print('Download completed')
+        else:
+            print(f"     - NDVI data already exists in {self.working_dir}/ndvi/daily_ndvi_climatology.pkl; skipping download.")
 
     def generate_intervals(self, year):
         """
@@ -156,35 +161,48 @@ class NDVI:
         """
         Main process to compute the daily NDVI climatology.
         """
-        groups = self.group_files_by_intervals()
-        interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in groups.keys()]
 
-        for interval_start, file_list in groups.items():
-            print(f'Processing {interval_start} with {len(file_list)} files...')
-            output_file = os.path.join(self.ndvi_folder, f'{interval_start}_median_ndvi.tif')
-            self.calculate_median_raster(file_list, output_file)
+        ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
+        if not os.path.exists(ndvi_check):
+            groups = self.group_files_by_intervals()
+            interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in groups.keys()]
 
-        medians = []
-        medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
-        for file in medians_list:
-            median_da = rioxarray.open_rasterio(file)[0]  # Extract the first band as DataArray
-            medians.append(median_da)
+            for interval_start, file_list in groups.items():
+                print(f'Processing {interval_start} with {len(file_list)} files...')
+                output_file = os.path.join(self.ndvi_folder, f'{interval_start}_median_ndvi.tif')
+                self.calculate_median_raster(file_list, output_file)
 
-        print("Interpolating daily NDVI...")
-        daily_ndvi = self.interpolate_daily_ndvi(medians, interval_dates)
-        for doy, arr in daily_ndvi.items():
-            daily_ndvi[doy] = xr.DataArray(
-                arr,
-                dims=("lat", "lon"),  # Assuming the interpolated array has y and x dimensions
-                coords={"lat": medians[0].y, "lon": medians[0].x},  # Use coordinates from a median DataArray
-                attrs={"day_of_year": doy},
-            )
+            medians = []
+            medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
+            for file in medians_list:
+                median_da = rioxarray.open_rasterio(file)[0]  # Extract the first band as DataArray
+                medians.append(median_da)
+
+            print("Interpolating daily NDVI...")
+            daily_ndvi = self.interpolate_daily_ndvi(medians, interval_dates)
+            for doy, arr in daily_ndvi.items():
+                daily_ndvi[doy] = xr.DataArray(
+                    arr,
+                    dims=("y", "x"),  # Assuming the interpolated array has y and x dimensions
+                    coords={"y": medians[0].y, "x": medians[0].x},  # Use coordinates from a median DataArray
+                    attrs={"day_of_year": doy},
+                )
 
 
-        pickle_file_path = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
-        with open(pickle_file_path, 'wb') as f:
-            pickle.dump(daily_ndvi, f)
-        print("Process complete!")
-        return daily_ndvi
+            pickle_file_path = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
+            with open(pickle_file_path, 'wb') as f:
+                pickle.dump(daily_ndvi, f)
+            print("Process complete!")
+        else:
+            print(f"     - NDVI data already exists in {self.working_dir}/ndvi/daily_ndvi_climatology.pkl; skipping preprocessing.")
+
+    
+    def plot_ndvi(self):
+        with open(f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl', 'rb') as f:
+            ndvi_data = pickle.load(f)
+
+        plt.imshow(ndvi_data[9]*0.0001)
+        plt.colorbar()
+        plt.show()
 
     

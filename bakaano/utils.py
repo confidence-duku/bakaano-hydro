@@ -172,6 +172,7 @@ class Utils:
                     "height": out_image.shape[1],
                     "width": out_image.shape[2],
                     "transform": out_transform,
+                    "dtype": "float32",
                     "nodata": -9999
                 })
         
