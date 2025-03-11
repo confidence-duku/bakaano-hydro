@@ -6,7 +6,7 @@ import pandas as pd
 import xarray as xr
 import tensorflow as tf
 import tensorflow_probability as tfp
-from tensorflow.keras.utils import register_keras_serializable
+from keras.utils import register_keras_serializable
 import glob
 from tcn import TCN
 import pysheds.grid
@@ -27,7 +27,7 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area, start_date, end_date):
+    def __init__(self, working_dir,  study_area, start_date, end_date, grdc_streamflow_nc_file=None):
         """
         Initialize directories, dates and relevant variables
         
@@ -42,7 +42,7 @@ class PredictDataPreprocessor:
         self.end_date = end_date
         self.working_dir = working_dir
         self.times = pd.date_range(start_date, end_date)
-        self.grdc_subset = self.load_observed_streamflow()
+        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         self.data_list = []
         self.catchment = []  

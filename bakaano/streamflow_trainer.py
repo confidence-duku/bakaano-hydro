@@ -6,11 +6,10 @@ import pandas as pd
 import xarray as xr
 import tensorflow as tf
 import tensorflow_probability as tfp
-tf.get_logger().setLevel('ERROR')
-from tf.keras.models import Model # type: ignore
-from tf.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add
-from tf.keras.callbacks import ModelCheckpoint # type: ignore
-from tf.keras.utils import register_keras_serializable
+from tensorflow.keras.models import Model # type: ignore
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add
+from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
+from tensorflow.keras.utils import register_keras_serializable
 from sklearn.preprocessing import MinMaxScaler
 import glob
 import pysheds.grid
@@ -72,7 +71,7 @@ class DataPreprocessor:
     get_data():
         Extracts predictors for multiple stations
     """
-    def __init__(self,  working_dir, study_area, start_date, end_date):
+    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -97,7 +96,7 @@ class DataPreprocessor:
         self.end_date = end_date
         self.working_dir = working_dir
         #self.times = pd.date_range(start_date, end_date)
-        self.grdc_subset = self.load_observed_streamflow()
+        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         self.data_list = []
         self.catchment = []    
