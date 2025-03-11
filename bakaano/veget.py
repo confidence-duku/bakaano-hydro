@@ -60,7 +60,8 @@ class VegET:
             tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
             tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
             rf = prep_nc[prep_var].sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
-            rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
+            #rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
+            self.rf = rf
             
             td = np.sqrt(tasmax_period - tasmin_period)
             pet_params = 0.408 * 0.0023 * (tmean_period + 17.8) * td
@@ -84,12 +85,12 @@ class VegET:
                 ndvi_array = pickle.load(f)
             
             water_holding_capacity = self.uw.align_rasters(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', israster=True) * 10
-            max_allowable_depletion = 0.5 * water_holding_capacity
+            max_allowable_depletion = 0.5 * water_holding_capacity[0]
 
             tree_cover_tiff = f'{self.working_dir}/vcf/mean_tree_cover.tif'
             herb_cover_tiff = f'{self.working_dir}/vcf/mean_herb_cover.tif'
-            tree_cover = self.uw.align_rasters(tree_cover_tiff, israster=True)
-            herb_cover = self.uw.align_rasters(herb_cover_tiff, israster=True)
+            tree_cover = self.uw.align_rasters(tree_cover_tiff, israster=True)[0]
+            herb_cover = self.uw.align_rasters(herb_cover_tiff, israster=True)[0]
 
             tree_cover = np.where(tree_cover > 100, 0, tree_cover)
             herb_cover = np.where(herb_cover > 100, 0, herb_cover)
@@ -115,6 +116,7 @@ class VegET:
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'Computing surface runoff and routing flow to river channels in year {year_num}')
+                count2 = count+1
                 this_rf = rf[count]
                 this_rf = self.uw.align_rasters(this_rf, israster=False)
                 eff_rain = this_rf * (1- interception)
@@ -134,6 +136,7 @@ class VegET:
                 ks = np.where(soil_moisture < max_allowable_depletion, (soil_moisture/max_allowable_depletion), 1)
                 ETa = this_et * ks * this_kcp
                 soil_moisture = soil_moisture + eff_rain - ETa
+                soil_moisture = soil_moisture.values
                 soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0
                 q_surf = np.where(soil_moisture > water_holding_capacity, (soil_moisture - water_holding_capacity), 0)
                 q_surf[np.isinf(q_surf) | np.isnan(q_surf)] = 0

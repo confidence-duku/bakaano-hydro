@@ -83,7 +83,8 @@ class Utils:
         else:
             ds = input_ras
             ds = ds.rio.write_crs(4326)
-            ds = ds.rename({'lon': 'x', 'lat': 'y'})
+            if 'lat' in ds.coords and 'lon' in ds.coords:
+                ds = ds.rename({'lon': 'x', 'lat': 'y'})
             # ds = ds.chunk({'x': 100, 'y': 100})
             ds = ds.rio.reproject_match(self.match, resampling=Resampling.average)
         return ds
@@ -173,7 +174,7 @@ class Utils:
                     "width": out_image.shape[2],
                     "transform": out_transform,
                     "dtype": "float32",
-                    "nodata": -9999
+                    "nodata": -9999.0
                 })
         
                 with rasterio.open(out_path, "w", **out_meta) as dest:

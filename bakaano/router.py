@@ -48,8 +48,8 @@ class RunoffRouter:
         return runoff_tiff
     
     def fill_dem(self):
-        self.grid = pysheds.grid.Grid.from_raster(self.dem_filepath, nodata=-9999)
-        dem = self.grid.read_raster(self.dem_filepath, nodata=-9999)
+        self.grid = pysheds.grid.Grid.from_raster(self.dem_filepath, nodata=self.dem_nodata)
+        dem = self.grid.read_raster(self.dem_filepath, nodata=self.dem_nodata)
         
         flooded_dem = self.grid.fill_depressions(dem)
 
