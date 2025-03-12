@@ -73,7 +73,7 @@ class BakaanoHydro:
         smodel.train_model()
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
+    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, smoothen_output=True):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -107,13 +107,15 @@ class BakaanoHydro:
         self.vmodel.load_model(model_path)
         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
         mu = predicted_streamflow[:, 0]  # Mean in original space
+        if smoothen_output is True:
+            mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
         sigma = predicted_streamflow[:, 1]  # Standard deviation in original space
 
         self.plot_grdc_streamflow(observed_streamflow, mu)
         
 #========================================================================================================================  
 
-    def simulate_streamflow(self, model_path, lat, lon, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
+    def simulate_streamflow(self, model_path, lat, lon, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, smoothen_output=True):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -130,6 +132,8 @@ class BakaanoHydro:
         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
         mu = predicted_streamflow[:, 0]  # Mean in original space
         sigma = predicted_streamflow[:, 1]  # Standard deviation in original space
+        if smoothen_output is True:
+            mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
         lower_bound = np.maximum(mu - 1.65 * sigma, 0)
         upper_bound = mu + 1.65 * sigma
 
