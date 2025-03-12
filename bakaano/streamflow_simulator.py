@@ -548,7 +548,7 @@ class PredictStreamflow:
 
         """
 
-        predictors = list(map(lambda xy: xy[0], data_list[0]))
+        predictors = list(map(lambda xy: xy, data_list[0]))
         train_catchment = np.array(data_list[1])  
                 
         full_train_predictors = []
@@ -557,7 +557,7 @@ class PredictStreamflow:
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
 
-        if len(self.train_catchment) <= 0:
+        if len(train_catchment) <= 0:
             return
         
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
