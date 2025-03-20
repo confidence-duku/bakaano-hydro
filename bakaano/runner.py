@@ -42,11 +42,13 @@ class BakaanoHydro:
         os.makedirs(f'{self.working_dir}/scratch', exist_ok=True)
         os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
         os.makedirs(f'{self.working_dir}/catchment', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/predicted_streamflow_data', exist_ok=True)
       
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
+    def train_streamflow_model(self, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, 
+                               loss_fn, num_input_branch, lookback, batch_size, num_epochs):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             self.vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -65,15 +67,19 @@ class BakaanoHydro:
         print(sdp.sim_station_names)
         
         print(' 3. Building neural network model')
-        smodel = StreamflowModel(self.working_dir)
+        smodel = StreamflowModel(self.working_dir, lookback, batch_size, num_epochs)
         smodel.prepare_data(self.rawdata)
-        smodel.build_model()
+        if num_input_branch == 3:
+            smodel.build_model_3_input_branches(loss_fn)
+        else:
+            smodel.build_model_2_input_branches(loss_fn)
         #smodel.load_regional_model(f'{self.working_dir}/models/deepstrmm_model_tcn360.keras')
         print(' 4. Training neural network model')
-        smodel.train_model()
+        smodel.train_model(loss_fn, num_input_branch)
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, smoothen_output=True):
+    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, 
+                                  tmean_nc, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -101,21 +107,79 @@ class BakaanoHydro:
         rawdata = vdp.get_data()
         observed_streamflow = list(map(lambda xy: xy[1], rawdata[0]))
 
-        self.vmodel = PredictStreamflow(self.working_dir)
+        self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
         self.vmodel.prepare_data(rawdata)
 
-        self.vmodel.load_model(model_path)
-        predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-        mu = predicted_streamflow[:, 0]  # Mean in original space
-        if smoothen_output is True:
-            mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
-        sigma = predicted_streamflow[:, 1]  # Standard deviation in original space
+        self.vmodel.load_model(model_path, loss_fn)
+        if num_input_branch == 3:
+            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
+        else:
+            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
 
-        self.plot_grdc_streamflow(observed_streamflow, mu)
+        if loss_fn == 'laplacian_nll':
+        
+            mu_log = predicted_streamflow[:, 0]  # Mean in log-space
+            b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
+            
+            # ✅ Convert back to original streamflow units
+            mu = np.exp(mu_log) - 1  # Mean streamflow prediction
+            sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
+            if smoothen_output is True:
+                mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
+            predicted_streamflow = mu
+        else:
+            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+
+        self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
         
 #========================================================================================================================  
 
-    def simulate_streamflow(self, model_path, lat, lon, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, smoothen_output=True):
+    # def simulate_streamflow(self, model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, 
+    #                         tmean_nc, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
+    #     if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
+    #         print('Computing VegET runoff and routing flow to river network')
+    #         vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
+    #         vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
+
+    #     vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
+        
+    #     rawdata = vdp.get_data_latlng(latlist, lonlist)
+
+    #     self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
+    #     self.vmodel.prepare_data_latlng(rawdata)
+
+    #     self.vmodel.load_model(model_path, loss_fn)
+    #     if num_input_branch == 3:
+    #         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
+    #     else:
+    #         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
+
+    #     if loss_fn == 'laplacian_nll':
+        
+    #         mu_log = predicted_streamflow[:, 0]  # Mean in log-space
+    #         b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
+            
+    #         # ✅ Convert back to original streamflow units
+    #         mu = np.exp(mu_log) - 1  # Mean streamflow prediction
+    #         sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
+    #         if smoothen_output is True:
+    #             mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
+    #         predicted_streamflow = mu
+    #     else:
+    #         predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+
+    #     adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=lookback)
+    #     period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
+    #     df = pd.DataFrame({
+    #         'time': period,  # Adjusted time column
+    #         'streamflow (m3/s)': predicted_streamflow
+    #     })
+    #     output_path = os.path.join(self.working_dir, f"output_data/streamflow_{lat}_{lon}.csv")
+    #     df.to_csv(output_path, index=False)
+        
+#==============================================================================================================================
+    def simulate_streamflow_batch(self, model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, 
+                                  tmean_nc, loss_fn, num_input_branch, lookback, smoothen_output=True):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -123,35 +187,59 @@ class BakaanoHydro:
 
         vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
         
-        rawdata = vdp.get_data_latlng(lat, lon)
+        rawdata = vdp.get_data_latlng(latlist, lonlist)
 
-        self.vmodel = PredictStreamflow(self.working_dir)
+        self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
         self.vmodel.prepare_data_latlng(rawdata)
+        batch_size = len(self.vmodel.latlist)
+        self.vmodel.load_model(model_path, loss_fn)
+        if num_input_branch == 3:
+            predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size],
+                                                                  batch_size=batch_size)
+            
+        else:
+            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
 
-        self.vmodel.load_model(model_path)
-        predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-        mu = predicted_streamflow[:, 0]  # Mean in original space
-        sigma = predicted_streamflow[:, 1]  # Standard deviation in original space
-        if smoothen_output is True:
-            mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
-        lower_bound = np.maximum(mu - 1.65 * sigma, 0)
-        upper_bound = mu + 1.65 * sigma
+        if loss_fn == 'laplacian_nll':
+            seq = int(len(predicted_streamflows)/batch_size)
+            predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 2)
 
-        adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=365)
-        period = pd.date_range(adjusted_start_date, periods=len(mu), freq='D')  # Match time length with mu
-        df = pd.DataFrame({
-            'time': period,  # Adjusted time column
-            'streamflow (m3/s)': mu,
-            'lower_bound (95% CI)': lower_bound,
-            'upper_bound (95% CI)': upper_bound
-        })
-        output_path = os.path.join(self.working_dir, f"output_data/streamflow_{lat}_{lon}.csv")
-        df.to_csv(output_path, index=False)
+            predicted_streamflow_list = []
         
+            for predicted_streamflow in predicted_streamflows:
+                mu_log = predicted_streamflow[:, 0]  # Mean in log-space
+                b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
+                
+                # ✅ Convert back to original streamflow units
+                mu = np.exp(mu_log) - 1  # Mean streamflow prediction
+                sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
+                if smoothen_output is True:
+                    mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
+                predicted_streamflow = mu
+                predicted_streamflow_list.append(predicted_streamflow)
+        else:
+            seq = int(len(predicted_streamflows)/batch_size)
+            predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
+
+            predicted_streamflow_list = []
+            for predicted_streamflow in predicted_streamflows:
+                predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+                predicted_streamflow_list.append(predicted_streamflow)
+
+        for predicted_streamflow, lat, lon in zip(predicted_streamflow_list, latlist, lonlist):
+            adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=lookback)
+            period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
+            df = pd.DataFrame({
+                'time': period,  # Adjusted time column
+                'streamflow (m3/s)': predicted_streamflow
+            })
+            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/streamflow_{lat}_{lon}.csv")
+            df.to_csv(output_path, index=False)
+
 #========================================================================================================================  
             
-    def plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, sigma=None):
-        nse, kge = self.compute_metrics(observed_streamflow, predicted_streamflow)
+    def plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
+        nse, kge = self.compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
         kge1 = kge[0][0]
         R = kge[1][0]
         Beta = kge[2][0]
@@ -161,10 +249,6 @@ class BakaanoHydro:
         print(f"Kling-Gupta Efficiency (KGE): {kge1}")
         plt.plot(predicted_streamflow[:], color='blue', label='Predicted Streamflow')
         plt.plot(observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values[:], color='red', label='Observed Streamflow')
-        if sigma is not None:
-            lower_bound = np.maximum(predicted_streamflow - 1.65 * sigma, 0)
-            upper_bound = predicted_streamflow[:] + 1.65 * sigma
-            plt.fill_between(range(len(predicted_streamflow[:])), lower_bound, upper_bound, color='orange', alpha=0.3, label='95% Confidence Interval')
         plt.title('Comparison of observed and simulated streamflow for River ' + self.working_dir)  # Add a title
         plt.xlabel('Date')  # Label the x-axis
         plt.ylabel('River Discharge (m³/s)')
@@ -172,9 +256,12 @@ class BakaanoHydro:
         plt.show()
 #========================================================================================================================  
         
-    def compute_metrics(self, observed_streamflow, predicted_streamflow):
+    def compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
         observed = observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values
-        predicted = predicted_streamflow[:]
+        if loss_fn == 'laplacian_nll':
+            predicted = predicted_streamflow[:]
+        else: 
+            predicted = predicted_streamflow[:, 0].flatten()
         nan_indices = np.isnan(observed) | np.isnan(predicted)
         observed = observed[~nan_indices]
         predicted = predicted[~nan_indices]

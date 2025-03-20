@@ -404,7 +404,7 @@ class StreamflowModel:
     num_static_features : int
         The number of static features in the model.
     """
-    def __init__(self, working_dir):
+    def __init__(self, working_dir, lookback, batch_size, num_epochs):
         """
         Initialize the StreamflowModel with project details.
 
@@ -415,9 +415,9 @@ class StreamflowModel:
         """
         self.regional_model = None
         self.train_data_list = []
-        self.timesteps = 365
-        self.num_epochs = 200
-        self.batch_size = 256
+        self.timesteps = lookback
+        self.num_epochs = num_epochs
+        self.batch_size = batch_size
         self.train_predictors = None
         self.train_response = None
         self.num_dynamic_features = 3
@@ -444,6 +444,23 @@ class StreamflowModel:
         # Save as a pickle file
         with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "wb") as f:
             pickle.dump(global_cdfs, f)
+
+    def compute_local_cdf(self, df, variables):
+        """
+        Compute and save the empirical CDF for each variable separately as a pickle file.
+    
+        Args:
+            df (pd.DataFrame): DataFrame containing multiple variables.
+            variables (list): List of column names to apply quantile scaling.
+            filename (str): File to save the computed CDFs.
+        """
+        transformed_df = pd.DataFrame(index=df.index)
+    
+        for var in variables:
+            sorted_values = np.sort(df[var].dropna().values)  # Remove NaNs and sort
+            quantiles = np.linspace(0, 1, len(sorted_values))  # Generate percentiles
+            transformed_df[var] = np.interp(df[var], sorted_values, quantiles)
+        return transformed_df
 
     def load_global_cdfs_pkl(self):
         """Load the saved empirical CDFs for multiple variables from a pickle file."""
@@ -499,6 +516,7 @@ class StreamflowModel:
         full_train_predictors = []
         full_train_response = []
         train_catchment_list = []
+        full_local_predictors = []
         
         catchment_scaler = MinMaxScaler()
         
@@ -515,6 +533,10 @@ class StreamflowModel:
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
 
+            local_var = ['scaled_acc']
+            local_predictor = self.compute_local_cdf(x, local_var)
+            local_predictor = local_predictor.values
+
             scaled_train_response = y.values/1
 
             z2 = z.reshape(-1,self.num_static_features)
@@ -525,18 +547,23 @@ class StreamflowModel:
             predictor_samples = []
             response_samples = []
             catchment_samples = []
+            local_predictor_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
                 # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
+
+                local_predictor_batch = local_predictor[i:i+self.timesteps, :]
+                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
                 
                 response_batch = scaled_train_response[i+self.timesteps]
                 response_batch = response_batch.reshape(1)
                 
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
+                local_predictor_samples.append(local_predictor_batch)
                 response_samples.append(response_batch)
 
                 catchment_samples.append(scaled_train_catchment)
@@ -550,17 +577,20 @@ class StreamflowModel:
             scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
             scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
+            train_local_predictor_filtered = np.array(local_predictor_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
+            full_local_predictors.append(train_local_predictor_filtered)
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
+        self.train_local_predictors = np.concatenate(full_local_predictors, axis=0)
         self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)  
     
               
-    def build_model(self):
+    def build_model_3_input_branches(self, loss_fn):
         """
         Build and compile the streamflow prediction model using TCN and dense layers.
 
@@ -572,15 +602,21 @@ class StreamflowModel:
         None
         """
         strategy = tf.distribute.MirroredStrategy()
-
         with strategy.scope():
-            dynamic_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='dynamic_input')
+            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
+            local_input = Input(shape=(self.timesteps, 1), name='local_input')
             static_input = Input(shape=(self.num_static_features,), name="static_input")
     
-            tcn_output = TCN(nb_filters = 64, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(dynamic_input)
+            tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(global_input)
             tcn_output = BatchNormalization()(tcn_output)
             tcn_output = Dropout(0.4)(tcn_output)
+
+
+            tcn_output1 = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(local_input)
+            tcn_output1 = BatchNormalization()(tcn_output1)
+            tcn_output1 = Dropout(0.4)(tcn_output1)
         
             static_dense = Dense(32, activation="relu")(static_input)
             static_dense = BatchNormalization()(static_dense)
@@ -609,11 +645,11 @@ class StreamflowModel:
                 return gamma, beta
         
             # Apply FiLM at multiple levels
-            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=64)
+            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=128)
             tcn_output = Multiply()([tcn_output, gamma1])  # Scaling
             tcn_output = Add()([tcn_output, beta1])  # Shifting
         
-            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=64)
+            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=128)
             tcn_output = Multiply()([tcn_output, gamma2])  # Additional FiLM layer
             tcn_output = Add()([tcn_output, beta2])
     
@@ -625,6 +661,105 @@ class StreamflowModel:
                 return weighted_output
     
             tcn_output = attention_block(tcn_output)
+            tcn_output1 = attention_block(tcn_output1)
+    
+            # Merge all outputs
+            merged_output = Concatenate()([tcn_output, tcn_output1, static_dense])
+            merged_output = BatchNormalization()(merged_output)
+    
+            # Fully connected layers
+            output3 = Dense(64, activation='relu')(merged_output)
+            output3 = BatchNormalization()(output3)
+            output3 = Dropout(0.4)(output3)
+    
+            output2 = Dense(32, activation='relu')(output3)
+            output2 = BatchNormalization()(output2)
+            output2 = Dropout(0.4)(output2)
+    
+            output1 = Dense(16)(output2)
+            output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
+    
+            # Create the model
+            
+            if loss_fn is 'laplacian_nll':
+                mu = Dense(1, name="mu")(output1)  # Mean prediction
+                sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
+                output = Concatenate(name="streamflow_distribution")([mu, sigma])
+                self.regional_model = Model(inputs=[global_input, local_input, static_input], outputs=output)
+                self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
+            else:
+                output = Dense(1)(output1)
+                self.regional_model = Model(inputs=[global_input, local_input, static_input], outputs=output)
+                self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
+            return self.regional_model
+
+
+    def build_model_2_input_branches(self, loss_fn):
+        """
+        Build and compile the streamflow prediction model using TCN and dense layers.
+
+        The model uses a TCN for the dynamic input and a dense network for the static input,
+        then concatenates their outputs and passes them through additional dense layers.
+
+        Returns
+        -------
+        None
+        """
+        strategy = tf.distribute.MirroredStrategy()
+        with strategy.scope():
+            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
+            static_input = Input(shape=(self.num_static_features,), name="static_input")
+    
+            tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+                             return_sequences=False)(global_input)
+            tcn_output = BatchNormalization()(tcn_output)
+            tcn_output = Dropout(0.4)(tcn_output)
+
+        
+            static_dense = Dense(32, activation="relu")(static_input)
+            static_dense = BatchNormalization()(static_dense)
+            static_dense = Dropout(0.4)(static_dense)
+        
+            # --- Enhanced FiLM Conditioning ---
+            def enhanced_film_layer(static_input, feature_dim, hidden_dim=64):
+                """
+                Enhanced FiLM conditioning using a deeper MLP for gamma and beta modulation.
+                
+                Parameters:
+                    static_input: Tensor (Static catchment descriptors)
+                    feature_dim: int (Size of TCN output features)
+                    hidden_dim: int (Size of hidden layers in FiLM MLP)
+                
+                Returns:
+                    gamma, beta: Scaling and shifting parameters for FiLM conditioning
+                """
+                x = Dense(hidden_dim, activation="relu")(static_input)
+                x = BatchNormalization()(x)
+                x = Dense(hidden_dim, activation="relu")(x)
+                x = BatchNormalization()(x)
+        
+                gamma = Dense(feature_dim, activation="sigmoid")(x)  # Scaling
+                beta = Dense(feature_dim, activation="tanh")(x)  # Shifting
+                return gamma, beta
+        
+            # Apply FiLM at multiple levels
+            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=128)
+            tcn_output = Multiply()([tcn_output, gamma1])  # Scaling
+            tcn_output = Add()([tcn_output, beta1])  # Shifting
+        
+            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=128)
+            tcn_output = Multiply()([tcn_output, gamma2])  # Additional FiLM layer
+            tcn_output = Add()([tcn_output, beta2])
+    
+    
+            # --- Attention Mechanism ---
+            def attention_block(inputs):
+                attention_scores = Dense(1, activation="softmax")(inputs)
+                weighted_output = Multiply()([inputs, attention_scores])
+                return weighted_output
+    
+            tcn_output = attention_block(tcn_output)
+            #tcn_output1 = attention_block(tcn_output1)
     
             # Merge all outputs
             merged_output = Concatenate()([tcn_output, static_dense])
@@ -642,18 +777,23 @@ class StreamflowModel:
             output1 = Dense(16)(output2)
             output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
     
-            # Probabilistic Output Layer - Predicting Mean and Standard Deviation
-            mu = Dense(1, name="mu")(output1)  # Mean prediction
-            sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
-            output = Concatenate(name="streamflow_distribution")([mu, sigma])
-    
             # Create the model
-            self.regional_model = Model(inputs=[dynamic_input, static_input], outputs=output)
-            self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
+            
+            if loss_fn is 'laplacian_nll':
+                mu = Dense(1, name="mu")(output1)  # Mean prediction
+                sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
+                output = Concatenate(name="streamflow_distribution")([mu, sigma])
+                self.regional_model = Model(inputs=[global_input, static_input], outputs=output)
+                self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
+            else:
+                output = Dense(1)(output1)
+                self.regional_model = Model(inputs=[global_input,  static_input], outputs=output)
+                self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
             return self.regional_model
 
+
     
-    def train_model(self): 
+    def train_model(self, loss_fn, num_input_branch): 
         """
         Train the streamflow prediction model using the prepared training data.
 
@@ -665,13 +805,17 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/deepstrmm_model_tcn365.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        self.regional_model.fit(x=[self.train_predictors,self.train_catchment_size], y=self.train_response, batch_size=self.batch_size, 
-                       epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
+        if num_input_branch == 3:
+            self.regional_model.fit(x=[self.train_predictors, self.train_local_predictors, self.train_catchment_size], y=self.train_response, 
+                                    batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
+        else:
+            self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, 
+                                    batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
-    def load_regional_model(self, path):
+    def load_regional_model(self, path, loss_fn):
         """
         Load a pre-trained regional model from the specified path.
 
@@ -689,7 +833,10 @@ class StreamflowModel:
         from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope # type: ignore
 
-        custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
+        if loss_fn == 'laplacian_nll':
+            custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
+        else:
+            custom_objects = {"TCN": TCN}
         
         strategy = tf.distribute.MirroredStrategy()
         
