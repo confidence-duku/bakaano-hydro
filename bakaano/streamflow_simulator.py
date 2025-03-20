@@ -278,10 +278,8 @@ class PredictDataPreprocessor:
             
         return [self.data_list, self.catchment]
     
-    def get_data_latlng(self, olat, olon):
+    def get_data_latlng(self, latlist, lonlist):
 
-        count = 1
-        
         count = 1
         
         slope = f'{self.working_dir}/elevation/slope_clipped.tif'
@@ -345,50 +343,50 @@ class PredictDataPreprocessor:
                 this_arr = pickle.load(f)
             wfa_list = wfa_list + this_arr
                 
+        for olat, olon in zip(latlist, lonlist):
+            snapped_y, snapped_x = self._snap_coordinates(olat, olon)
+            acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
+            slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
+            tree_cover_data = cum_tree_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            herb_cover_data = cum_herb_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            awc_data = cum_awc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+            self.acc_data = acc_data.values
+            slp_data = slp_data.values
+    
+            row, col = self._extract_station_rowcol(snapped_y, snapped_x)
 
-        snapped_y, snapped_x = self._snap_coordinates(olat, olon)
-        acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-        slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-        tree_cover_data = cum_tree_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-        herb_cover_data = cum_herb_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-        awc_data = cum_awc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-        satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-        self.acc_data = acc_data.values
-        slp_data = slp_data.values
-   
-        row, col = self._extract_station_rowcol(snapped_y, snapped_x)
+            station_wfa = []
+            for arr in wfa_list:
+                arr = arr.tocsr()
+                station_wfa.append(arr[int(row), int(col)])
+            full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
+            full_wfa_data.set_index(time_index, inplace=True)
+            full_wfa_data.index.name = 'time'  # Rename the index to 'time'
 
-        station_wfa = []
-        for arr in wfa_list:
-            arr = arr.tocsr()
-            station_wfa.append(arr[int(row), int(col)])
-        full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
-        full_wfa_data.set_index(time_index, inplace=True)
-        full_wfa_data.index.name = 'time'  # Rename the index to 'time'
+            #extract wfa data based on defined training period
+            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
+            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
+            wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
+            wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
+            wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
+            wfa_data4 = wfa_data1.join([wfa_data2])
+            wfa_data = wfa_data4.join([wfa_data3])
 
-        #extract wfa data based on defined training period
-        wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
-        wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
-        wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
-        wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
-        wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
-        wfa_data4 = wfa_data1.join([wfa_data2])
-        wfa_data = wfa_data4.join([wfa_data3])
-
-        predictors = wfa_data.copy()
-        predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
-        
-        sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
-        catch_list = [self.acc_data, slp_data,sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, 
-                      herb_cover_data, awc_data, satpt_data]
-        predictors2 = predictors
-        self.data_list.append((predictors2))
-        catch_tup = tuple(catch_list)
-        self.catchment.append(catch_tup)
-
-        count = count + 1
+            predictors = wfa_data.copy()
+            predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
             
-        return [self.data_list, self.catchment]
+            sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
+            catch_list = [self.acc_data, slp_data,sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, 
+                        herb_cover_data, awc_data, satpt_data]
+            predictors2 = predictors
+            self.data_list.append((predictors2))
+            catch_tup = tuple(catch_list)
+            self.catchment.append(catch_tup)
+
+            count = count + 1
+            
+        return [self.data_list, self.catchment, latlist, lonlist]
 
     
 #=====================================================================================================================================
@@ -414,12 +412,12 @@ class PredictStreamflow:
     A class for preprocessing flow accumulation data and/or observed streamflow data for prediction and comparison. Preprocessing involves data augmentation, remove missing data and breaking them into sequences of specified length.
 
     """
-    def __init__(self, working_dir):
+    def __init__(self, working_dir, lookback, batch_size):
         self.regional_model = None
         self.train_data_list = []
-        self.timesteps = 360
+        self.timesteps = lookback
         self.num_epochs = 10
-        self.batch_size = 64
+        self.batch_size = batch_size
         self.train_predictors = None
         self.train_response = None
         self.num_dynamic_features = 3
@@ -477,6 +475,23 @@ class PredictStreamflow:
     
         return transformed_df
     
+    def compute_local_cdf(self, df, variables):
+        """
+        Compute and save the empirical CDF for each variable separately as a pickle file.
+    
+        Args:
+            df (pd.DataFrame): DataFrame containing multiple variables.
+            variables (list): List of column names to apply quantile scaling.
+            filename (str): File to save the computed CDFs.
+        """
+        transformed_df = pd.DataFrame(index=df.index)
+    
+        for var in variables:
+            sorted_values = np.sort(df[var].dropna().values)  # Remove NaNs and sort
+            quantiles = np.linspace(0, 1, len(sorted_values))  # Generate percentiles
+            transformed_df[var] = np.interp(df[var], sorted_values, quantiles)
+        return transformed_df
+    
     def prepare_data(self, data_list):
         
         """
@@ -491,9 +506,12 @@ class PredictStreamflow:
 
         predictors = list(map(lambda xy: xy[0], data_list[0]))
         train_catchment = np.array(data_list[1])
+        self.latlist = data_list[2]
+        self.lonlist = data_list[3]
      
         full_train_predictors = []
         train_catchment_list = []
+        full_local_predictors = []
 
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
@@ -511,14 +529,24 @@ class PredictStreamflow:
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
 
+            local_var = ['scaled_acc']
+            local_predictor = self.compute_local_cdf(x, local_var)
+            local_predictor = local_predictor.values
+
             num_samples = scaled_train_predictor.shape[0] - self.timesteps
             predictor_samples = []
             catchment_samples = []
+            local_predictor_samples = []
             
             for i in range(num_samples):
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
+
+                local_predictor_batch = local_predictor[i:i+self.timesteps, :]
+                local_predictor_batch = predictor_batch.reshape(self.timesteps, 1)
+
                 predictor_samples.append(predictor_batch)
+                local_predictor_samples.append(local_predictor_batch)
                 catchment_samples.append(z)
             
             timesteps_to_keep = []
@@ -529,11 +557,14 @@ class PredictStreamflow:
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)
             scaled_train_catchment_filtered = np.array(catchment_samples)
+            train_local_predictor_filtered = np.array(local_predictor_samples)
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
+            full_local_predictors.append(train_local_predictor_filtered)
             
         self.predictors = np.concatenate(full_train_predictors, axis=0)
+        self.local_predictors = np.concatenate(full_local_predictors, axis=0)
         self.catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1,self.num_static_features) 
     
     def prepare_data_latlng(self, data_list):
@@ -553,6 +584,7 @@ class PredictStreamflow:
                 
         full_train_predictors = []
         train_catchment_list = []
+        full_local_predictors = []
         
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
             catchment_scaler = pickle.load(file)
@@ -569,19 +601,28 @@ class PredictStreamflow:
         for x, z in zip(predictors, scaled_trained_catchment):
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
+
+            local_var = ['scaled_acc']
+            local_predictor = self.compute_local_cdf(x, local_var)
+            local_predictor = local_predictor.values
               
             num_samples = scaled_train_predictor.shape[0] - self.timesteps
             predictor_samples = []
             catchment_samples = []
+            local_predictor_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
                 # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
+
+                local_predictor_batch = local_predictor[i:i+self.timesteps, :]
+                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
                 
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
+                local_predictor_samples.append(local_predictor_batch)
                 catchment_samples.append(z)
             
             timesteps_to_keep = []
@@ -592,15 +633,18 @@ class PredictStreamflow:
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)
             scaled_train_catchment_filtered = np.array(catchment_samples)
+            train_local_predictor_filtered = np.array(local_predictor_samples)
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             train_catchment_list.append(scaled_train_catchment_filtered)
+            full_local_predictors.append(train_local_predictor_filtered)
             
         self.predictors = np.concatenate(full_train_predictors, axis=0)
+        self.local_predictors = np.concatenate(full_local_predictors, axis=0)
         self.catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1,self.num_static_features)
         
             
-    def load_model(self, path):
+    def load_model(self, path, loss_fn):
         """
         Load saved LSTM model. 
         
@@ -613,13 +657,16 @@ class PredictStreamflow:
         from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope
 
-        custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
+        if loss_fn == 'laplacian_nll':
+            custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
+        else:
+            custom_objects = {"TCN": TCN}
 
         strategy = tf.distribute.MirroredStrategy()
 
         with strategy.scope():
             with custom_object_scope(custom_objects):  
-                self.model = load_model(path, custom_objects=custom_objects, safe_mode=False)
+                self.model = load_model(path, custom_objects=custom_objects)
         
     def summary(self):
         self.model.summary()
