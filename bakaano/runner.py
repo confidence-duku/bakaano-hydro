@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 class BakaanoHydro:
     """Generate an instance
     """
-    def __init__(self, working_dir, study_area_path, start_date, end_date):
+    def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source):
         """_summary_
 
         Args:
@@ -24,6 +24,7 @@ class BakaanoHydro:
         """
          # Initialize the project name
         self.working_dir = working_dir
+        self.climate_data_source = climate_data_source
         
         # Initialize the study area
         self.study_area = study_area_path
@@ -51,7 +52,7 @@ class BakaanoHydro:
                                loss_fn, num_input_branch, lookback, batch_size, num_epochs):
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
-            self.vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
+            self.vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date, climate_data_source=self.climate_data_source)
             self.vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
 
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
