@@ -1,9 +1,11 @@
 
 import requests as r
 import os
+import rasterio
 import rioxarray
 from bakaano.utils import Utils
 import zipfile
+import richdem as rd
 
 class DEM:
     def __init__(self, working_dir, study_area, local_data=False, local_data_path=None):
@@ -53,8 +55,11 @@ class DEM:
                     print(f"Files extracted to '{extraction_path}'")
 
                 self.preprocess()
+
             else:
                 print(f"     - DEM data already exists in {self.working_dir}/elevation; skipping download.")
+                
+
         else:
             #print(f"     - Local DEM data already provided")
             try:
@@ -71,6 +76,14 @@ class DEM:
     def preprocess(self):
         dem = f'{self.working_dir}/elevation/hyd_glo_dem_30s.tif'   
         self.uw.clip(raster_path=dem, out_path=self.out_path, save_output=True)
+
+        slope_name = f'{self.working_dir}/elevation/slope_clipped.tif'
+        if not os.path.exists(slope_name):
+            dem_array = rasterio.open(self.out_path).read(1)
+            rd_dem = rd.rdarray(dem_array, no_data=-9999)
+            slope = rd.TerrainAttribute(rd_dem, attrib='slope_riserun')
+            self.uw.save_to_scratch(slope_name, slope)
+
     
     def plot_dem(self):
         dem_data = rioxarray.open_rasterio(self.out_path)

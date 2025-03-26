@@ -15,7 +15,7 @@ from datetime import datetime
 
 
 class Meteo:
-    def __init__(self, working_dir, study_area, local_data=False, data_source='chelsa', local_prep_path=None, 
+    def __init__(self, working_dir, study_area, start_year, end_year, local_data=False, data_source='chelsa', local_prep_path=None, 
                  local_tasmax_path=None, local_tasmin_path=None, local_tmean_path=None):
         """
         Initialize a Meteo object.
@@ -33,15 +33,17 @@ class Meteo:
         """
         self.study_area = study_area
         self.working_dir = working_dir
-        os.makedirs(f'{self.working_dir}/tasmax', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/tasmin', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/prep', exist_ok=True)
-        os.makedirs(f'{self.working_dir}/tmean', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/{data_source}/tasmax', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/{data_source}/tasmin', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/{data_source}/prep', exist_ok=True)
+        os.makedirs(f'{self.working_dir}/{data_source}/tmean', exist_ok=True)
         self.uw = Utils(self.working_dir, self.study_area)
         self.uw.get_bbox('EPSG:4326')
         self.client = ISIMIPClient()
         self.local_data = local_data
         self.data_source = data_source
+        self.start_year = start_year
+        self.end_year = end_year
 
         if local_data is True:
             self.prep_path = local_prep_path
@@ -91,140 +93,169 @@ class Meteo:
             print(f"     - Climate data already exists in {self.tasmax_path}, {self.tasmin_path}, {self.tmean_path} and {self.prep_path}; skipping download.")
     
     def _download_era5_land_data(self):
-        data_check = f'{self.working_dir}/era5_land/daily_prep.nc'
-        if not os.path.exists(data_check):
-            ee.Authenticate()
-            ee.Initialize()
+       
+        #ee.Authenticate()
+        ee.Initialize()
 
-            era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+        era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 
-            i_date = str(1981)+'-01-01'
-            f_date = str(2021)+'-01-01'
-            df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
+        end_year2 = int(self.end_year) + 1
+        i_date = f'{self.start_year}'+'-01-01'
+        f_date = f'{end_year2}'+'-01-01'
+        df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
 
-            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-            geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=1000, region=area, crs='EPSG:4326', file_per_band=True) 
-            print('Download completed')
-        else:
-            print(f"     - ERA5 Land daily data already exists in {self.working_dir}/era5_land; skipping download.")
+        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
+        geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True) 
+        print('Download completed')
 
     def _download_chirps_prep_data(self):
-        data_check = f'{self.working_dir}/chirps/daily_prep.nc'
-        if not os.path.exists(data_check):
-            ee.Authenticate()
-            ee.Initialize()
+        
+        ee.Authenticate()
+        ee.Initialize()
 
-            chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
+        chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
 
-            i_date = str(1981)+'-01-01'
-            f_date = str(2021)+'-01-01'
+        end_year2 = int(self.end_year) + 1
+        i_date = f'{self.start_year}'+'-01-01'
+        f_date = f'{end_year2}'+'-01-01'
 
-            df = chirps.select('precipitation').filterDate(i_date, f_date)
-            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-            geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=1000, region=area, crs='EPSG:4326', file_per_band=True) 
-            
-            era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
-            df2 = era5.select('temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
-            geemap.ee_export_image_collection(ee_object=df2, out_dir=self.era5_scratch, scale=1000, region=area, crs='EPSG:4326', file_per_band=True)
-            print('Download completed')
-        else:
-            print(f"     - CHIRPS rainfall and ERA5 Land temperature daily data already exists in {self.working_dir}/era5_land; skipping download.")
-
+        df = chirps.select('precipitation').filterDate(i_date, f_date)
+        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
+        geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
+        
+        era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+        df2 = era5.select('temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
+        geemap.ee_export_image_collection(ee_object=df2, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)
+        print('Download completed')
+        
     def get_era5_land_meteo_data(self):
         if self.local_data is False:
-            self._download_era5_land_data()
-            variable_dirs = {
-                'pr': f'{self.working_dir}/{self.era5_scratch}/*total_precipitation_sum*.tif',
-                'tasmax': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m_max*.tif',
-                'tasmin': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m_min*.tif',
-                'tmean': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m*.tif'
-            }
+            data_check = f'{self.working_dir}/ERA5/prep/pr.nc'
+            if not os.path.exists(data_check):
+                self._download_era5_land_data()
+                variable_dirs = {
+                    'pr': os.path.join(self.era5_scratch, '*total_precipitation_sum*.tif'),
+                    'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
+                    'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
+                    'tmean': os.path.join(self.era5_scratch, '*temperature_2m.tif')
+                }
 
-            output_dir_list = [self.prep_path, self.tasmax_path, self.tasmin_path, self.tmean_path]
-            for (var_name, tif_dir), output_dir in zip(variable_dirs.items(), output_dir_list):
-                tif_files = sorted(glob.glob(tif_dir))
+                output_dir_map = {
+                    'pr': self.prep_path,
+                    'tasmax': self.tasmax_path,
+                    'tasmin': self.tasmin_path,
+                    'tmean': self.tmean_path
+                }
 
-                # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
-                try:
-                    timestamps = [
-                        datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
-                        for f in tif_files
-                    ]
-                except ValueError:
-                    raise ValueError(f"Could not parse timestamps from filenames in: {tif_dir}")
+                for var_name, tif_pattern in variable_dirs.items():
+                    self.pattern = tif_pattern
+                    output_dir = output_dir_map[var_name]
+                    tif_files = sorted(glob.glob(tif_pattern))
 
-                # 📚 Load and stack GeoTIFFs
-                data_list = []
-                for i, file in enumerate(tif_files):
-                    da = rioxarray.open_rasterio(file, masked=True).squeeze()  # (band, y, x) → (y, x)
-                    da = da.expand_dims(time=[timestamps[i]])            # Add time dimension
-                    data_list.append(da)
+                    # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
+                    try:
+                        timestamps = [
+                            datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
+                            for f in tif_files
+                        ]
+                    except ValueError:
+                        raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
+                    self.timestamps = timestamps
+                    # 📚 Load and stack GeoTIFFs
+                    data_list = []
+                    for i, file in enumerate(tif_files):
+                        da = rioxarray.open_rasterio(file, masked=True).squeeze()  # Remove band dim if present
+                        da = da.expand_dims(dim={"time": [timestamps[i]]})         # ⬅️ Make time a proper dim
+                        da = da.assign_coords(time=("time", [timestamps[i]]))      # ⬅️ Make it a coordinate too
+                        data_list.append(da)
 
-                # 📈 Combine into a single xarray DataArray
-                data = xr.concat(data_list, dim="time")
-                data.name = var_name
-                data = data.rename({"y": "lat", "x": "lon"})
+                    # 📈 Combine into a single xarray DataArray
+                    data = xr.concat(data_list, dim="time")
+                    data.name = var_name
+                    data = data.rename({"y": "lat", "x": "lon"})
 
-                # 💾 Save to NetCDF
-                
-                data.to_netcdf(f'{output_dir}/{var_name}.nc')
-                print(f"✅ Saved NetCDF for '{var_name}': {output_dir}")
+                    # 💾 Save to NetCDF
+                    os.makedirs(output_dir, exist_ok=True)
+                    nc_path = os.path.join(output_dir, f"{var_name}.nc")
+                    data.to_netcdf(nc_path)
+                    print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
 
-            tasmax_nc = xr.open_dataset(f'{output_dir}/tasmax.nc')
-            tasmin_nc = xr.open_dataset(f'{output_dir}/tasmin.nc')
-            tmean_nc = xr.open_dataset(f'{output_dir}/tmean.nc')
-            prep_nc = xr.open_dataset(f'{output_dir}/pr.nc')
+            else:
+                print(f"     - ERA5 Land daily data already exists in {self.working_dir}/era5_land; skipping download.")
 
-        return prep_nc, tasmax_nc, tasmin_nc, tmean_nc 
+
+            # 🔄 Load datasets for return
+            prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
+            tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
+            tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+
+        return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
             
 
     def get_chirps_prep_meteo_data(self):
         if self.local_data is False:
-            self._download_chirps_prep_data()
-            variable_dirs = {
-                'pr': f'{self.working_dir}/{self.chirps_scratch}/*precipitation*.tif',
-                'tasmax': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m_max*.tif',
-                'tasmin': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m_min*.tif',
-                'tmean': f'{self.working_dir}/{self.era5_scratch}/*temperature_2m*.tif'
-            }
+            data_check = f'{self.working_dir}/CHIRPS/prep/pr.nc'
+            if not os.path.exists(data_check):
+                self._download_chirps_prep_data()
+                variable_dirs = {
+                    'pr': os.path.join(self.chirps_scratch, '*precipitation*.tif'),
+                    'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
+                    'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
+                    'tmean': os.path.join(self.era5_scratch, '*temperature_2m*.tif')
+                }
 
-            output_dir_list = [self.prep_path, self.tasmax_path, self.tasmin_path, self.tmean_path]
-            for (var_name, tif_dir), output_dir in zip(variable_dirs.items(), output_dir_list):
-                tif_files = sorted(glob.glob(tif_dir))
+                output_dir_map = {
+                    'pr': self.prep_path,
+                    'tasmax': self.tasmax_path,
+                    'tasmin': self.tasmin_path,
+                    'tmean': self.tmean_path
+                }
 
-                # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
-                try:
-                    timestamps = [
-                        datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
-                        for f in tif_files
-                    ]
-                except ValueError:
-                    raise ValueError(f"Could not parse timestamps from filenames in: {tif_dir}")
+                for var_name, tif_pattern in variable_dirs.items():
+                    self.pattern = tif_pattern
+                    output_dir = output_dir_map[var_name]
+                    tif_files = sorted(glob.glob(tif_pattern))
 
-                # 📚 Load and stack GeoTIFFs
-                data_list = []
-                for i, file in enumerate(tif_files):
-                    da = rioxarray.open_rasterio(file, masked=True).squeeze()  # (band, y, x) → (y, x)
-                    da = da.expand_dims(time=[timestamps[i]])            # Add time dimension
-                    data_list.append(da)
+                    # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
+                    try:
+                        timestamps = [
+                            datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
+                            for f in tif_files
+                        ]
+                    except ValueError:
+                        raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
 
-                # 📈 Combine into a single xarray DataArray
-                data = xr.concat(data_list, dim="time")
-                data.name = var_name
-                data = data.rename({"y": "lat", "x": "lon"})
+                    # 📚 Load and stack GeoTIFFs
+                    data_list = []
+                    for i, file in enumerate(tif_files):
+                        da = rioxarray.open_rasterio(file, masked=True).squeeze()  # Remove band dim if present
+                        da = da.expand_dims(dim={"time": [timestamps[i]]})         # ⬅️ Make time a proper dim
+                        da = da.assign_coords(time=("time", [timestamps[i]]))      # ⬅️ Make it a coordinate too
+                        data_list.append(da)
 
-                # 💾 Save to NetCDF
-                
-                data.to_netcdf(f'{output_dir}/{var_name}.nc')
-                print(f"✅ Saved NetCDF for '{var_name}': {output_dir}")
+                    # 📈 Combine into a single xarray DataArray
+                    data = xr.concat(data_list, dim="time")
+                    data.name = var_name
+                    data = data.rename({"y": "lat", "x": "lon"})
 
-            tasmax_nc = xr.open_dataset(f'{output_dir}/tasmax.nc')
-            tasmin_nc = xr.open_dataset(f'{output_dir}/tasmin.nc')
-            tmean_nc = xr.open_dataset(f'{output_dir}/tmean.nc')
-            prep_nc = xr.open_dataset(f'{output_dir}/pr.nc')
+                    # 💾 Save to NetCDF
+                    os.makedirs(output_dir, exist_ok=True)
+                    nc_path = os.path.join(output_dir, f"{var_name}.nc")
+                    data.to_netcdf(nc_path)
+                    print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
 
-        return prep_nc, tasmax_nc, tasmin_nc, tmean_nc   
+            else:
+                print(f"     - CHIRPS daily data already exists in {self.working_dir}/CHIRPS; skipping download.")
+
+            # 🔄 Load datasets for return
+            prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
+            tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
+            tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+
+        return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
     def get_chelsa_meteo_data(self):
         if self.local_data is False:
@@ -254,12 +285,6 @@ class Meteo:
             tmean_nc = self.uw.concat_nc(self.tmean_path, '*tas_*.nc')
             prep_nc = self.uw.concat_nc(self.prep_path, '*pr_*.nc')
 
-        
-
-            # tasmax_nc = self.uw.align_rasters(tasmax_nc, israster=False)
-            # tasmin_nc = self.uw.align_rasters(tasmin_nc, israster=False)
-            # tmean_nc = self.uw.align_rasters(tmean_nc, israster=False)
-            # prep_nc = self.uw.align_rasters(prep_nc, israster=False)
         else:
             try:
                 if not all([self.prep_path, self.tasmax_path, self.tasmin_path, self.tmean_path]):
@@ -321,11 +346,12 @@ class Meteo:
         Get meteo data from the specified data source: 'CHELSA', 'ERA5' or 'CHIRPS'
         '''
         if self.data_source == 'CHELSA':
-            self.get_chelsa_meteo_data()
+            prep_nc, tasmax_nc, tasmin_nc, tmean_nc = self.get_chelsa_meteo_data()
         elif self.data_source == 'ERA5':
-            self.get_era5_land_meteo_data()
+            prep_nc, tasmax_nc, tasmin_nc, tmean_nc = self.get_era5_land_meteo_data()
         elif self.data_source == 'CHIRPS':
-            self.get_chirps_prep_meteo_data()
+            prep_nc, tasmax_nc, tasmin_nc, tmean_nc= self.get_chirps_prep_meteo_data()
+        return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
         
         

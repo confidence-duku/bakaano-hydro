@@ -252,8 +252,8 @@ class PredictDataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
-            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
-            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
+            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
             wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
