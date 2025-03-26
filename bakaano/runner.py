@@ -56,7 +56,7 @@ class BakaanoHydro:
             self.vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
 
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.start_date)
+        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         
@@ -86,7 +86,7 @@ class BakaanoHydro:
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
             vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.start_date, grdc_netcdf)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, grdc_netcdf)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
         print("Available station names:")

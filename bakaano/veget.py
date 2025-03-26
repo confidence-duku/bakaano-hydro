@@ -51,13 +51,15 @@ class VegET:
             # Initialize potential evapotranspiration and data preprocessor
             eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
-            # Load observed streamflow and climate data
-            tasmax_var = list(tasmax_nc.data_vars)[0]
-            tasmin_var = list(tasmin_nc.data_vars)[0]
-            tmean_var = list(tmean_nc.data_vars)[0]
-            prep_var = list(prep_nc.data_vars)[0]
+            
 
             if self.climate_data_source == 'CHELSA':
+                # Load observed streamflow and climate data
+                tasmax_var = list(tasmax_nc.data_vars)[0]
+                tasmin_var = list(tasmin_nc.data_vars)[0]
+                tmean_var = list(tmean_nc.data_vars)[0]
+                prep_var = list(prep_nc.data_vars)[0]
+
                 tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
@@ -66,6 +68,12 @@ class VegET:
                 self.rf = rf
 
             elif self.climate_data_source == 'ERA5':
+                # Load observed streamflow and climate data
+                tasmax_var = list(tasmax_nc.data_vars)[1]
+                tasmin_var = list(tasmin_nc.data_vars)[1]
+                tmean_var = list(tmean_nc.data_vars)[1]
+                prep_var = list(prep_nc.data_vars)[1]
+
                 tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
@@ -73,6 +81,11 @@ class VegET:
                 self.rf = rf
                 #rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
             elif self.climate_data_source == 'CHIRPS':
+                tasmax_var = list(tasmax_nc.data_vars)[1]
+                tasmin_var = list(tasmin_nc.data_vars)[1]
+                tmean_var = list(tmean_nc.data_vars)[1]
+                prep_var = list(prep_nc.data_vars)[1]
+                
                 tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
                 tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15

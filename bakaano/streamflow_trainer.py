@@ -303,7 +303,7 @@ class DataPreprocessor:
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
             
-            if station_discharge['station_discharge'].notna().sum() < 1095:
+            if station_discharge['station_discharge'].notna().sum() < 10:
                 continue
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
@@ -332,8 +332,8 @@ class DataPreprocessor:
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
             #extract wfa data based on defined training period
-            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
-            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
+            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
             wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
@@ -519,7 +519,7 @@ class StreamflowModel:
         full_local_predictors = []
         
         catchment_scaler = MinMaxScaler()
-        
+        #train_catchment = train_catchment.reshape(-1,1)
         trained_catchment_scaler = catchment_scaler.fit(train_catchment)
         with open(f'./{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
             pickle.dump(trained_catchment_scaler, file)
@@ -681,7 +681,7 @@ class StreamflowModel:
     
             # Create the model
             
-            if loss_fn is 'laplacian_nll':
+            if loss_fn == 'laplacian_nll':
                 mu = Dense(1, name="mu")(output1)  # Mean prediction
                 sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
                 output = Concatenate(name="streamflow_distribution")([mu, sigma])
@@ -779,7 +779,7 @@ class StreamflowModel:
     
             # Create the model
             
-            if loss_fn is 'laplacian_nll':
+            if loss_fn == 'laplacian_nll':
                 mu = Dense(1, name="mu")(output1)  # Mean prediction
                 sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
                 output = Concatenate(name="streamflow_distribution")([mu, sigma])
