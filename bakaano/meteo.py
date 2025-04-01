@@ -130,7 +130,7 @@ class Meteo:
 
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 
-        end_year2 = int(self.end_year) + 1
+        #end_year2 = int(self.end_year) + 1
         # i_date = f'{self.start_year}'+'-01-01'
         # f_date = f'{end_year2}'+'-01-01'
         df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(self.start_date, self.end_date)
