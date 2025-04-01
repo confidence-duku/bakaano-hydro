@@ -10,6 +10,24 @@ from bakaano.utils import Utils
 
 class TreeCover:
     def __init__(self, working_dir, study_area):
+        """
+        A class used to download and preprocess fractional vegetation cover data
+
+        Args:
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area (str): The path to the shapefile of the river basin or watershed.
+        
+        Methods
+        -------
+        __init__(working_dir, study_area):
+            Initializes the TreeCover object with project details.
+        download_tree_cover():
+            Download fractional vegetation cover data. 
+        preprocess_tree_cover():
+            Preprocess downloaded data.
+        plot_tree_cover():
+            Plot mean tree cover data
+        """
         self.study_area = study_area
         self.working_dir = working_dir
         os.makedirs(f'{self.working_dir}/vcf', exist_ok=True)
@@ -17,6 +35,8 @@ class TreeCover:
         self.uw.get_bbox('EPSG:4326')
 
     def download_tree_cover(self):
+        """Download fractional vegetation cover data.
+        """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
         if not os.path.exists(vcf_check):
             ee.Authenticate()
@@ -36,6 +56,8 @@ class TreeCover:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping download.")
 
     def preprocess_tree_cover(self):
+        """Preprocess downloaded data
+        """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
         if not os.path.exists(vcf_check):
             vcf_path= f'{self.working_dir}/vcf'
@@ -78,6 +100,8 @@ class TreeCover:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping preprocessing.")
 
     def plot_tree_cover(self):
+        """Plot mean tree cover data
+        """
         tc_data = rioxarray.open_rasterio(f'{self.working_dir}/vcf/mean_tree_cover.tif')
         tc_data = tc_data.where(tc_data > 0)
         tc_data = tc_data.where(tc_data < 100)

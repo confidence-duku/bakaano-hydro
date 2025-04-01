@@ -29,12 +29,23 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 class PredictDataPreprocessor:
     def __init__(self, working_dir,  study_area, start_date, end_date, grdc_streamflow_nc_file=None):
         """
-        Initialize directories, dates and relevant variables
+        Initialize the PredictDataPreprocessor object.
         
-        Parameters:
-        -----------
-        data_dir : Working directory 
-            Data directory that contains sub-folders and data
+        Args:
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area (str): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
+            grdc_streamflow_nc_file (str): The path to the GRDC streamflow NetCDF file.
+
+        Methods
+        -------
+        _extract_station_rowcol(lat, lon): Extract the row and column indices for a given latitude and longitude from given raster file.
+        _snap_coordinates(lat, lon): Snap the given latitude and longitude to the nearest river segment based on a river grid.
+        load_observed_streamflow(grdc_streamflow_nc_file): Load observed streamflow data from GRDC NetCDF file.
+        encode_lat_lon(latitude, longitude): Encode latitude and longitude into sine and cosine components.
+        get_data(): Extract and process data for each station in the GRDC dataset.
+        get_data_latlng(latlist, lonlist): Extract and process data for specified latitude and longitude coordinates.
     
         """
         self.study_area = study_area
@@ -408,11 +419,26 @@ def laplacian_nll(y_true, y_pred):
     return nll + reg_term
 
 class PredictStreamflow:
-    """
-    A class for preprocessing flow accumulation data and/or observed streamflow data for prediction and comparison. Preprocessing involves data augmentation, remove missing data and breaking them into sequences of specified length.
-
-    """
     def __init__(self, working_dir, lookback, batch_size):
+        """
+        Initializes the PredictStreamflow class for streamflow prediction using a temporal convolutional network (TCN).
+
+        Args:
+            working_dir (str): The working directory where the model and data are stored.
+            lookback (int): The number of timesteps to look back for prediction.
+            batch_size (int): The batch size for training the model.
+
+        Methods
+        -------
+        load_global_cdfs_pkl(): Load the saved empirical CDFs for multiple variables from a pickle file.
+        compute_global_cdfs_pkl(df, variables): Compute and save the empirical CDF for each variable separately as a pickle file.
+        quantile_transform(df, variables, global_cdfs): Apply quantile scaling to multiple variables using precomputed global CDFs.
+        compute_local_cdf(df, variables): Compute and save the empirical CDF for each variable separately as a pickle file.
+        prepare_data(data_list): Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model.
+        prepare_data_latlng(data_list): Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model.
+        load_model(): Load the trained regional model from a file.
+
+        """
         self.regional_model = None
         self.train_data_list = []
         self.timesteps = lookback

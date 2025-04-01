@@ -7,16 +7,21 @@ from bakaano.utils import Utils
 class Soil:
     def __init__(self, working_dir, study_area):
         """
-        Initialize a DEM (Digital Elevation Model) object.
+        Initialize a Soil object.
 
         Args:
             working_dir (str): The working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
-            local_data (bool, optional): Flag indicating whether to use local data instead of downloading new data. Defaults to False.
-            local_data_path (str, optional): Path to the local DEM geotiff tile if `local_data` is True. Defaults to None. Local DEM provided should be in the GCS WGS84 or EPSG:4326 coordinate system
-        
-        Returns:
-            A DEM geotiff clipped to the study area extent to be stored in "{working_dir}/elevation" directory
+        Methods
+        -------
+        __init__(working_dir, study_area):
+            Initializes the Soil object with project details.
+        get_soil_data():
+            Download soil data.
+        preprocess():
+            Preprocess downloaded data.
+        plot_soil():
+            Plot soil data.
         """
         
         self.study_area = study_area
@@ -25,6 +30,8 @@ class Soil:
         self.uw = Utils(self.working_dir, self.study_area)
         
     def get_soil_data(self):
+        """Download soil data.
+        """
         soil_check = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         if not os.path.exists(soil_check):
             urls = ['https://files.isric.org/soilgrids/former/2017-03-10/aggregated/1km/AWCh3_M_sl6_1km_ll.tif',
@@ -55,9 +62,13 @@ class Soil:
             
 
     def preprocess(self, raster_dir, out_path):  
+        """Preprocess downloaded data.
+        """
         self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True)
     
     def plot_soil(self, vmax):
+        """Plot soil data.
+        """
         soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
         soil_data = soil_data.where(soil_data > 0)
         soil_data.plot(cmap='copper', vmax=vmax)

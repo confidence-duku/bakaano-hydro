@@ -16,6 +16,12 @@ warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWa
 
 class Utils:
     def __init__(self, working_dir, study_area):
+        """_summary_
+
+        Args:
+            working_dir (_type_): _description_
+            study_area (_type_): _description_
+        """
         self.study_area = study_area
         self.working_dir = working_dir
         # reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'

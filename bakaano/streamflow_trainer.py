@@ -30,65 +30,28 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
 class DataPreprocessor:
-    """
-    A class used to preprocess data for training DeepSTRMM hydrological model.
-
-    Attributes
-    ----------
-    study_area : str
-        The file path to a shapefile of the study area.
-    start_date : str
-        The start date of the data period in 'YYYY-MM-DD' format.
-    end_date : str
-        The end date of the data period in 'YYYY-MM-DD' format.
-    sim_start : str
-        The start date of the training period in 'YYYY-MM-DD' format.
-    sim_end : str
-        The end date of the training period in 'YYYY-MM-DD' format.
-    project_name : str
-        The name of the project.
-    times : pd.DatetimeIndex
-        A range of dates from start_date to end_date.
-    grdc_subset : pd.DataFrame
-        A DataFrame containing the observed streamflow data.
-    station_ids : np.ndarray
-        An array of unique station IDs from the grdc_subset DataFrame.
-    data_list : list
-        A list to store preprocessed data.
-    catchment : list
-        A list to store catchment information.
-
-    Methods
-    -------
-    __init__(project_name, study_area, start_date, end_date, sim_start, sim_end):
-        Initializes the DataPreprocessor with project details and dates.
-    load_observed_streamflow():
-        Load observed streamflow data from GRDC Data. 
-    _extract_station_rowcol(lat, lon):
-        Transforms coordinates into row and column numbers.
-    _snap_coordinates(lat, lon):
-        Snaps given coordinates to the neares river network grid
-    get_data():
-        Extracts predictors for multiple stations
-    """
     def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date):
         """
         Initialize the DataPreprocessor with project details and dates.
         
-        Parameters
-        ----------
-        project_name : str
-            The name of the project.
-        study_area : str
-            The geographical area of the study.
-        start_date : str
-            The start date of the data period in 'YYYY-MM-DD' format.
-        end_date : str
-            The end date of the data period in 'YYYY-MM-DD' format.
-        sim_start : str
-            The start date of the simulation period in 'YYYY-MM-DD' format.
-        sim_end : str
-            The end date of the simulation period in 'YYYY-MM-DD' format.
+        Args:
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area (str): The path to the shapefile defining the study area.
+            grdc_streamflow_nc_file (str): The path to the GRDC streamflow NetCDF file.
+            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
+
+        Methods
+        -------
+        __init__(working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date):
+            Initializes the DataPreprocessor with project details and dates.
+        load_observed_streamflow(grdc_streamflow_nc_file):
+            Loads and filters observed streamflow data based on the study area and simulation period.
+        encode_lat_lon(latitude, longitude):
+            Encodes latitude and longitude into sine and cosine components.
+        get_data():
+            Extracts and preprocesses predictor and response variables for each station based on its coordinates.
+
         """
         
         self.study_area = study_area
@@ -378,40 +341,39 @@ def laplacian_nll(y_true, y_pred):
     # Compute Negative Log-Likelihood (NLL)
     return nll + reg_term
 class StreamflowModel:
-    """
-    A class used to create and train a streamflow prediction model.
-
-    Attributes
-    ----------
-    working_dir : str
-        The working directory of the project.
-    regional_model : object, optional
-        The regional model used for streamflow prediction.
-    train_data_list : list
-        A list to store the training data.
-    timesteps : int
-        The number of timesteps for the model input.
-    num_epochs : int
-        The number of epochs for training the model.
-    batch_size : int
-        The batch size for training the model.
-    train_predictors : DataFrame, optional
-        The predictors used for training the model.
-    train_response : DataFrame, optional
-        The response variables used for training the model.
-    num_dynamic_features : int
-        The number of dynamic features in the model.
-    num_static_features : int
-        The number of static features in the model.
-    """
+    
     def __init__(self, working_dir, lookback, batch_size, num_epochs):
         """
         Initialize the StreamflowModel with project details.
 
-        Parameters
-        ----------
-        project_name : str
-            The name of the project.
+        Args:
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            lookback (int): The number of timesteps to look back for the model.
+            batch_size (int): The batch size for training the model.
+            num_epochs (int): The number of epochs for training the model.
+
+        Methods
+        -------
+        __init__(working_dir, lookback, batch_size, num_epochs):
+            Initializes the StreamflowModel with project details.
+        compute_global_cdfs_pkl(df, variables):
+            Computes and saves the empirical CDF for each variable separately as a pickle file.
+        compute_local_cdf(df, variables):
+            Computes the empirical CDF for each variable separately.
+        load_global_cdfs_pkl():
+            Loads the saved empirical CDFs for multiple variables from a pickle file.
+        quantile_transform(df, variables, global_cdfs):
+            Applies quantile scaling to multiple variables using precomputed global CDFs.
+        prepare_data(data_list):
+            Prepares the data for training the streamflow prediction model.
+        build_model_3_input_branches(loss_fn):
+            Builds and compiles the streamflow prediction model using TCN and dense layers with three input branches.
+        build_model_2_input_branches(loss_fn):
+            Builds and compiles the streamflow prediction model using TCN and dense layers with two input branches.
+        train_model():
+            Trains the streamflow prediction model using the prepared data.
+        load_regional_model():
+            Loads a pre-trained regional model from a specified directory.
         """
         self.regional_model = None
         self.train_data_list = []

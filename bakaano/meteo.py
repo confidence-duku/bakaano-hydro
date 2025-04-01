@@ -15,19 +15,49 @@ from datetime import datetime
 
 
 class Meteo:
-    def __init__(self, working_dir, study_area, start_year, end_year, local_data=False, data_source='chelsa', local_prep_path=None, 
+    def __init__(self, working_dir, study_area, start_date, end_date, local_data=False, data_source='CHELSA', local_prep_path=None, 
                  local_tasmax_path=None, local_tasmin_path=None, local_tmean_path=None):
+        
         """
         Initialize a Meteo object.
 
         Args:
             working_dir (str): The working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date for the data in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the data in 'YYYY-MM-DD' format.
             local_data (bool, optional): Flag indicating whether to use local data instead of downloading new data. Defaults to False.
+            data_source (str, optional): The source of the data. Options are 'CHELSA', 'ERA5', or 'CHIRPS'. Defaults to 'CHELSA'.
             local_prep_path (str, optional): Path to the local NetCDF file containing daily rainfall data. Required if `local_data` is True.
             local_tasmax_path (str, optional): Path to the local NetCDF file containing daily maximum temperature data (in Kelvin). Required if `local_data` is True.
             local_tasmin_path (str, optional): Path to the local NetCDF file containing daily minimum temperature data (in Kelvin). Required if `local_data` is True.
             local_tmean_path (str, optional): Path to the local NetCDF file containing daily mean temperature data (in Kelvin). Required if `local_data` is True.
+        Methods
+        -------
+        __init__(working_dir, study_area, start_date, end_date, local_data=False, data_source='CHELSA', local_prep_path=None,
+                    local_tasmax_path=None, local_tasmin_path=None, local_tmean_path=None):
+                Initializes the Meteo object with project details.
+        get_meteo_data():
+                Downloads and processes meteorological data from the specified source.
+        get_era5_land_meteo_data():
+                Downloads and processes ERA5 Land meteorological data.
+        get_chirps_prep_meteo_data():
+                Downloads and processes CHIRPS precipitation data.
+        get_chelsa_meteo_data():
+                Downloads and processes CHELSA meteorological data.
+        export_urls_for_download_manager():
+                Exports URLs for downloading CHELSA meteorological data.
+        _download_chelsa_data():
+                Downloads CHELSA meteorological data.
+        _download_era5_land_data():
+                Downloads ERA5 Land meteorological data.
+        _download_chirps_prep_data():
+                Downloads CHIRPS precipitation data.
+        _download_chelsa_data():
+                Downloads CHELSA meteorological data.
+        _download_era5_land_data():
+                Downloads ERA5 Land meteorological data.
+        
         Returns:
             Dataarrays clipped to the study area extent, reprojected to the correct CRS, resampled to match DEM resolution
         """
@@ -42,8 +72,8 @@ class Meteo:
         self.client = ISIMIPClient()
         self.local_data = local_data
         self.data_source = data_source
-        self.start_year = start_year
-        self.end_year = end_year
+        self.start_date = start_date
+        self.end_date = end_date
 
         if local_data is True:
             self.prep_path = local_prep_path
@@ -67,6 +97,7 @@ class Meteo:
                 self.era5_scratch = Path(f'{self.working_dir}/era5_scratch/')
 
     def _download_chelsa_data(self, climate_variable, output_folder):
+
         if not any(folder.exists() and any(folder.iterdir()) for folder in [self.tasmax_path, self.tasmin_path, self.tmean_path, self.prep_path]):
             response = self.client.datasets(
                 simulation_round='ISIMIP3a',
@@ -100,9 +131,9 @@ class Meteo:
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 
         end_year2 = int(self.end_year) + 1
-        i_date = f'{self.start_year}'+'-01-01'
-        f_date = f'{end_year2}'+'-01-01'
-        df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
+        # i_date = f'{self.start_year}'+'-01-01'
+        # f_date = f'{end_year2}'+'-01-01'
+        df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(self.start_date, self.end_date)
 
         area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
         geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True) 
@@ -115,11 +146,10 @@ class Meteo:
 
         chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
 
-        end_year2 = int(self.end_year) + 1
-        i_date = f'{self.start_year}'+'-01-01'
-        f_date = f'{end_year2}'+'-01-01'
-
-        df = chirps.select('precipitation').filterDate(i_date, f_date)
+        # end_year2 = int(self.end_year) + 1
+        # i_date = f'{self.start_year}'+'-01-01'
+        # f_date = f'{end_year2}'+'-01-01'
+        df = chirps.select('precipitation').filterDate(self.start_date, self.end_date)
         area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
         geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
         
