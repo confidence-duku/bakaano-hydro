@@ -16,6 +16,22 @@ import matplotlib.pyplot as plt
 
 class NDVI:
     def __init__(self, working_dir, study_area):
+        """Initialize a NDVI (Normalized Difference Vegetation Index) object.
+
+        Args:
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area (str): The path to the shapefile of the river basin or watershed.
+        Methods
+        -------
+        __init__(working_dir, study_area):
+            Initializes the NDVI object with project details.
+        download_ndvi():
+            Download NDVI data from Google Earth Engine.
+        preprocess():
+            Preprocess downloaded NDVI data.
+        plot_ndvi():
+            Plot NDVI data.
+        """
         self.study_area = study_area
         self.working_dir = working_dir
         os.makedirs(f'{self.working_dir}/ndvi', exist_ok=True)
@@ -24,7 +40,8 @@ class NDVI:
         self.ndvi_folder = f'{self.working_dir}/ndvi'
 
     def download_ndvi(self):
-
+        """Download NDVI data from Google Earth Engine.
+        """
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         if not os.path.exists(ndvi_check):
             ee.Authenticate()

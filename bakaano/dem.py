@@ -13,11 +13,21 @@ class DEM:
         Initialize a DEM (Digital Elevation Model) object.
 
         Args:
-            working_dir (str): The working directory where files and outputs will be stored.
+            working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
             local_data (bool, optional): Flag indicating whether to use local data instead of downloading new data. Defaults to False.
             local_data_path (str, optional): Path to the local DEM geotiff tile if `local_data` is True. Defaults to None. Local DEM provided should be in the GCS WGS84 or EPSG:4326 coordinate system
-        
+        Methods
+        -------
+        __init__(working_dir, study_area, local_data=False, local_data_path=None):
+            Initializes the DEM object with project details.
+        get_dem_data():
+            Download DEM data. 
+        preprocess():
+            Preprocess downloaded data.
+        plot_dem():
+            Plot DEM data
+
         Returns:
             A DEM geotiff clipped to the study area extent to be stored in "{working_dir}/elevation" directory
         """
@@ -31,6 +41,8 @@ class DEM:
         self.local_data_path = local_data_path
         
     def get_dem_data(self):
+        """Download DEM data.
+        """
         if self.local_data is False:
             if not os.path.exists(self.out_path):
                 url = 'https://data.hydrosheds.org/file/hydrosheds-v1-dem/hyd_glo_dem_30s.zip'
@@ -74,6 +86,8 @@ class DEM:
                 print(f"Error: {e}")
 
     def preprocess(self):
+        """Preprocess DEM data.
+        """
         dem = f'{self.working_dir}/elevation/hyd_glo_dem_30s.tif'   
         self.uw.clip(raster_path=dem, out_path=self.out_path, save_output=True)
 
@@ -86,6 +100,8 @@ class DEM:
 
     
     def plot_dem(self):
+        """Plot DEM data.
+        """
         dem_data = rioxarray.open_rasterio(self.out_path)
         dem_data = dem_data.where(dem_data > 0)
         dem_data = dem_data.where(dem_data < 32000)

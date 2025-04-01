@@ -13,14 +13,21 @@ class VegET:
     """Generate an instance
     """
     def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source):
-        """_summary_
+        """Initialize a VegET object.
 
         Args:
-            project_name (str): _description_
-            study_area (str): _description_
-            start_date (str): _description_
-            end_date (str): _description_
-            rp (_type_, optional): _description_. Defaults to None.
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area_path (str): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date of the simulation period in YYYY-MM-DD format
+            end_date (str): The end date of the simulation period in YYYY-MM-DD format
+            climate_data_source (str): The source of climate data. Options are 'CHELSA', 'ERA5', or 'CHIRPS'.
+
+        Methods
+        -------
+        __init__(working_dir, study_area_path, start_date, end_date, climate_data_source):
+            Initializes the VegET object with project details.
+        compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc):
+            Computes the vegetation evapotranspiration and runoff routing flow.
         """
          # Initialize the project name
         self.working_dir = working_dir

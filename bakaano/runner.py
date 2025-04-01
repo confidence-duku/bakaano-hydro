@@ -13,14 +13,32 @@ class BakaanoHydro:
     """Generate an instance
     """
     def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source):
-        """_summary_
+        """Initialize the BakaanoHydro object with project details.
 
         Args:
-            project_name (str): _description_
-            study_area (str): _description_
-            start_date (str): _description_
-            end_date (str): _description_
-            rp (_type_, optional): _description_. Defaults to None.
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area_path (str)): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date for the project in 'YYYY-MM-DD' format.
+            end_date (): The end date for the project in 'YYYY-MM-DD' format.
+            climate_data_source (str): The source of climate data, either 'CHELSA', 'ERA5' or 'CHIRPS'.
+
+        Methods
+        -------
+        __init__(working_dir, study_area_path, start_date, end_date, climate_data_source):
+            Initializes the BakaanoHydro object with project details.
+        train_streamflow_model(grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+            Train the deep learning streamflow prediction model.
+        evaluate_streamflow_model(model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size):
+            Evaluate the streamflow prediction model.
+        simulate_streamflow(model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size):
+            Simulate streamflow using the trained model.
+        simulate_streamflow_batch(model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback):
+            Simulate streamflow in batch mode using the trained model.
+        plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn):
+            Plot the observed and predicted streamflow data.
+        compute_metrics(observed_streamflow, predicted_streamflow, loss_fn):
+            Compute performance metrics for the model.
+
         """
          # Initialize the project name
         self.working_dir = working_dir
@@ -50,6 +68,8 @@ class BakaanoHydro:
 #=========================================================================================================================================
     def train_streamflow_model(self, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, 
                                loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+        """Train the deep learning streamflow prediction model."
+        """
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             self.vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date, climate_data_source=self.climate_data_source)
@@ -81,6 +101,8 @@ class BakaanoHydro:
                 
     def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, 
                                   tmean_nc, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
+        """Evaluate the streamflow prediction model."
+        """
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -181,6 +203,8 @@ class BakaanoHydro:
 #==============================================================================================================================
     def simulate_streamflow_batch(self, model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, 
                                   tmean_nc, loss_fn, num_input_branch, lookback, smoothen_output=True):
+        """Simulate streamflow in batch mode using the trained model."
+        """
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             print('Computing VegET runoff and routing flow to river network')
             vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
@@ -240,6 +264,8 @@ class BakaanoHydro:
 #========================================================================================================================  
             
     def plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
+        """Plot the observed and predicted streamflow data.
+        """
         nse, kge = self.compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
         kge1 = kge[0][0]
         R = kge[1][0]
@@ -258,6 +284,8 @@ class BakaanoHydro:
 #========================================================================================================================  
         
     def compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
+        """Compute performance metrics for the model.
+        """
         observed = observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values
         if loss_fn == 'laplacian_nll':
             predicted = predicted_streamflow[:]
