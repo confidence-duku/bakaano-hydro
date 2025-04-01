@@ -130,13 +130,16 @@ class Meteo:
 
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 
-        #end_year2 = int(self.end_year) + 1
-        # i_date = f'{self.start_year}'+'-01-01'
-        # f_date = f'{end_year2}'+'-01-01'
-        df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(self.start_date, self.end_date)
+        start_year = int(self.start_date[:4])
+        end_year = int(self.end_date[:4])
 
-        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-        geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True) 
+        for year in range(start_year, end_year + 1):
+            i_date = f"{year}-01-01"
+            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
+            df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
+    
+            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
+            geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)  
         print('Download completed')
 
     def _download_chirps_prep_data(self):
@@ -145,17 +148,21 @@ class Meteo:
         ee.Initialize()
 
         chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
-
-        # end_year2 = int(self.end_year) + 1
-        # i_date = f'{self.start_year}'+'-01-01'
-        # f_date = f'{end_year2}'+'-01-01'
-        df = chirps.select('precipitation').filterDate(self.start_date, self.end_date)
-        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-        geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
-        
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
-        df2 = era5.select('temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
-        geemap.ee_export_image_collection(ee_object=df2, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)
+
+        start_year = int(self.start_date[:4])
+        end_year = int(self.end_date[:4])
+
+        for year in range(start_year, end_year + 1):
+            i_date = f"{year}-01-01"
+            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
+            df = chirps.select('precipitation').filterDate(i_date, f_date)
+            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
+            geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
+            
+           
+            df2 = era5.select('temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
+            geemap.ee_export_image_collection(ee_object=df2, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)
         print('Download completed')
         
     def get_era5_land_meteo_data(self):
