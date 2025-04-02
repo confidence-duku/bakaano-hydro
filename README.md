@@ -31,13 +31,13 @@ pip install -r requirements.txt
 
 ## Usage
 
-Users require three primary data or inputs
+Bakaano-Hydro requires three primary data or inputs
 1. Shapefile of study area or river basin
 2. Observed streamflow data in NetCDF format from Global Runoff Data Center (https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Home). Because Bakaano-Hydro aims to use only open-source data, it currently accepts observed streamflow data only from GRDC. 
 3. Registration at Google Earth Engine (https://code.earthengine.google.com/register). Bakaano-Hydro retrieves, NDVI, tree cover and meteorological variables from ERA5-land or CHIRPS from Google Earth Engine Data Catalog. This platform requires prior registration for subsequent authentication during execution of the model
 
-Model execution then involves only five steps. See
-- See https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano%20Hydro%20Tutorials.ipynb
+Model execution then involves only five steps. See the quick start notebook https://github.com/confidence-duku/bakaano-hydro/blob/main/quick_start.ipynb for guidance.
+
 
 ## Code architecture
 
