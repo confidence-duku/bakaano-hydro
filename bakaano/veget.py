@@ -54,7 +54,9 @@ class VegET:
         self.climate_data_source = climate_data_source
 
     def compute_veget_runoff_route_flow(self, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):  
-
+        if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
+            # Initialize potential evapotranspiration and data preprocessor
+            print('Computing VegET runoff and routing flow to river network')
             # Initialize potential evapotranspiration and data preprocessor
             eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
@@ -152,7 +154,7 @@ class VegET:
             for count in range(rf.shape[0]):
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
-                    print(f'Computing surface runoff and routing flow to river channels in year {year_num}')
+                    print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
                 count2 = count+1
                 this_rf = rf[count]
                 this_rf = self.uw.align_rasters(this_rf, israster=False)
@@ -209,3 +211,5 @@ class VegET:
             
             with open(filename, 'wb') as f:
                 pickle.dump(self.wacc_list, f)
+        else:
+            print(f'Routed runoff data exists in {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl. Skipping processing')

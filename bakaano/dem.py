@@ -6,6 +6,7 @@ import rioxarray
 from bakaano.utils import Utils
 import zipfile
 import richdem as rd
+import matplotlib.pyplot as plt
 
 class DEM:
     def __init__(self, working_dir, study_area, local_data=False, local_data_path=None):
@@ -105,5 +106,8 @@ class DEM:
         dem_data = rioxarray.open_rasterio(self.out_path)
         dem_data = dem_data.where(dem_data > 0)
         dem_data = dem_data.where(dem_data < 32000)
-        dem_data.plot(cmap='terrain')
+        #dem_data.plot(cmap='terrain')
+        plt.imshow(dem_data[0], cmap='terrain')
+        plt.colorbar()
+        
         

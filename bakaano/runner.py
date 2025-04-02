@@ -66,15 +66,10 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, 
-                               loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+    def train_streamflow_model(self, grdc_netcdf,  loss_fn, num_input_branch, lookback, batch_size, num_epochs):
         """Train the deep learning streamflow prediction model."
         """
-        if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
-            print('Computing VegET runoff and routing flow to river network')
-            self.vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date, climate_data_source=self.climate_data_source)
-            self.vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
-
+    
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
         sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date)
         print(' 1. Loading observed streamflow')
@@ -99,14 +94,9 @@ class BakaanoHydro:
         smodel.train_model(loss_fn, num_input_branch)
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model(self, model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, 
-                                  tmean_nc, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
+    def evaluate_streamflow_model(self, model_path, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
         """Evaluate the streamflow prediction model."
         """
-        if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
-            print('Computing VegET runoff and routing flow to river network')
-            vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
-            vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
 
         vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, grdc_netcdf)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
@@ -201,14 +191,9 @@ class BakaanoHydro:
     #     df.to_csv(output_path, index=False)
         
 #==============================================================================================================================
-    def simulate_streamflow_batch(self, model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, 
-                                  tmean_nc, loss_fn, num_input_branch, lookback, smoothen_output=True):
+    def simulate_streamflow_batch(self, model_path, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=True):
         """Simulate streamflow in batch mode using the trained model."
         """
-        if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
-            print('Computing VegET runoff and routing flow to river network')
-            vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
-            vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
 
         vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
         

@@ -3,6 +3,7 @@ import requests as r
 import os
 import rioxarray
 from bakaano.utils import Utils
+import matplotlib.pyplot as plt
 
 class Soil:
     def __init__(self, working_dir, study_area):
@@ -71,5 +72,8 @@ class Soil:
         """
         soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
         soil_data = soil_data.where(soil_data > 0)
-        soil_data.plot(cmap='copper', vmax=vmax)
+        soil_data = soil_data.where(soil_data < 100)
+        #soil_data.plot(cmap='copper', vmax=vmax)
+        plt.imshow(soil_data[0], cmap='copper', vmax=vmax)
+        plt.colorbar()
         
