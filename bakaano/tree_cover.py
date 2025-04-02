@@ -7,6 +7,7 @@ import os
 import glob
 import rasterio
 from bakaano.utils import Utils
+import matplotlib.pyplot as plt
 
 class TreeCover:
     def __init__(self, working_dir, study_area):
@@ -102,7 +103,14 @@ class TreeCover:
     def plot_tree_cover(self):
         """Plot mean tree cover data
         """
-        tc_data = rioxarray.open_rasterio(f'{self.working_dir}/vcf/mean_tree_cover.tif')
-        tc_data = tc_data.where(tc_data > 0)
-        tc_data = tc_data.where(tc_data < 100)
-        tc_data.plot(cmap='terrain_r')
+        # tc_data = rioxarray.open_rasterio(f'{self.working_dir}/vcf/mean_tree_cover.tif')
+        # tc_data = tc_data.where(tc_data > 0)
+        # tc_data = tc_data.where(tc_data < 100)
+        # tc_data.plot(cmap='terrain_r')
+
+        this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_tree_cover.tif', out_path=None, save_output=False)[0]
+        this_tc = np.where(this_tc<=0, np.nan, this_tc)
+        this_tc = np.where(this_tc>100, np.nan, this_tc)
+        plt.imshow(this_tc, cmap='viridis_r', vmax=50)
+        plt.colorbar()
+        plt.show()

@@ -215,10 +215,12 @@ class NDVI:
 
     
     def plot_ndvi(self):
-        with open(f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl', 'rb') as f:
-            ndvi_data = pickle.load(f)
+       
+        nlist = sorted(glob.glob(f'{self.working_dir}/ndvi/*median*.tif'))
+        this_ndvi = self.uw.clip(raster_path=nlist[0], out_path=None, save_output=False)[0] * 0.0001
+        this_ndvi = np.where(this_ndvi<=0, np.nan, this_ndvi)
 
-        plt.imshow(ndvi_data[9]*0.0001)
+        plt.imshow(this_ndvi, cmap='viridis_r', vmax=0.6)
         plt.colorbar()
         plt.show()
 
