@@ -1,8 +1,5 @@
 # Bakaano-Hydro
 
-## Name
-Bakaano-Hydro
-
 ## Description
 Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction. Bakaano-Hydro employs a serial hybridization approach and integrates a gridded process-based rainfall-runoff method that captures spatial heterogeneity and dynamic interactions of meteorological forcings and physiographic attributes generating spatially distributed runoff estimates; a flow routing method propagating runoff through the river network based on topographic constraints to preserve hydrological connectivity.; and a sequential neural network that uses routed flow sequences extracted at hydrological stations to predict streamflow. This approach ensures that primary hydrological responses to climate, soil, topography, and vegetation interactions and changes are captured by process-based components, enhancing interpretability while leveraging deep learning for pattern recognition. 
 
