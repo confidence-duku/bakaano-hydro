@@ -4,10 +4,11 @@
 Bakaano-Hydro
 
 ## Description
-Bakaano-Hydro  is a distributed hydrology-guided neural network modelling framework for simulating streamflows. It integrates the distributed hydrological representations of physical-based models with the capacity of deep learning techniques to learn and generalize across basins.Bakaano-Hydro provides a complete, integrated solution for simulating land surface hydrological processes, river flow routing, and streamflow, from raw data processing to model deployment.
+Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction. Bakaano-Hydro employs a serial hybridization approach and integrates a gridded process-based rainfall-runoff method that captures spatial heterogeneity and dynamic interactions of meteorological forcings and physiographic attributes generating spatially distributed runoff estimates; a flow routing method propagating runoff through the river network based on topographic constraints to preserve hydrological connectivity.; and a sequential neural network that uses routed flow sequences extracted at hydrological stations to predict streamflow. This approach ensures that primary hydrological responses to climate, soil, topography, and vegetation interactions and changes are captured by process-based components, enhancing interpretability while leveraging deep learning for pattern recognition. 
+
+![image](https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf)
 
 Bakaano-Hydro leverages extensive data inputs—ranging from digital elevation models (DEMs) to meteorological time-series—and processes them through a robust sequence of automated steps. This includes the download, preprocessing, and alignment of source data, as well as regridding inputs to the desired spatial resolution, ensuring consistency and accuracy across all datasets.
-
 It is highly adaptable, providing users with two primary options for data input: they can either let the model automatically download and preprocess all relevant input data or supply their own datasets. If users choose the latter, Bakaano-Hydro accommodates them by accepting data in the widely-used WGS84 geographic coordinate system (EPSG:4326), without the need for time-consuming clipping or regridding. The model seamlessly adjusts input data to match the DEM's spatial resolution, ensuring that all variables are consistently aligned for optimal performance.
 
 ## Installation
@@ -30,6 +31,12 @@ pip install -r requirements.txt
 
 ## Usage
 
+Users require three primary data or inputs
+1. Shapefile of study area or river basin
+2. Observed streamflow data in NetCDF format from Global Runoff Data Center (https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Home). Because Bakaano-Hydro aims to use only open-source data, it currently accepts observed streamflow data only from GRDC. 
+3. Registration at Google Earth Engine (https://code.earthengine.google.com/register). Bakaano-Hydro retrieves, NDVI, tree cover and meteorological variables from ERA5-land or CHIRPS from Google Earth Engine Data Catalog. This platform requires prior registration for subsequent authentication during execution of the model
+
+Model execution then involves only five steps. See
 - See https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano%20Hydro%20Tutorials.ipynb
 
 ## Code architecture
