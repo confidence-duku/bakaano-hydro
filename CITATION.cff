@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: Bakaano-AI
+title: Bakaano-Hydro
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
@@ -14,7 +14,7 @@ authors:
 repository-code: >-
   https://git.wur.nl/confidence.duku/bakaano-ai
 abstract: >-
-  A distributed hydrology-guided neural network model
+  A distributed hydrology-guided neural network model for streamflow simulation
 keywords:
   - Simulation
 version: "1.1.0"
