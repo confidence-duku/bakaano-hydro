@@ -27,7 +27,7 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area, start_date, end_date, grdc_streamflow_nc_file=None):
+    def __init__(self, working_dir,  study_area, start_date, end_date, sim_start, sim_end, grdc_streamflow_nc_file=None):
         """
         Initialize the PredictDataPreprocessor object.
         
@@ -53,10 +53,13 @@ class PredictDataPreprocessor:
         self.end_date = end_date
         self.working_dir = working_dir
         self.times = pd.date_range(start_date, end_date)
-        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
-        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
+        
         self.data_list = []
         self.catchment = []  
+        self.sim_start = sim_start
+        self.sim_end = sim_end
+        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
+        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         
     def _extract_station_rowcol(self, lat, lon):
         """
@@ -149,8 +152,8 @@ class PredictDataPreprocessor:
 
         # Filter the GRDC dataset based on time and station names
         filtered_grdc = grdc.where(
-            (grdc['time'] >= pd.to_datetime(self.start_date)) &
-            (grdc['time'] <= pd.to_datetime(self.end_date)) &
+            (grdc['time'] >= pd.to_datetime(self.sim_start)) &
+            (grdc['time'] <= pd.to_datetime(self.sim_end)) &
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
@@ -175,7 +178,7 @@ class PredictDataPreprocessor:
         slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
-        herb_cover = f'./{self.working_dir}/vcf/mean_herb_cover.tif'
+        herb_cover = f'{self.working_dir}/vcf/mean_herb_cover.tif'
         awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
         sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
@@ -263,7 +266,7 @@ class PredictDataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
-            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
@@ -282,12 +285,12 @@ class PredictDataPreprocessor:
             catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, herb_cover_data, 
                           awc_data, satpt_data]
 
-            self.data_list.append((predictors, response))
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)  
+            self.data_list.append((predictors, response, catch_tup))
             count = count + 1
             
-        return [self.data_list, self.catchment]
+        return self.data_list
     
     def get_data_latlng(self, latlist, lonlist):
 
@@ -296,7 +299,7 @@ class PredictDataPreprocessor:
         slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
-        herb_cover = f'./{self.working_dir}/vcf/mean_herb_cover.tif'
+        herb_cover = f'{self.working_dir}/vcf/mean_herb_cover.tif'
         awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
         sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
@@ -391,9 +394,9 @@ class PredictDataPreprocessor:
             catch_list = [self.acc_data, slp_data,sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, 
                         herb_cover_data, awc_data, satpt_data]
             predictors2 = predictors
-            self.data_list.append((predictors2))
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
+            self.data_list.append((predictors2, catch_tup))
 
             count = count + 1
             
@@ -453,7 +456,7 @@ class PredictStreamflow:
     
     def load_global_cdfs_pkl(self):
         """Load the saved empirical CDFs for multiple variables from a pickle file."""
-        with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "rb") as f:
+        with open(f'{self.working_dir}/models/global_cdfs.pkl', "rb") as f:
             global_cdfs = pickle.load(f)
         return global_cdfs
 
@@ -530,10 +533,9 @@ class PredictStreamflow:
 
         """
 
-        predictors = list(map(lambda xy: xy[0], data_list[0]))
-        train_catchment = np.array(data_list[1])
-        self.latlist = data_list[2]
-        self.lonlist = data_list[3]
+        predictors = list(map(lambda xy: xy[0], data_list))
+        train_catchment = list(map(lambda xy: xy[2], data_list))
+        train_catchment = np.array(train_catchment)
      
         full_train_predictors = []
         train_catchment_list = []
@@ -569,7 +571,7 @@ class PredictStreamflow:
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
 
                 local_predictor_batch = local_predictor[i:i+self.timesteps, :]
-                local_predictor_batch = predictor_batch.reshape(self.timesteps, 1)
+                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
 
                 predictor_samples.append(predictor_batch)
                 local_predictor_samples.append(local_predictor_batch)
@@ -605,8 +607,12 @@ class PredictStreamflow:
 
         """
 
-        predictors = list(map(lambda xy: xy, data_list[0]))
-        train_catchment = np.array(data_list[1])  
+        predictors = list(map(lambda xy: xy[0], data_list[0]))
+        train_catchment = list(map(lambda xy: xy[1], data_list[0]))
+        train_catchment = np.array(train_catchment)
+        
+        self.latlist = data_list[2]
+        self.lonlist = data_list[3] 
                 
         full_train_predictors = []
         train_catchment_list = []
@@ -680,7 +686,7 @@ class PredictStreamflow:
             Path to the saved neural network LSTM model
 
         """
-        from tcn import TCN  # Make sure to import TCN
+        from bakaano.tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope
 
         if loss_fn == 'laplacian_nll':

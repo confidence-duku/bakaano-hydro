@@ -66,12 +66,12 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, grdc_netcdf,  loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+    def train_streamflow_model(self, train_start, train_end, grdc_netcdf,  loss_fn, num_input_branch, lookback, batch_size, num_epochs):
         """Train the deep learning streamflow prediction model."
         """
     
         print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date)
+        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date,train_start, train_end)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         
@@ -87,18 +87,20 @@ class BakaanoHydro:
         smodel.prepare_data(self.rawdata)
         if num_input_branch == 3:
             smodel.build_model_3_input_branches(loss_fn)
-        else:
+        elif num_input_branch == 3:
             smodel.build_model_2_input_branches(loss_fn)
-        #smodel.load_regional_model(f'{self.working_dir}/models/deepstrmm_model_tcn360.keras')
+        else:
+            raise ValueError("Invalid number. Choose either 2 or 3")
         print(' 4. Training neural network model')
         smodel.train_model(loss_fn, num_input_branch)
+        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model(self, model_path, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
         """Evaluate the streamflow prediction model."
         """
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, grdc_netcdf)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date,val_start, val_end, grdc_netcdf)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
         print("Available station names:")
@@ -118,7 +120,7 @@ class BakaanoHydro:
         vdp.station_ids = np.unique([full_ids[station_index]])
         
         rawdata = vdp.get_data()
-        observed_streamflow = list(map(lambda xy: xy[1], rawdata[0]))
+        observed_streamflow = list(map(lambda xy: xy[1], rawdata))
 
         self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
         self.vmodel.prepare_data(rawdata)
@@ -126,7 +128,7 @@ class BakaanoHydro:
         self.vmodel.load_model(model_path, loss_fn)
         if num_input_branch == 3:
             predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
-        else:
+        elif num_input_branch == 3:
             predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
 
         if loss_fn == 'laplacian_nll':
@@ -145,57 +147,12 @@ class BakaanoHydro:
 
         self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
         
-#========================================================================================================================  
-
-    # def simulate_streamflow(self, model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, 
-    #                         tmean_nc, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
-    #     if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
-    #         print('Computing VegET runoff and routing flow to river network')
-    #         vg = VegET(self.working_dir, self.study_area, self.start_date, self.end_date)
-    #         vg.compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc)
-
-    #     vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
-        
-    #     rawdata = vdp.get_data_latlng(latlist, lonlist)
-
-    #     self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
-    #     self.vmodel.prepare_data_latlng(rawdata)
-
-    #     self.vmodel.load_model(model_path, loss_fn)
-    #     if num_input_branch == 3:
-    #         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
-    #     else:
-    #         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-
-    #     if loss_fn == 'laplacian_nll':
-        
-    #         mu_log = predicted_streamflow[:, 0]  # Mean in log-space
-    #         b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
-            
-    #         # ✅ Convert back to original streamflow units
-    #         mu = np.exp(mu_log) - 1  # Mean streamflow prediction
-    #         sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
-    #         if smoothen_output is True:
-    #             mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
-    #         predicted_streamflow = mu
-    #     else:
-    #         predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
-
-    #     adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=lookback)
-    #     period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
-    #     df = pd.DataFrame({
-    #         'time': period,  # Adjusted time column
-    #         'streamflow (m3/s)': predicted_streamflow
-    #     })
-    #     output_path = os.path.join(self.working_dir, f"output_data/streamflow_{lat}_{lon}.csv")
-    #     df.to_csv(output_path, index=False)
-        
 #==============================================================================================================================
-    def simulate_streamflow_batch(self, model_path, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=True):
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=True):
         """Simulate streamflow in batch mode using the trained model."
         """
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, sim_start, sim_end)
         
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 

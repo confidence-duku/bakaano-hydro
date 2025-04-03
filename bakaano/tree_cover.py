@@ -100,17 +100,29 @@ class TreeCover:
         else:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping preprocessing.")
 
-    def plot_tree_cover(self):
+    def plot_tree_cover(self, variable='tree_cover'):
         """Plot mean tree cover data
         """
         # tc_data = rioxarray.open_rasterio(f'{self.working_dir}/vcf/mean_tree_cover.tif')
         # tc_data = tc_data.where(tc_data > 0)
         # tc_data = tc_data.where(tc_data < 100)
         # tc_data.plot(cmap='terrain_r')
-
-        this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_tree_cover.tif', out_path=None, save_output=False)[0]
-        this_tc = np.where(this_tc<=0, np.nan, this_tc)
-        this_tc = np.where(this_tc>100, np.nan, this_tc)
-        plt.imshow(this_tc, cmap='viridis_r', vmax=50)
-        plt.colorbar()
-        plt.show()
+        if variable == 'tree_cover':
+            this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_tree_cover.tif', out_path=None, save_output=False)[0]
+            plt.title('Mean Tree Cover')
+            this_tc = np.where(this_tc<=0, np.nan, this_tc)
+            this_tc = np.where(this_tc>100, np.nan, this_tc)
+            plt.imshow(this_tc, cmap='viridis_r', vmax=50)
+            plt.colorbar()
+            plt.show()
+        elif variable == 'herb_cover':
+            this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_herb_cover.tif', out_path=None, save_output=False)[0]
+            plt.title('Mean Herbacous Cover')
+            this_tc = np.where(this_tc<=0, np.nan, this_tc)
+            this_tc = np.where(this_tc>100, np.nan, this_tc)
+            plt.imshow(this_tc, cmap='viridis')
+            plt.colorbar()
+            plt.show()
+        else:
+            raise ValueError("Invalid variable. Choose 'tree_cover' or 'herb_cover'.")
+        

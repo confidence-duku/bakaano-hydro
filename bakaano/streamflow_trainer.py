@@ -30,7 +30,7 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
 class DataPreprocessor:
-    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date):
+    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date, train_start, train_end):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -59,11 +59,14 @@ class DataPreprocessor:
         self.end_date = end_date
         self.working_dir = working_dir
         #self.times = pd.date_range(start_date, end_date)
-        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
-        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
+        
         self.data_list = []
         self.catchment = []    
         self.sim_station_names= []
+        self.train_start = train_start
+        self.train_end = train_end
+        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
+        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
     
     def _extract_station_rowcol(self, lat, lon):
         """
@@ -167,8 +170,8 @@ class DataPreprocessor:
 
         # Filter the GRDC dataset based on time and station names
         filtered_grdc = grdc.where(
-            (grdc['time'] >= pd.to_datetime(self.start_date)) &
-            (grdc['time'] <= pd.to_datetime(self.end_date)) &
+            (grdc['time'] >= pd.to_datetime(self.train_start)) &
+            (grdc['time'] <= pd.to_datetime(self.train_end)) &
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
@@ -203,7 +206,7 @@ class DataPreprocessor:
         slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
-        herb_cover = f'./{self.working_dir}/vcf/mean_herb_cover.tif'
+        herb_cover = f'{self.working_dir}/vcf/mean_herb_cover.tif'
         awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
         sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
@@ -295,7 +298,7 @@ class DataPreprocessor:
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
             #extract wfa data based on defined training period
-            wfa_data1 = full_wfa_data[self.start_date: self.end_date]
+            wfa_data1 = full_wfa_data[self.train_start: self.train_end]
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
@@ -319,7 +322,7 @@ class DataPreprocessor:
             
             count = count + 1
 
-        with open(f'./{self.working_dir}/models/{self.working_dir}_predictor_response_data.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/predictor_response_data.pkl', 'wb') as file:
                 pickle.dump(self.data_list, file)
             
         return self.data_list
@@ -404,7 +407,7 @@ class StreamflowModel:
             global_cdfs[var] = (sorted_values, quantiles)  # Store CDF mapping
         
         # Save as a pickle file
-        with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "wb") as f:
+        with open(f'{self.working_dir}/models/global_cdfs.pkl', "wb") as f:
             pickle.dump(global_cdfs, f)
 
     def compute_local_cdf(self, df, variables):
@@ -426,7 +429,7 @@ class StreamflowModel:
 
     def load_global_cdfs_pkl(self):
         """Load the saved empirical CDFs for multiple variables from a pickle file."""
-        with open(f'./{self.working_dir}/models/{self.working_dir}_global_cdfs.pkl', "rb") as f:
+        with open(f'{self.working_dir}/models/global_cdfs.pkl', "rb") as f:
             global_cdfs = pickle.load(f)
         return global_cdfs
 
@@ -483,7 +486,7 @@ class StreamflowModel:
         catchment_scaler = MinMaxScaler()
         #train_catchment = train_catchment.reshape(-1,1)
         trained_catchment_scaler = catchment_scaler.fit(train_catchment)
-        with open(f'./{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
+        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
             pickle.dump(trained_catchment_scaler, file)
 
         concatenated_predictors = pd.concat(train_predictors, axis=0)
