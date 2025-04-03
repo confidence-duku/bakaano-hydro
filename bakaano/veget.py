@@ -8,6 +8,7 @@ from bakaano.pet import PotentialEvapotranspiration
 from bakaano.router import RunoffRouter
 import pickle
 import scipy as sp
+from bakaano.meteo import Meteo
 
 class VegET:
     """Generate an instance
@@ -53,14 +54,17 @@ class VegET:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
         self.climate_data_source = climate_data_source
 
-    def compute_veget_runoff_route_flow(self, prep_nc, tasmax_nc, tasmin_nc, tmean_nc):  
+    def compute_veget_runoff_route_flow(self):  
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             # Initialize potential evapotranspiration and data preprocessor
             print('Computing VegET runoff and routing flow to river network')
             # Initialize potential evapotranspiration and data preprocessor
             eto = PotentialEvapotranspiration(self.working_dir, self.study_area, self.start_date, self.end_date)
 
-            
+            cd = Meteo(self.working_dir, self.study_area, start_date=self.start_date, end_date=self.end_date, 
+                       local_data=False, data_source=self.climate_data_source, local_prep_path=None, local_tasmax_path=None, 
+                       local_tasmin_path=None, local_tmean_path=None)
+            prep_nc, tasmax_nc, tasmin_nc, tmean_nc = cd.get_meteo_data()
 
             if self.climate_data_source == 'CHELSA':
                 # Load observed streamflow and climate data
@@ -211,5 +215,6 @@ class VegET:
             
             with open(filename, 'wb') as f:
                 pickle.dump(self.wacc_list, f)
+            print(f'Completed. Routed runoff data saved to {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl')
         else:
             print(f'Routed runoff data exists in {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl. Skipping processing')

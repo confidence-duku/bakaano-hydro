@@ -12,6 +12,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import xarray as xr
 from datetime import datetime
+import matplotlib.pyplot as plt
 
 
 class Meteo:
@@ -389,6 +390,33 @@ class Meteo:
         elif self.data_source == 'CHIRPS':
             prep_nc, tasmax_nc, tasmin_nc, tmean_nc= self.get_chirps_prep_meteo_data()
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
+    
+    def plot_meteo(self, variable, date):
+        prep_nc, tasmax_nc, tasmin_nc, tmean_nc = self.get_meteo_data()
+        
+        if variable=='precip':
+            data = prep_nc['pr'].sel(time=date, method='nearest')
+            plt.title(f'Precipitation on {date}')
+            plt.imshow(data, interpolation='gaussian')
+            plt.colorbar()
+        elif variable=='tasmax':
+            data = tasmax_nc['tasmax'].sel(time=date, method='nearest') - 273.15
+            plt.title(f'Maximum temperature on {date}')
+            plt.imshow(data, interpolation='gaussian', vmin=0)
+            plt.colorbar()
+        elif variable=='tasmin':
+            data = tasmin_nc['tasmin'].sel(time=date, method='nearest') - 273.15
+            plt.title(f'Minimum temperature on {date}')
+            plt.imshow(data, interpolation='gaussian', vmin=0)
+            plt.colorbar()
+        elif variable=='tmean':
+            data = tmean_nc['tmean'].sel(time=date, method='nearest') - 273.15
+            plt.title(f'Mean temperature on {date}')
+            plt.imshow(data, interpolation='gaussian', vmin=0)
+            plt.colorbar()
+        else:
+            raise ValueError("Invalid variable. Select valid variable")
+
 
         
         

@@ -67,13 +67,31 @@ class Soil:
         """
         self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True)
     
-    def plot_soil(self, vmax):
+    def plot_soil(self, variable):
         """Plot soil data.
         """
-        soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
-        soil_data = soil_data.where(soil_data > 0)
-        soil_data = soil_data.where(soil_data < 100)
-        #soil_data.plot(cmap='copper', vmax=vmax)
-        plt.imshow(soil_data[0], cmap='copper', vmax=vmax)
-        plt.colorbar()
+        if variable=='available_water_content':
+            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif')
+            soil_data = soil_data.where(soil_data > 0)
+            soil_data = soil_data.where(soil_data < 100)
+            plt.title('Available_water_content')
+            plt.imshow(soil_data[0], cmap='copper')
+            plt.colorbar()
+        elif variable == 'wilting_point':
+            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_WWP_M_sl6_1km_ll.tif')
+            soil_data = soil_data.where(soil_data > 0)
+            soil_data = soil_data.where(soil_data < 100)
+            plt.title('Wilting_point')
+            plt.imshow(soil_data[0], cmap='copper')
+            plt.colorbar()
+        elif variable == 'saturation_point':
+            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
+            soil_data = soil_data.where(soil_data > 0)
+            soil_data = soil_data.where(soil_data < 100)
+            plt.title('Saturation_point')
+            plt.imshow(soil_data[0], cmap='copper')
+            plt.colorbar()
+        else:
+            raise ValueError("Invalid variable. Select one of 'available_water_content', 'wilting_point', 'saturation_point'")
+        
         

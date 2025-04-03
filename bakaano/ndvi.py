@@ -214,14 +214,17 @@ class NDVI:
             print(f"     - NDVI data already exists in {self.working_dir}/ndvi/daily_ndvi_climatology.pkl; skipping preprocessing.")
 
     
-    def plot_ndvi(self):
-       
-        nlist = sorted(glob.glob(f'{self.working_dir}/ndvi/*median*.tif'))
-        this_ndvi = self.uw.clip(raster_path=nlist[0], out_path=None, save_output=False)[0] * 0.0001
-        this_ndvi = np.where(this_ndvi<=0, np.nan, this_ndvi)
-
-        plt.imshow(this_ndvi, cmap='viridis_r', vmax=0.6)
-        plt.colorbar()
-        plt.show()
+    def plot_ndvi(self, interval_num):
+        if interval_num <= 22:
+            nlist = sorted(glob.glob(f'{self.working_dir}/ndvi/*median*.tif'))
+            this_ndvi = self.uw.clip(raster_path=nlist[interval_num], out_path=None, save_output=False)[0] * 0.0001
+            this_ndvi = np.where(this_ndvi<=0, np.nan, this_ndvi)
+            file_name = os.path.basename(nlist[interval_num])[:5]
+            plt.imshow(this_ndvi, cmap='viridis_r', vmax=0.6)
+            plt.title(f'mean NDVI for {file_name}')
+            plt.colorbar()
+            plt.show()
+        else:
+            raise ValueError("Invalid number. Choose number less than 22")
 
     
