@@ -96,7 +96,7 @@ class BakaanoHydro:
         print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=True):
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=False):
         """Evaluate the streamflow prediction model."
         """
 
@@ -148,7 +148,7 @@ class BakaanoHydro:
         self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
         
 #==============================================================================================================================
-    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=True):
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=False):
         """Simulate streamflow in batch mode using the trained model."
         """
 

@@ -9,12 +9,12 @@ authors:
     family-names: Duku
     email: confidence.duku@wur.nl
     affiliation: >-
-      Wageningen Environmental Research, Wageningen University & Research
+      Wageningen University & Research
     orcid: "https://orcid.org/0000-0002-1670-3451"
 repository-code: >-
-  https://git.wur.nl/confidence.duku/bakaano-ai
+  https://github.com/confidence-duku/bakaano-hydro
 abstract: >-
   A distributed hydrology-guided neural network model for streamflow simulation
 keywords:
   - Simulation
-version: "1.1.0"
+version: "1.0"
