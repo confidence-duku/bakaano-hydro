@@ -14,7 +14,7 @@ authors:
 repository-code: >-
   https://github.com/confidence-duku/bakaano-hydro
 abstract: >-
-  A distributed hydrology-guided neural network model
+  A distributed hydrology-guided neural network model for streamflow simulation
 keywords:
   - Simulation
 version: "1.0"
