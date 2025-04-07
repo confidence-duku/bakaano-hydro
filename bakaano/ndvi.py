@@ -217,7 +217,7 @@ class NDVI:
     def plot_ndvi(self, interval_num):
         if interval_num <= 22:
             nlist = sorted(glob.glob(f'{self.working_dir}/ndvi/*median*.tif'))
-            this_ndvi = self.uw.clip(raster_path=nlist[interval_num], out_path=None, save_output=False)[0] * 0.0001
+            this_ndvi = self.uw.clip(raster_path=nlist[interval_num], out_path=None, save_output=False, crop_type=True)[0] * 0.0001
             this_ndvi = np.where(this_ndvi<=0, np.nan, this_ndvi)
             file_name = os.path.basename(nlist[interval_num])[:5]
             plt.imshow(this_ndvi, cmap='viridis_r', vmax=0.6)

@@ -56,7 +56,7 @@ class Soil:
 
                 
                 #extraction_path = f'{self.working_dir}/soil'  # Directory where files will be extracted
-                out_path = f'{self.working_dir}/soil/clipped_{filename}'
+                out_path = f'{self.working_dir}/soil/full_{filename}'
                 self.preprocess(local_filename, out_path)
         else:
             print(f"     - Soil data already exists in {self.working_dir}/soil; skipping download.")
@@ -65,27 +65,30 @@ class Soil:
     def preprocess(self, raster_dir, out_path):  
         """Preprocess downloaded data.
         """
-        self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True)
+        self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True, crop_type=False)
     
     def plot_soil(self, variable):
         """Plot soil data.
         """
         if variable=='available_water_content':
-            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif')
+            soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/full_AWCh3_M_sl6_1km_ll.tif', 
+                                     out_path=None, save_output=False, crop_type=True)[0]
             soil_data = soil_data.where(soil_data > 0)
             soil_data = soil_data.where(soil_data < 100)
             plt.title('Available_water_content')
             plt.imshow(soil_data[0], cmap='copper')
             plt.colorbar()
         elif variable == 'wilting_point':
-            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_WWP_M_sl6_1km_ll.tif')
+            soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/full_WWP_M_sl6_1km_ll.tif', 
+                                     out_path=None, save_output=False, crop_type=True)[0]
             soil_data = soil_data.where(soil_data > 0)
             soil_data = soil_data.where(soil_data < 100)
             plt.title('Wilting_point')
             plt.imshow(soil_data[0], cmap='copper')
             plt.colorbar()
         elif variable == 'saturation_point':
-            soil_data = rioxarray.open_rasterio(f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif')
+            soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/full_AWCtS_M_sl6_1km_ll.tif', 
+                                     out_path=None, save_output=False, crop_type=True)[0]
             soil_data = soil_data.where(soil_data > 0)
             soil_data = soil_data.where(soil_data < 100)
             plt.title('Saturation_point')
