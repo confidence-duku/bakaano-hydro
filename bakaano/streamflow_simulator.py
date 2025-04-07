@@ -350,7 +350,7 @@ class PredictDataPreprocessor:
  
         time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         #combine or all yearly output from the runoff and routing module into a single list
-        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/output_data/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:

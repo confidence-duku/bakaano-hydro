@@ -70,7 +70,7 @@ class BakaanoHydro:
         """Train the deep learning streamflow prediction model."
         """
     
-        print('TRAINING DEEP LEARNING STREAMFLOW PREDICTION MODEL')
+        print('TRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
         sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date,train_start, train_end)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
