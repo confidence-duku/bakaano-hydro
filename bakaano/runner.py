@@ -96,7 +96,7 @@ class BakaanoHydro:
         print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, smoothen_output=False):
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size):
         """Evaluate the streamflow prediction model."
         """
 
@@ -139,8 +139,7 @@ class BakaanoHydro:
             # ✅ Convert back to original streamflow units
             mu = np.exp(mu_log) - 1  # Mean streamflow prediction
             sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
-            if smoothen_output is True:
-                mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
+            
             predicted_streamflow = mu
         else:
             predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
@@ -148,7 +147,7 @@ class BakaanoHydro:
         self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
         
 #==============================================================================================================================
-    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback, smoothen_output=False):
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback):
         """Simulate streamflow in batch mode using the trained model."
         """
 
@@ -180,8 +179,7 @@ class BakaanoHydro:
                 # ✅ Convert back to original streamflow units
                 mu = np.exp(mu_log) - 1  # Mean streamflow prediction
                 sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
-                if smoothen_output is True:
-                    mu = pd.DataFrame(mu.reshape(-1, 1)).rolling(window=30, min_periods=1).mean().values.flatten()
+                
                 predicted_streamflow = mu
                 predicted_streamflow_list.append(predicted_streamflow)
         else:
