@@ -1,6 +1,7 @@
 
 import requests as r
 import os
+import numpy as np
 import rioxarray
 from bakaano.utils import Utils
 import matplotlib.pyplot as plt
@@ -73,26 +74,26 @@ class Soil:
         if variable=='available_water_content':
             soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', 
                                      out_path=None, save_output=False, crop_type=True)[0]
-            soil_data = soil_data.where(soil_data > 0)
-            soil_data = soil_data.where(soil_data < 100)
+            soil_data = np.where(soil_data > 0, soil_data, np.nan)
+            soil_data = np.where(soil_data < 100, soil_data, np.nan)
             plt.title('Available_water_content')
-            plt.imshow(soil_data[0], cmap='copper')
+            plt.imshow(soil_data, cmap='copper')
             plt.colorbar()
         elif variable == 'wilting_point':
             soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/clipped_WWP_M_sl6_1km_ll.tif', 
                                      out_path=None, save_output=False, crop_type=True)[0]
-            soil_data = soil_data.where(soil_data > 0)
-            soil_data = soil_data.where(soil_data < 100)
+            soil_data = np.where(soil_data > 0, soil_data, np.nan)
+            soil_data = np.where(soil_data < 100, soil_data, np.nan)
             plt.title('Wilting_point')
-            plt.imshow(soil_data[0], cmap='copper')
+            plt.imshow(soil_data, cmap='copper')
             plt.colorbar()
         elif variable == 'saturation_point':
             soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif', 
                                      out_path=None, save_output=False, crop_type=True)[0]
-            soil_data = soil_data.where(soil_data > 0)
-            soil_data = soil_data.where(soil_data < 100)
+            soil_data = np.where(soil_data > 0, soil_data, np.nan)
+            soil_data = np.where(soil_data < 100, soil_data, np.nan)
             plt.title('Saturation_point')
-            plt.imshow(soil_data[0], cmap='copper')
+            plt.imshow(soil_data, cmap='copper')
             plt.colorbar()
         else:
             raise ValueError("Invalid variable. Select one of 'available_water_content', 'wilting_point', 'saturation_point'")
