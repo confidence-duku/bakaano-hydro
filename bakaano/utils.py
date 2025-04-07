@@ -129,7 +129,7 @@ class Utils:
         return ds3
         
 
-    def clip(self, raster_path,  dst_crs='EPSG:4326', out_path=None, save_output=False):
+    def clip(self, raster_path,  dst_crs='EPSG:4326', out_path=None, save_output=False, crop_type=False):
         
         """
         Clips the source raster (src_path) using the extent of the clip raster (clip_path) 
@@ -163,7 +163,7 @@ class Utils:
                 shapes = [feature["geometry"] for feature in shapefile]
 
         with rasterio.open(raster_path) as src:
-            out_image, out_transform = rasterio.mask.mask(src, shapes, crop=True)
+            out_image, out_transform = rasterio.mask.mask(src, shapes, crop=crop_type)
             out_meta = src.meta
             #out_image = out_image.astype(np.float32)
             #out_image = np.where(out_image == src.nodata, np.nan, out_image)

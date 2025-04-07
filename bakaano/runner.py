@@ -96,7 +96,7 @@ class BakaanoHydro:
         print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size):
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback):
         """Evaluate the streamflow prediction model."
         """
 
@@ -122,7 +122,7 @@ class BakaanoHydro:
         rawdata = vdp.get_data()
         observed_streamflow = list(map(lambda xy: xy[1], rawdata))
 
-        self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
+        self.vmodel = PredictStreamflow(self.working_dir, lookback)
         self.vmodel.prepare_data(rawdata)
 
         self.vmodel.load_model(model_path, loss_fn)
@@ -157,7 +157,7 @@ class BakaanoHydro:
         
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 
-        self.vmodel = PredictStreamflow(self.working_dir, lookback, batch_size)
+        self.vmodel = PredictStreamflow(self.working_dir, lookback)
         self.vmodel.prepare_data_latlng(rawdata)
         batch_size = len(self.vmodel.latlist)
         self.vmodel.load_model(model_path, loss_fn)

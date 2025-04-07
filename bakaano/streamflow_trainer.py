@@ -88,7 +88,7 @@ class DataPreprocessor:
             The column index corresponding to the given latitude and longitude.
 
         """
-        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_full.tif') as src:
             #data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
@@ -315,10 +315,10 @@ class DataPreprocessor:
             sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
             catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, herb_cover_data, 
                           awc_data, satpt_data]
-
+            predictors2 = predictors
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
-            self.data_list.append((predictors, response, catch_tup))
+            self.data_list.append((predictors2, response, catch_tup))
             
             count = count + 1
 
@@ -330,19 +330,17 @@ class DataPreprocessor:
 @register_keras_serializable(package="Custom", name="laplacian_nll")
 def laplacian_nll(y_true, y_pred):
 
-    mu = y_pred[:, 0]  # Mean prediction (original space)
-    b = tf.nn.softplus(y_pred[:, 1]) + 1e-3  # Scale parameter (uncertainty), ensuring positivity
+    mu = y_pred[:, 0]  # Log-space mean prediction
+    b = tf.nn.softplus(y_pred[:, 1]) + 1e-6  # Scale parameter (uncertainty)
 
-    # Define Laplace distribution in original space
+    # ✅ Log-transform the observed streamflow
+    log_y_true = tf.math.log(y_true[:, 0] + 1)  # Avoid log(0) issues
+
+    # Define Laplacian distribution in log-space
     laplace_dist = tfd.Laplace(loc=mu, scale=b)
 
-    nll = -tf.reduce_mean(laplace_dist.log_prob(y_true[:, 0]))
-
-    # ✅ Regularization to penalize large sigma values
-    reg_term = 0.0001 * tf.reduce_mean(tf.square(b))  # Adjust weight if needed
-
-    # Compute Negative Log-Likelihood (NLL)
-    return nll + reg_term
+    # Compute NLL in log-space
+    return -tf.reduce_mean(laplace_dist.log_prob(log_y_true))
 class StreamflowModel:
     
     def __init__(self, working_dir, lookback, batch_size, num_epochs):

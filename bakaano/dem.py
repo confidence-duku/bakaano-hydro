@@ -38,6 +38,7 @@ class DEM:
         os.makedirs(f'{self.working_dir}/elevation', exist_ok=True)
         self.uw = Utils(self.working_dir, self.study_area)
         self.out_path = f'{self.working_dir}/elevation/dem_clipped.tif'
+        #self.out_path_uncropped = f'{self.working_dir}/elevation/dem_full.tif'
         self.local_data = local_data
         self.local_data_path = local_data_path
         
@@ -90,7 +91,8 @@ class DEM:
         """Preprocess DEM data.
         """
         dem = f'{self.working_dir}/elevation/hyd_glo_dem_30s.tif'   
-        self.uw.clip(raster_path=dem, out_path=self.out_path, save_output=True)
+        self.uw.clip(raster_path=dem, out_path=self.out_path, save_output=True, crop_type=False)
+        #self.uw.clip(raster_path=dem, out_path=self.out_path_uncropped, save_output=True, crop_type=False)
 
         slope_name = f'{self.working_dir}/elevation/slope_clipped.tif'
         if not os.path.exists(slope_name):
