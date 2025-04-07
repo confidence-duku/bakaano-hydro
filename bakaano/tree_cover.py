@@ -110,7 +110,7 @@ class TreeCover:
         if variable == 'tree_cover':
             this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_tree_cover.tif', out_path=None, save_output=False)[0]
             plt.title('Mean Tree Cover')
-            this_tc = np.where(this_tc<=0, np.nan, this_tc)
+            this_tc = np.where(this_tc<0, np.nan, this_tc)
             this_tc = np.where(this_tc>100, np.nan, this_tc)
             plt.imshow(this_tc, cmap='viridis_r', vmax=50)
             plt.colorbar()
@@ -118,7 +118,7 @@ class TreeCover:
         elif variable == 'herb_cover':
             this_tc = self.uw.clip(raster_path=f'{self.working_dir}/vcf/mean_herb_cover.tif', out_path=None, save_output=False)[0]
             plt.title('Mean Herbacous Cover')
-            this_tc = np.where(this_tc<=0, np.nan, this_tc)
+            this_tc = np.where(this_tc<0, np.nan, this_tc)
             this_tc = np.where(this_tc>100, np.nan, this_tc)
             plt.imshow(this_tc, cmap='viridis')
             plt.colorbar()
