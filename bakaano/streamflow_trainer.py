@@ -113,7 +113,7 @@ class DataPreprocessor:
             The longitude of the nearest river segment.
         """
         coordinate_to_snap=(lon, lat)
-        with rasterio.open(f'{self.working_dir}/elevation/dem_full.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
             transform = src.transform
 
             river_coords = []
@@ -203,12 +203,12 @@ class DataPreprocessor:
         """
         count = 1
         
-        slope = f'{self.working_dir}/elevation/slope_full.tif'
-        dem_filepath = f'{self.working_dir}/elevation/dem_full.tif'
+        slope = f'{self.working_dir}/elevation/slope_clipped.tif'
+        dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
         herb_cover = f'{self.working_dir}/vcf/mean_herb_cover.tif'
-        awc = f'{self.working_dir}/soil/full_AWCh3_M_sl6_1km_ll.tif'
-        sat_pt = f'{self.working_dir}/soil/full_AWCtS_M_sl6_1km_ll.tif'
+        awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
+        sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
         latlng_ras = latlng_ras.rio.write_crs(4326)

@@ -51,7 +51,7 @@ class VegET:
         os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
         os.makedirs(f'{self.working_dir}/catchment', exist_ok=True)
 
-        self.clipped_dem = f'{self.working_dir}/elevation/dem_full.tif'
+        self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
         self.climate_data_source = climate_data_source
 
     def compute_veget_runoff_route_flow(self):  
@@ -127,7 +127,7 @@ class VegET:
             with open(pickle_file_path, 'rb') as f:
                 ndvi_array = pickle.load(f)
             
-            water_holding_capacity = self.uw.align_rasters(f'{self.working_dir}/soil/full_AWCh3_M_sl6_1km_ll.tif', israster=True) * 10
+            water_holding_capacity = self.uw.align_rasters(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', israster=True) * 10
             max_allowable_depletion = 0.5 * water_holding_capacity[0]
 
             tree_cover_tiff = f'{self.working_dir}/vcf/mean_tree_cover.tif'
