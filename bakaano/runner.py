@@ -87,7 +87,7 @@ class BakaanoHydro:
         smodel.prepare_data(self.rawdata)
         if num_input_branch == 3:
             smodel.build_model_3_input_branches(loss_fn)
-        elif num_input_branch == 3:
+        elif num_input_branch == 2:
             smodel.build_model_2_input_branches(loss_fn)
         else:
             raise ValueError("Invalid number. Choose either 2 or 3")
@@ -128,8 +128,10 @@ class BakaanoHydro:
         self.vmodel.load_model(model_path, loss_fn)
         if num_input_branch == 3:
             predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
-        elif num_input_branch == 3:
+        elif num_input_branch == 2:
             predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
+        else:
+            raise ValueError("Invalid number. Choose either 2 or 3")
 
         if loss_fn == 'laplacian_nll':
         
