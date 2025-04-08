@@ -2,6 +2,7 @@
 import requests as r
 import os
 import rasterio
+import numpy as np
 import rioxarray
 from bakaano.utils import Utils
 import zipfile
@@ -105,11 +106,12 @@ class DEM:
     def plot_dem(self):
         """Plot DEM data.
         """
-        dem_data = rioxarray.open_rasterio(self.out_path)
-        dem_data = dem_data.where(dem_data > 0)
-        dem_data = dem_data.where(dem_data < 32000)
+        dem_data = self.uw.clip(raster_path=self.out_path, out_path=None, save_output=False, crop_type=True)[0]
+        #dem_data = rioxarray.open_rasterio(self.out_path)
+        dem_data = np.where(dem_data > 0, dem_data, np.nan)
+        dem_data = np.where(dem_data < 32000, dem_data, np.nan)
         #dem_data.plot(cmap='terrain')
-        plt.imshow(dem_data[0], cmap='terrain')
+        plt.imshow(dem_data, cmap='terrain')
         plt.colorbar()
         
         
