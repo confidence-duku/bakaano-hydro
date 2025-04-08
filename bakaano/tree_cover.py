@@ -1,16 +1,15 @@
 import ee
 import numpy as np
 import geemap
-import datetime
-import rioxarray
 import os
 import glob
 import rasterio
 from bakaano.utils import Utils
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
 class TreeCover:
-    def __init__(self, working_dir, study_area):
+    def __init__(self, working_dir, study_area, start_date, end_date):
         """
         A class used to download and preprocess fractional vegetation cover data
 
@@ -34,6 +33,8 @@ class TreeCover:
         os.makedirs(f'{self.working_dir}/vcf', exist_ok=True)
         self.uw = Utils(self.working_dir, self.study_area)
         self.uw.get_bbox('EPSG:4326')
+        self.start_date = start_date
+        self.end_date = end_date
 
     def download_tree_cover(self):
         """Download fractional vegetation cover data.
@@ -43,10 +44,11 @@ class TreeCover:
             ee.Authenticate()
             ee.Initialize()
 
-            vcf = ee.ImageCollection("MODIS/006/MOD44B")
+            vcf = ee.ImageCollection("MODIS/061/MOD44B")
 
-            i_date = str(2001)+'-01-01'
-            f_date = str(2021)+'-01-01'
+            i_date = self.start_date
+            f_date = datetime.strptime(self.end_date, "%Y-%m-%d") + timedelta(days=1)
+
             df = vcf.select('Percent_Tree_Cover', 'Percent_NonTree_Vegetation').filterDate(i_date, f_date)
 
             area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 

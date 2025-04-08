@@ -82,12 +82,12 @@ class Meteo:
             self.tasmin_path = local_tasmin_path
             self.tmean_path = local_tmean_path
         else:
-            if self.data_source == 'chirps':
+            if self.data_source == 'CHIRPS':
 
-                self.tasmax_path = Path(f'{self.working_dir}/era5_land/tasmax/')
-                self.tasmin_path = Path(f'{self.working_dir}/era5_land/tasmin/')
-                self.tmean_path = Path(f'{self.working_dir}/era5_land/tmean/')
-                self.prep_path = Path(f'{self.working_dir}/era5_land/prep/')
+                self.tasmax_path = Path(f'{self.working_dir}/{self.data_source}/tasmax/')
+                self.tasmin_path = Path(f'{self.working_dir}/{self.data_source}/tasmin/')
+                self.tmean_path = Path(f'{self.working_dir}/{self.data_source}/tmean/')
+                self.prep_path = Path(f'{self.working_dir}/{self.data_source}/prep/')
                 self.era5_scratch = Path(f'{self.working_dir}/era5_scratch/')
                 self.chirps_scratch = Path(f'{self.working_dir}/chirps_scratch/')
             else:
@@ -175,14 +175,14 @@ class Meteo:
                     'pr': os.path.join(self.era5_scratch, '*total_precipitation_sum*.tif'),
                     'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
                     'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
-                    'tmean': os.path.join(self.era5_scratch, '*temperature_2m.tif')
+                    'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
                 }
 
                 output_dir_map = {
                     'pr': self.prep_path,
                     'tasmax': self.tasmax_path,
                     'tasmin': self.tasmin_path,
-                    'tmean': self.tmean_path
+                    'tas': self.tmean_path
                 }
 
                 for var_name, tif_pattern in variable_dirs.items():
@@ -241,14 +241,14 @@ class Meteo:
                     'pr': os.path.join(self.chirps_scratch, '*precipitation*.tif'),
                     'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
                     'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
-                    'tmean': os.path.join(self.era5_scratch, '*temperature_2m*.tif')
+                    'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
                 }
 
                 output_dir_map = {
                     'pr': self.prep_path,
                     'tasmax': self.tasmax_path,
                     'tasmin': self.tasmin_path,
-                    'tmean': self.tmean_path
+                    'tas': self.tmean_path
                 }
 
                 for var_name, tif_pattern in variable_dirs.items():
@@ -410,7 +410,7 @@ class Meteo:
             plt.imshow(data, interpolation='gaussian', vmin=0)
             plt.colorbar()
         elif variable=='tmean':
-            data = tmean_nc['tmean'].sel(time=date, method='nearest') - 273.15
+            data = tmean_nc['tas'].sel(time=date, method='nearest') - 273.15
             plt.title(f'Mean temperature on {date}')
             plt.imshow(data, interpolation='gaussian', vmin=0)
             plt.colorbar()

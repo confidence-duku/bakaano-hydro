@@ -2,7 +2,6 @@
 import requests as r
 import os
 import numpy as np
-import rioxarray
 from bakaano.utils import Utils
 import matplotlib.pyplot as plt
 
