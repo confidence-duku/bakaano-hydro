@@ -4,7 +4,6 @@ import os
 from bakaano.utils import Utils
 from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 from bakaano.streamflow_simulator import PredictDataPreprocessor, PredictStreamflow
-from bakaano.veget import VegET
 import hydroeval
 import matplotlib.pyplot as plt
 

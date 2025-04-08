@@ -18,7 +18,6 @@ import pickle
 import warnings
 import geopandas as gpd
 from scipy.spatial.distance import cdist
-from shapely.geometry import Point
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 

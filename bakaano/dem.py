@@ -3,7 +3,6 @@ import requests as r
 import os
 import rasterio
 import numpy as np
-import rioxarray
 from bakaano.utils import Utils
 import zipfile
 import richdem as rd

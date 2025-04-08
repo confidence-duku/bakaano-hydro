@@ -10,12 +10,12 @@ import pickle
 from datetime import datetime, timedelta
 from collections import defaultdict
 from bakaano.utils import Utils
-from rasterio.enums import Resampling
 from scipy.interpolate import interp1d
 import matplotlib.pyplot as plt
+from datetime import datetime, timedelta
 
 class NDVI:
-    def __init__(self, working_dir, study_area):
+    def __init__(self, working_dir, study_area, start_date, end_date):
         """Initialize a NDVI (Normalized Difference Vegetation Index) object.
 
         Args:
@@ -38,6 +38,8 @@ class NDVI:
         self.uw = Utils(self.working_dir, self.study_area)
         self.uw.get_bbox('EPSG:4326')
         self.ndvi_folder = f'{self.working_dir}/ndvi'
+        self.start_date = start_date
+        self.end_date = end_date
 
     def download_ndvi(self):
         """Download NDVI data from Google Earth Engine.
@@ -49,8 +51,8 @@ class NDVI:
 
             ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
 
-            i_date = str(2001)+'-01-01'
-            f_date = str(2021)+'-01-01'
+            i_date = self.start_date
+            f_date = datetime.strptime(self.end_date, "%Y-%m-%d") + timedelta(days=1)
             df = ndvi.select('NDVI').filterDate(i_date, f_date)
 
             area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
