@@ -83,7 +83,7 @@ class NDVI:
         :return: Dictionary of interval start dates and associated file lists.
         """
         ndvi_files = glob.glob(os.path.join(self.ndvi_folder, '*NDVI.tif'))
-        base_year = 2000  # A leap year to handle February 29
+        base_year = int(self.start_date[:4])  # A leap year to handle February 29
         base_intervals = self.generate_intervals(base_year)  # Generate intervals for one year
         
         groups = defaultdict(list)

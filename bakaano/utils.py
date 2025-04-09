@@ -9,6 +9,8 @@ from operator import itemgetter
 import geopandas as gpd
 import fiona
 from shapely.geometry import shape
+from rasterio.windows import from_bounds
+from shapely.ops import transform
 import warnings
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWarning)
@@ -123,6 +125,10 @@ class Utils:
         #ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override')
         ds = xr.open_mfdataset(files, combine='nested', concat_dim='time', join='override', chunks={'time': 100})
         ds2 = ds.sortby('time')
+        if 'lat' in ds2.coords:
+            ds2 = ds2.assign_coords(lat=ds2['lat'].astype('float32'))
+        if 'lon' in ds2.coords:
+            ds2 = ds2.assign_coords(lon=ds2['lon'].astype('float32'))
         data_var = ds2.sel()
         data_var = data_var.rio.write_crs(4326)  # Ensure consistent CRS            
         ds3 = data_var.rio.clip_box(self.minx, self.miny, self.maxx, self.maxy)
@@ -162,13 +168,24 @@ class Utils:
             with fiona.open(prj_shp_path, "r") as shapefile:
                 shapes = [feature["geometry"] for feature in shapefile]
 
-        with rasterio.open(raster_path) as src:
-            out_image, out_transform = rasterio.mask.mask(src, shapes, crop=crop_type)
-            out_meta = src.meta
-            #out_image = out_image.astype(np.float32)
-            #out_image = np.where(out_image == src.nodata, np.nan, out_image)
-            out_image = out_image.astype('float32')
-            out_image[(out_image > 32600) | (out_image < -32600)] = -9999
+        if crop_type == False:  
+            geom_bounds = shape(shapes[0]).bounds  # (minx, miny, maxx, maxy)
+            with rasterio.open(raster_path) as src:
+                window = from_bounds(*geom_bounds, transform=src.transform)
+                window = window.round_offsets().round_lengths()
+                
+                # Read the rectangular window
+                out_image = src.read(window=window).astype('float32')
+                out_transform = src.window_transform(window)
+                
+                out_meta = src.meta.copy()
+
+        else:
+            with rasterio.open(raster_path) as src:
+                out_image, out_transform = rasterio.mask.mask(src, shapes, crop=crop_type)
+                out_meta = src.meta
+                out_image = out_image.astype('float32')
+                out_image[(out_image > 32600) | (out_image < -32600)] = -9999
 
         if save_output==True:
             if out_path!=None:
@@ -180,7 +197,8 @@ class Utils:
                     "width": out_image.shape[2],
                     "transform": out_transform,
                     "dtype": "float32",
-                    "nodata": -9999.0
+                    "nodata": -9999.0,
+                    "compress": "lzw"
                 })
         
                 with rasterio.open(out_path, "w", **out_meta) as dest:

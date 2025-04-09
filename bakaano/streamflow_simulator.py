@@ -57,8 +57,9 @@ class PredictDataPreprocessor:
         self.catchment = []  
         self.sim_start = sim_start
         self.sim_end = sim_end
-        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
-        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
+        if grdc_streamflow_nc_file is not None:
+            self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
+            self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         
     def _extract_station_rowcol(self, lat, lon):
         """
