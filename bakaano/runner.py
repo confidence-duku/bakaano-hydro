@@ -105,7 +105,7 @@ class BakaanoHydro:
         print("Available station names:")
         print(self.stat_names)
 
-        station_name = input("Please enter the station name: ")
+        station_name = input("\n Please enter the station name: ")
         
         extracted_data = fulldata.where(fulldata.station_name.astype(str) == station_name, drop=True)
         full_ids = list(extracted_data.id.values)
@@ -151,21 +151,22 @@ class BakaanoHydro:
     def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback):
         """Simulate streamflow in batch mode using the trained model."
         """
-
+        print(' 1. Loading runoff data and other predictors')
         vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, sim_start, sim_end)
-        
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 
         self.vmodel = PredictStreamflow(self.working_dir, lookback)
         self.vmodel.prepare_data_latlng(rawdata)
         batch_size = len(self.vmodel.latlist)
         self.vmodel.load_model(model_path, loss_fn)
+        print(' 2. Batch prediction')
         if num_input_branch == 3:
             predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size],
                                                                   batch_size=batch_size)
-            
+        elif num_input_branch ==2:
+            predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
         else:
-            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
+            raise ValueError("Invalid number. Choose either 2 or 3")
 
         if loss_fn == 'laplacian_nll':
             seq = int(len(predicted_streamflows)/batch_size)
@@ -191,7 +192,7 @@ class BakaanoHydro:
             for predicted_streamflow in predicted_streamflows:
                 predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
                 predicted_streamflow_list.append(predicted_streamflow)
-
+        print(' 3. Generating csv file for each coordinate')
         for predicted_streamflow, lat, lon in zip(predicted_streamflow_list, latlist, lonlist):
             adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=lookback)
             period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
@@ -199,9 +200,10 @@ class BakaanoHydro:
                 'time': period,  # Adjusted time column
                 'streamflow (m3/s)': predicted_streamflow
             })
-            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/streamflow_{lat}_{lon}.csv")
+            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/predicted_streamflow_lat{lat}_lon{lon}.csv")
             df.to_csv(output_path, index=False)
-
+        out_folder = os.path.join(self.working_dir, 'predicted_streamflow_data')
+        print(f' COMPLETED! csv files available at {out_folder}')
 #========================================================================================================================  
             
     def plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
@@ -217,7 +219,7 @@ class BakaanoHydro:
         print(f"Kling-Gupta Efficiency (KGE): {kge1}")
         plt.plot(predicted_streamflow[:], color='blue', label='Predicted Streamflow')
         plt.plot(observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values[:], color='red', label='Observed Streamflow')
-        plt.title('Comparison of observed and simulated streamflow for River ' + self.working_dir)  # Add a title
+        plt.title('Comparison of observed and simulated streamflow')  # Add a title
         plt.xlabel('Date')  # Label the x-axis
         plt.ylabel('River Discharge (m³/s)')
         plt.legend()  # Add a legend to label the lines

@@ -88,7 +88,7 @@ class DataPreprocessor:
             The column index corresponding to the given latitude and longitude.
 
         """
-        with rasterio.open(f'{self.working_dir}/elevation/dem_full.tif') as src:
+        with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
             #data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
