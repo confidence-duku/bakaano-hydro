@@ -226,7 +226,7 @@ class Meteo:
             prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
             tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
             tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
-            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tas.nc"))
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
@@ -291,7 +291,7 @@ class Meteo:
             prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
             tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
             tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
-            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tas.nc"))
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
