@@ -136,7 +136,7 @@ class Meteo:
 
         for year in range(start_year, end_year + 1):
             i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
+            f_date = f"{year + 1}-01-01" if year <= end_year else self.end_date  # Final year may be partial
             df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
     
             area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
@@ -156,7 +156,7 @@ class Meteo:
 
         for year in range(start_year, end_year + 1):
             i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
+            f_date = f"{year + 1}-01-01" if year <= end_year else self.end_date  # Final year may be partial
             df = chirps.select('precipitation').filterDate(i_date, f_date)
             area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
             geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
