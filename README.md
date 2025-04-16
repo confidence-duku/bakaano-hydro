@@ -1,4 +1,5 @@
-[![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5281/zenodo.15227201) [![License](https://img.shields.io/github/license/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/blob/main/LICENSE) [![GitHub release](https://img.shields.io/github/v/release/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/releases) [![Last Commit](https://img.shields.io/github/last-commit/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/commits/main) [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
+[![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5281/zenodo.15227201) [![License](https://img.shields.io/github/license/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/blob/main/LICENSE) [![PyPI version](https://badge.fury.io/py/bakaano-hydro.svg)](https://pypi.org/project/bakaano-hydro/)
+ [![GitHub release](https://img.shields.io/github/v/release/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/releases) [![Last Commit](https://img.shields.io/github/last-commit/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/commits/main) [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/)
 
 
 
@@ -18,15 +19,11 @@ It is highly adaptable, providing users with two primary options for data input:
 
 ---
 
-### CPU Installation (Default)
-
 Install `bakaano-hydro` for CPU-only environments:
 
 ```bash
 pip install bakaano-hydro
 ```
-
-### GPU Installation (Recommended)
 To enable GPU acceleration (CUDA), install using the [gpu] extra: 
 
 ```bash
