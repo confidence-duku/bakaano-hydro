@@ -11,7 +11,7 @@ from bakaano.utils import Utils
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import xarray as xr
-from datetime import datetime
+from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
 
 
@@ -125,46 +125,218 @@ class Meteo:
             print(f"     - Climate data already exists in {self.tasmax_path}, {self.tasmin_path}, {self.tmean_path} and {self.prep_path}; skipping download.")
     
     def _download_era5_land_data(self):
-       
-        #ee.Authenticate()
-        ee.Initialize()
 
-        era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
-
-        start_year = int(self.start_date[:4])
-        end_year = int(self.end_date[:4])
-
-        for year in range(start_year, end_year + 1):
-            i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
-            df = era5.select('total_precipitation_sum', 'temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
-    
-            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-            geemap.ee_export_image_collection(ee_object=df, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)  
-        print('Download completed')
-
-    def _download_chirps_prep_data(self):
-        
         ee.Authenticate()
         ee.Initialize()
-
-        chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
+       
+        # Parse start and end dates
+        start = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end = datetime.strptime(self.end_date, "%Y-%m-%d")
+    
+        # Step 1: Attempt bulk download by year using image collection
+        start_year = start.year
+        end_year = end.year
+    
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
-
-        start_year = int(self.start_date[:4])
-        end_year = int(self.end_date[:4])
 
         for year in range(start_year, end_year + 1):
             i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date  # Final year may be partial
-            df = chirps.select('precipitation').filterDate(i_date, f_date)
-            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-            geemap.ee_export_image_collection(ee_object=df, out_dir=self.chirps_scratch, scale=5000, region=area, crs='EPSG:4326', file_per_band=True) 
-            
-           
-            df2 = era5.select('temperature_2m_min', 'temperature_2m_max', 'temperature_2m').filterDate(i_date, f_date)
-            geemap.ee_export_image_collection(ee_object=df2, out_dir=self.era5_scratch, scale=10000, region=area, crs='EPSG:4326', file_per_band=True)
-        print('Download completed')
+            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date
+    
+            df = era5.select(
+                'total_precipitation_sum',
+                'temperature_2m_min',
+                'temperature_2m_max',
+                'temperature_2m'
+            ).filterDate(i_date, f_date)
+    
+            # geemap.ee_export_image_collection(
+            #     ee_object=df,
+            #     out_dir=self.era5_scratch,
+            #     scale=10000,
+            #     region=area,
+            #     crs='EPSG:4326',
+            #     file_per_band=True
+            # )
+    
+        print("Bulk download attempt completed. Verifying files...")
+    
+        # Step 2: Check for missing dates
+        expected_dates = []
+        current = start
+        while current <= end:
+            expected_dates.append(current.strftime("%Y-%m-%d"))
+            current += timedelta(days=1)
+    
+        # List downloaded files and extract dates from filenames
+        downloaded_dates = set()
+        for fname in os.listdir(self.era5_scratch):
+            if fname.endswith(".tif"):
+                try:
+                    date_str_raw = fname.split('.')[0]  # Get '20010101'
+                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
+                    downloaded_dates.add(date_str)
+                except:
+                    continue
+    
+        # Find missing dates
+        missing_dates = sorted(set(expected_dates) - downloaded_dates)
+        print(f"{len(missing_dates)} missing dates detected. Re-downloading...")
+    
+        # Step 3: Re-download only missing dates individually
+        for date_str in missing_dates:
+            try:
+                next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+                img = era5.filterDate(date_str, next_day).select(
+                    ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                ).first()
+        
+                if img:
+                    date_raw = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
+        
+                    # Loop over each band and export separately
+                    band_names = ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                    for band in band_names:
+                        single_band_img = img.select(band)
+                        filename = os.path.join(self.era5_scratch, f"{date_raw}.{band}.tif")
+        
+                        geemap.ee_export_image(
+                            ee_object=single_band_img,
+                            filename=filename,
+                            scale=10000,
+                            region=area,
+                            crs='EPSG:4326'
+                        )
+                        print(f"Downloaded {band} for {date_str}")
+            except Exception as e:
+                print(f"Failed to download {date_str}: {e}")
+    
+        print("ERA5 download process completed.")
+
+    
+
+    def _download_chirps_prep_data(self):
+        ee.Authenticate()
+        ee.Initialize()
+    
+        chirps = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY")
+        era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
+        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy)
+    
+        start = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        expected_dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end - start).days + 1)]
+    
+        # Step 1: Bulk download CHIRPS and ERA5 (temperature)
+        start_year = start.year
+        end_year = end.year
+    
+        for year in range(start_year, end_year + 1):
+            i_date = f"{year}-01-01"
+            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date
+    
+            # CHIRPS precipitation
+            df_chirps = chirps.select('precipitation').filterDate(i_date, f_date)
+            geemap.ee_export_image_collection(
+                ee_object=df_chirps,
+                out_dir=self.chirps_scratch,
+                scale=5000,
+                region=area,
+                crs='EPSG:4326',
+                file_per_band=True
+            )
+    
+            # ERA5 temperature
+            df_era5 = era5.select(
+                'temperature_2m_min',
+                'temperature_2m_max',
+                'temperature_2m'
+            ).filterDate(i_date, f_date)
+            geemap.ee_export_image_collection(
+                ee_object=df_era5,
+                out_dir=self.era5_scratch,
+                scale=10000,
+                region=area,
+                crs='EPSG:4326',
+                file_per_band=True
+            )
+    
+        print("Bulk CHIRPS and ERA5 download complete. Checking for missing files...")
+    
+        # Step 2: Post-check and re-download CHIRPS missing dates
+        chirps_downloaded = set()
+        for fname in os.listdir(self.chirps_scratch):
+            if "precipitation" in fname and fname.endswith(".tif"):
+                try:
+                    date_str_raw = fname.split('.')[0]  # Get '20010101'
+                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")  #
+                    chirps_downloaded.add(date_str)
+                except:
+                    continue
+    
+        missing_chirps = sorted(set(expected_dates) - chirps_downloaded)
+        print(f"Missing CHIRPS dates: {len(missing_chirps)}")
+    
+        for date_str in missing_chirps:
+            try:
+                next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+                img = chirps.filterDate(date_str, next_day).select('precipitation').first()
+                if img:
+                    date_raw = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
+                    filename = os.path.join(self.chirps_scratch, f"{date_raw}.precipitation.tif")
+                    geemap.ee_export_image(
+                        ee_object=img,
+                        filename=filename,
+                        scale=5000,
+                        region=area,
+                        crs='EPSG:4326'
+                    )
+                    print(f"Downloaded CHIRPS for {date_str}")
+            except Exception as e:
+                print(f"Failed CHIRPS download for {date_str}: {e}")
+    
+        # Step 3: Post-check and re-download ERA5 temperature missing dates
+        era5_downloaded = set()
+        for fname in os.listdir(self.era5_scratch):
+            if fname.endswith(".tif"):
+                try:
+                    date_str_raw = fname.split('.')[0]  # Get '20010101'
+                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
+                    era5_downloaded.add(date_str)
+                except:
+                    continue
+    
+        missing_era5 = sorted(set(expected_dates) - era5_downloaded)
+        print(f"Missing ERA5 dates: {len(missing_era5)}")
+    
+        for date_str in missing_era5:
+            try:
+                next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+                img = era5.filterDate(date_str, next_day).select(
+                    ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                ).first()
+        
+                if img:
+                    date_raw = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
+        
+                    # Loop over each band and export separately
+                    band_names = ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                    for band in band_names:
+                        single_band_img = img.select(band)
+                        filename = os.path.join(self.era5_scratch, f"{date_raw}.{band}.tif")
+        
+                        geemap.ee_export_image(
+                            ee_object=single_band_img,
+                            filename=filename,
+                            scale=10000,
+                            region=area,
+                            crs='EPSG:4326'
+                        )
+                        print(f"Downloaded {band} for {date_str}")
+            except Exception as e:
+                print(f"Failed ERA5 download for {date_str}: {e}")
+    
+        print("CHIRPS and ERA5 download (with checks) completed.")
         
     def get_era5_land_meteo_data(self):
         if self.local_data is False:
@@ -226,7 +398,7 @@ class Meteo:
             prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
             tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
             tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
-            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tas.nc"))
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
@@ -291,7 +463,7 @@ class Meteo:
             prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
             tasmax_nc = xr.open_dataset(os.path.join(self.tasmax_path, "tasmax.nc"))
             tasmin_nc = xr.open_dataset(os.path.join(self.tasmin_path, "tasmin.nc"))
-            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tmean.nc"))
+            tmean_nc = xr.open_dataset(os.path.join(self.tmean_path, "tas.nc"))
 
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
