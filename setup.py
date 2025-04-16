@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="bakaano-hydro",
-    version="1.1.4",
+    version="1.1.5",
     author="Confidence Duku",
     author_email="confidence.duku@gmail.com",
     description="Distributed hydrology-guided neural network for streamflow prediction",
@@ -30,18 +30,6 @@ setup(
         "matplotlib==3.9.2",
         "netCDF4==1.7.2",
         "numpy==1.26.4",
-        "nvidia-cublas-cu12==12.5.3.2",
-        "nvidia-cuda-cupti-cu12==12.5.82",
-        "nvidia-cuda-nvcc-cu12==12.5.82",
-        "nvidia-cuda-nvrtc-cu12==12.5.82",
-        "nvidia-cuda-runtime-cu12==12.5.82",
-        "nvidia-cudnn-cu12==9.3.0.75",
-        "nvidia-cufft-cu12==11.2.3.61",
-        "nvidia-curand-cu12==10.3.6.82",
-        "nvidia-cusolver-cu12==11.6.3.83",
-        "nvidia-cusparse-cu12==12.5.1.3",
-        "nvidia-nccl-cu12==2.21.5",
-        "nvidia-nvjitlink-cu12==12.5.82",
         "OWSLib==0.32.0",
         "pandas==2.2.3",
         "pyproj==3.7.0",
@@ -61,6 +49,11 @@ setup(
         "xarray==2024.10.0",
         "tqdm==4.67.1"
     ],
+    extras_require={
+        "gpu": [
+            "tensorflow[and-cuda]==2.18.0"
+        ]
+    },
     python_requires=">=3.8",
     classifiers=[
         "Development Status :: 4 - Beta",
