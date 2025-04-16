@@ -16,7 +16,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="bakaano-hydro",
-    version="1.1",
+    version="1.1.2",
     author="Confidence Duku",
     author_email="confidence.duku@gmail.com",
     description="Distributed hydrology-guided neural network for streamflow prediction",
@@ -25,7 +25,7 @@ setup(
     url="https://github.com/confidence-duku/bakaano-hydro",
     packages=find_packages(exclude=["tests*", "docs*"]),
     install_requires=requirements,
-    python_requires=">=3.8",
+    python_requires=">=3.10",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
