@@ -15,21 +15,24 @@ It is highly adaptable, providing users with two primary options for data input:
 
 ## Installation
 
-- Create and activate a conda environment 
+`bakaano-hydro` can run on both CPU and GPU (preferably) environments. The default installation installs all dependencies for CPU-based execution. For users with NVIDIA GPUs, GPU acceleration can significantly improve performance when running large-scale simulations or deep learning components.
 
-```
-conda create --name envname python=3.10.4
-conda activate envname
-```
+---
 
-- Install the Python libraries to that conda environment
+### ✅ CPU Installation (Default)
 
-```
-sudo apt-get update
-sudo apt-get install g++
-pip install -r requirements.txt
+Install `bakaano-hydro` for CPU-only environments:
+
+```bash
+pip install bakaano-hydro
 ```
 
+### ✅ GPU Installation (Recommended)
+To enable GPU acceleration (CUDA), install using the [gpu] extra: 
+
+```bash
+pip install bakaano-hydro[gpu]
+```
 
 ## Usage
 
