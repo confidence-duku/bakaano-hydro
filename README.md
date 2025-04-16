@@ -1,4 +1,5 @@
-[![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5281/zenodo.15227201)
+[![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5281/zenodo.15227201) [![License](https://img.shields.io/github/license/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/blob/main/LICENSE)
+
 
 # Bakaano-Hydro
 
