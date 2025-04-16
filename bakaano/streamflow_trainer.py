@@ -269,8 +269,8 @@ class DataPreprocessor:
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
             
-            if station_discharge['station_discharge'].notna().sum() < 1095:
-                continue
+            # if station_discharge['station_discharge'].notna().sum() < 1095:
+            #     continue
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
