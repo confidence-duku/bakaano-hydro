@@ -41,8 +41,7 @@ Model execution then involves only five steps. See the quick start notebook http
 
 
 ## Code architecture
-
-
+![bakaanohydro-2025-04-16-132235](https://github.com/user-attachments/assets/4a98f643-b703-4352-bfd7-3d4d13e9fdfe)
 
 ## Support
 For assistance, please contact Confidence Duku (confidence.duku@wur.nl)
