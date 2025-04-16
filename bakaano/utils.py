@@ -10,7 +10,6 @@ import geopandas as gpd
 import fiona
 from shapely.geometry import shape
 from rasterio.windows import from_bounds
-from shapely.ops import transform
 import warnings
 from rasterio.warp import calculate_default_transform, reproject, Resampling
 warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWarning)
