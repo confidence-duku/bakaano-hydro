@@ -1,7 +1,6 @@
 
 import requests as r
 import os
-import rasterio
 import numpy as np
 from bakaano.utils import Utils
 import zipfile

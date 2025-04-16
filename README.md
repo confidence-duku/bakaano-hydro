@@ -15,20 +15,24 @@ It is highly adaptable, providing users with two primary options for data input:
 
 ## Installation
 
-`bakaano-hydro` can run on both CPU and GPU (preferably) environments. The default installation installs all dependencies for CPU-based execution. For users with NVIDIA GPUs, GPU acceleration can significantly improve performance when running large-scale simulations or deep learning components.
+Bakaano-Hydro is built on TensorFlow and is designed to leverage GPU acceleration for training. This requires a system with an NVIDIA GPU installed or bundled CUDA and cuDNN runtime libraries.
+GPU acceleration is strongly recommended for training deep learning components and running large-scale simulations, as it significantly improves speed and scalability.
 
----
+If you have a compatible NVIDIA GPU and drivers installed, install with:
 
-Install `bakaano-hydro` for CPU-only environments:
-
-```bash
-pip install bakaano-hydro
-```
-To enable GPU acceleration (CUDA), install using the [gpu] extra: 
 
 ```bash
 pip install bakaano-hydro[gpu]
 ```
+This will automatically install the correct version of TensorFlow along with CUDA and cuDNN runtime libraries 
+
+If you do not have access to a GPU, you can still install and use Bakaano-Hydro in CPU mode (e.g., for inference, testing or small-scale evaluation):
+
+```bash
+pip install bakaano-hydro
+```
+Note: Training on CPU is supported but will be significantly slower, especially on large datasets or deep learning tasks.
+
 
 ## Usage
 
@@ -42,7 +46,7 @@ Model execution then involves only five steps. See the quick start notebook http
 
 ## Code architecture
 
-
+![bakaanohydro-2025-04-16-132235](https://github.com/user-attachments/assets/4a98f643-b703-4352-bfd7-3d4d13e9fdfe)
 
 ## Support
 For assistance, please contact Confidence Duku (confidence.duku@wur.nl)

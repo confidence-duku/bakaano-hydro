@@ -22,15 +22,12 @@ setup(
         "geemap==0.35.1",
         "geopandas==1.0.1",
         "hydroeval==0.1.0",
-        "ipython==8.12.3",
-        "ipywidgets==8.1.5",
         "isimip-client==1.0.1",
         "keras==3.6.0",
         "keras-tcn==3.5.6",
         "matplotlib==3.9.2",
         "netCDF4==1.7.2",
         "numpy==1.26.4",
-        "OWSLib==0.32.0",
         "pandas==2.2.3",
         "pyproj==3.7.0",
         "pysheds==0.3.3",
@@ -49,7 +46,17 @@ setup(
     ],
     extras_require={
         "gpu": [
-            "tensorflow[and-cuda]==2.18.0"
+            "nvidia-cublas-cu12==12.5.3.2",
+            "nvidia-cuda-cupti-cu12==12.5.82",
+            "nvidia-cuda-nvcc-cu12==12.5.82",
+            "nvidia-cuda-nvrtc-cu12==12.5.82",
+            "nvidia-cuda-runtime-cu12==12.5.82",
+            "nvidia-cudnn-cu12==9.3.0.75",
+            "nvidia-cufft-cu12==11.2.3.61",
+            "nvidia-curand-cu12==10.3.6.82",
+            "nvidia-cusolver-cu12==11.6.3.83",
+            "nvidia-cusparse-cu12==12.5.1.3",
+            "nvidia-nvjitlink-cu12==12.5.82"
         ]
     },
     python_requires=">=3.8",
