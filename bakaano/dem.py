@@ -5,8 +5,8 @@ import rasterio
 import numpy as np
 from bakaano.utils import Utils
 import zipfile
-import richdem as rd
 import matplotlib.pyplot as plt
+from whitebox import WhiteboxTools
 
 class DEM:
     def __init__(self, working_dir, study_area, local_data=False, local_data_path=None):
@@ -96,10 +96,19 @@ class DEM:
 
         slope_name = f'{self.working_dir}/elevation/slope_clipped.tif'
         if not os.path.exists(slope_name):
-            dem_array = rasterio.open(self.out_path).read(1)
-            rd_dem = rd.rdarray(dem_array, no_data=-9999)
-            slope = rd.TerrainAttribute(rd_dem, attrib='slope_riserun')
-            self.uw.save_to_scratch(slope_name, slope)
+            wbt = WhiteboxTools()
+            wbt.verbose = False
+            # dem_array = rasterio.open(self.out_path).read(1)
+            # rd_dem = rd.rdarray(dem_array, no_data=-9999)
+            # slope = rd.TerrainAttribute(rd_dem, attrib='slope_riserun')
+            # self.uw.save_to_scratch(slope_name, slope)
+
+            wbt.slope(
+                self.out_path, 
+                slope_name, 
+                zfactor=None, 
+                units="percent"
+            )
 
     
     def plot_dem(self):
