@@ -4,7 +4,6 @@ import ee
 import geemap
 import glob
 import numpy as np
-import rasterio
 import rioxarray
 from isimip_client.client import ISIMIPClient
 from bakaano.utils import Utils
