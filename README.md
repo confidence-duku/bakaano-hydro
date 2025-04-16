@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5281/zenodo.15227201)
+
 # Bakaano-Hydro
 
 ## Description
