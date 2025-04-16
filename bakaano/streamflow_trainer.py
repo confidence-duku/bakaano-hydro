@@ -387,6 +387,35 @@ class StreamflowModel:
         self.num_static_features = 10
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
+        self.min_ = None
+        self.max_ = None
+        self.scale_ = None
+        self.feature_range = (0, 1)
+
+    def fit_minmax(self, X):
+        X = np.asarray(X, dtype=float)
+        self.min_ = np.nanmin(X, axis=0)
+        self.max_ = np.nanmax(X, axis=0)
+        
+        data_range = self.max_ - self.min_
+        data_range[data_range == 0] = 1  # avoid division by zero
+
+        scale_min, scale_max = self.feature_range
+        self.scale_ = (scale_max - scale_min) / data_range
+        return self
+
+    def transform_minmax(self, X):
+        X = np.asarray(X, dtype=float)
+        scale_min = self.feature_range[0]
+        return (X - self.min_) * self.scale_ + scale_min
+
+    def fit_transform_minmax(self, X):
+        return self.fit_minmax(X).transform_minmax(X)
+
+    def inverse_transform_minmax(self, X_scaled):
+        X_scaled = np.asarray(X_scaled, dtype=float)
+        scale_min = self.feature_range[0]
+        return (X_scaled - scale_min) / self.scale_ + self.min_
 
     def compute_global_cdfs_pkl(self, df, variables):
         """
@@ -481,9 +510,9 @@ class StreamflowModel:
         train_catchment_list = []
         full_local_predictors = []
         
-        catchment_scaler = MinMaxScaler()
+        #catchment_scaler = MinMaxScaler()
         #train_catchment = train_catchment.reshape(-1,1)
-        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
+        trained_catchment_scaler = self.fit_minmax(train_catchment)
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
             pickle.dump(trained_catchment_scaler, file)
 
@@ -503,7 +532,7 @@ class StreamflowModel:
             scaled_train_response = y.values/1
 
             z2 = z.reshape(-1,self.num_static_features)
-            scaled_train_catchment = trained_catchment_scaler.transform(z2)    
+            scaled_train_catchment = trained_catchment_scaler.transform_minmax(z2)   
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1

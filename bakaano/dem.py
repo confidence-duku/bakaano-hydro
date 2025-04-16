@@ -5,7 +5,8 @@ import numpy as np
 from bakaano.utils import Utils
 import zipfile
 import matplotlib.pyplot as plt
-from whitebox import WhiteboxTools
+import rasterio
+from scipy.ndimage import convolve
 
 class DEM:
     def __init__(self, working_dir, study_area, local_data=False, local_data_path=None):
@@ -37,7 +38,6 @@ class DEM:
         os.makedirs(f'{self.working_dir}/elevation', exist_ok=True)
         self.uw = Utils(self.working_dir, self.study_area)
         self.out_path = f'{self.working_dir}/elevation/dem_clipped.tif'
-        #self.out_path_uncropped = f'{self.working_dir}/elevation/dem_full.tif'
         self.local_data = local_data
         self.local_data_path = local_data_path
         
@@ -95,29 +95,56 @@ class DEM:
 
         slope_name = f'{self.working_dir}/elevation/slope_clipped.tif'
         if not os.path.exists(slope_name):
-            wbt = WhiteboxTools()
-            wbt.verbose = False
-            # dem_array = rasterio.open(self.out_path).read(1)
-            # rd_dem = rd.rdarray(dem_array, no_data=-9999)
-            # slope = rd.TerrainAttribute(rd_dem, attrib='slope_riserun')
-            # self.uw.save_to_scratch(slope_name, slope)
+            self.compute_slope_percent_riserun()
 
-            wbt.slope(
-                self.out_path, 
-                slope_name, 
-                zfactor=None, 
-                units="percent"
-            )
+    def compute_slope_percent_riserun(self):
+        with rasterio.open(self.out_path) as src:
+            elevation = src.read(1).astype(float)
+            profile = src.profile.copy()
+            res_x, res_y = src.res
+            cellsize = np.mean([abs(res_x), abs(res_y)])
+            nodata = src.nodata
 
-    
+        # Handle NoData
+        if nodata is not None:
+            elevation[elevation == nodata] = np.nan
+
+        # Fill NaNs for convolution
+        elevation_filled = np.where(np.isnan(elevation), np.nanmean(elevation), elevation)
+
+        # Horn kernels (adjusted for cellsize in meters)
+        kernel_x = np.array([[-1, 0, 1],
+                            [-2, 0, 2],
+                            [-1, 0, 1]]) / (8 * cellsize)
+
+        kernel_y = np.array([[1, 2, 1],
+                            [0, 0, 0],
+                            [-1, -2, -1]]) / (8 * cellsize)
+
+        # Compute gradients
+        dzdx = convolve(elevation_filled, kernel_x, mode='nearest')
+        dzdy = convolve(elevation_filled, kernel_y, mode='nearest')
+
+        # Slope in percent rise/run
+        slope_percent = np.sqrt(dzdx**2 + dzdy**2) * 100
+        slope_percent[np.isnan(elevation)] = np.nan
+
+        # Update metadata
+        profile.update(dtype=rasterio.float32, count=1, nodata=np.nan)
+
+        # Save to GeoTIFF
+        output_path = f'{self.working_dir}/elevation/slope_clipped.tif'
+        with rasterio.open(output_path, 'w', **profile) as dst:
+            dst.write(slope_percent.astype(np.float32), 1)
+
+        print(f"Slope saved to: {output_path}")
+
     def plot_dem(self):
         """Plot DEM data.
         """
         dem_data = self.uw.clip(raster_path=self.out_path, out_path=None, save_output=False, crop_type=True)[0]
-        #dem_data = rioxarray.open_rasterio(self.out_path)
         dem_data = np.where(dem_data > 0, dem_data, np.nan)
         dem_data = np.where(dem_data < 32000, dem_data, np.nan)
-        #dem_data.plot(cmap='terrain')
         plt.imshow(dem_data, cmap='terrain')
         plt.colorbar()
         

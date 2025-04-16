@@ -18,6 +18,7 @@ import pickle
 import warnings
 import geopandas as gpd
 from scipy.spatial.distance import cdist
+from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
 
@@ -545,7 +546,7 @@ class PredictStreamflow:
             return
         
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
-        scaled_trained_catchment = catchment_scaler.transform(train_catchment)
+        scaled_trained_catchment = catchment_scaler.transform_minmax(train_catchment)
         
         variables = ['mfd_wfa', 'scaled_acc', 'scaled_slp']  # Adjust as needed
         global_cdfs = self.load_global_cdfs_pkl()
