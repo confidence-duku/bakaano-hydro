@@ -68,7 +68,7 @@ setup(
         "Programming Language :: Python :: 3.10",
         "Operating System :: OS Independent",
     ],
-    keywords="flood forecasting hydrology deep learning distributed runoff tcn",
+    keywords="flood forecasting hydrology deep learning streamflow prediction tcn",
     license="Apache 2.0",
     project_urls={
         "Source": "https://github.com/confidence-duku/bakaano-hydro",
