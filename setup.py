@@ -6,7 +6,7 @@ with open("README.md", encoding="utf-8") as f:
 
 setup(
     name="bakaano-hydro",
-    version="1.1.3",
+    version="1.1.4",
     author="Confidence Duku",
     author_email="confidence.duku@gmail.com",
     description="Distributed hydrology-guided neural network for streamflow prediction",
@@ -61,7 +61,7 @@ setup(
         "xarray==2024.10.0",
         "tqdm==4.67.1"
     ],
-    python_requires=">=3.10",
+    python_requires=">=3.8",
     classifiers=[
         "Development Status :: 4 - Beta",
         "Intended Audience :: Science/Research",
