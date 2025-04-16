@@ -42,7 +42,6 @@ setup(
         "scipy==1.14.1",
         "shapely==2.0.6",
         "tensorflow==2.18.0",
-        "tensorflow-addons==0.23.0",
         "tensorflow_probability==0.25.0",
         "tf_keras==2.18.0",
         "whitebox==2.3.5",
