@@ -205,9 +205,10 @@ class NDVI:
 
             print("Interpolating daily NDVI...")
             daily_ndvi = self._interpolate_daily_ndvi(medians, interval_dates)
+            
             for doy, arr in daily_ndvi.items():
                 daily_ndvi[doy] = xr.DataArray(
-                    arr,
+                    arr.astype(np.float32),
                     dims=("y", "x"),  # Assuming the interpolated array has y and x dimensions
                     coords={"y": medians[0].y, "x": medians[0].x},  # Use coordinates from a median DataArray
                     attrs={"day_of_year": doy},
