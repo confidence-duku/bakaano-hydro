@@ -23,6 +23,7 @@ import warnings
 import pandas as pd
 import geopandas as gpd
 from scipy.spatial.distance import cdist
+from datetime import datetime
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
@@ -30,7 +31,7 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
 class DataPreprocessor:
-    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, start_date, end_date, train_start, train_end):
+    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, train_start, train_end):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -57,8 +58,6 @@ class DataPreprocessor:
         """
         
         self.study_area = study_area
-        self.start_date = start_date
-        self.end_date = end_date
         self.working_dir = working_dir
         #self.times = pd.date_range(start_date, end_date)
         
@@ -257,15 +256,24 @@ class DataPreprocessor:
         cum_awc = xr.DataArray(data=cum_awc, coords=[('lat', lat), ('lon', lon)])
         cum_satpt = xr.DataArray(data=cum_satpt, coords=[('lat', lat), ('lon', lon)])
  
-        time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
+        #time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
+        start_dt = datetime.strptime(self.train_start, "%Y-%m-%d")
+        end_dt = datetime.strptime(self.train_end, "%Y-%m-%d")
+
         all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
                 this_arr = pickle.load(f)
             wfa_list = wfa_list + this_arr
+
+        # Filter based on time range
+        wfa_list = [
+            entry for entry in wfa_list
+            if start_dt <= datetime.strptime(entry["time"], "%Y-%m-%d") <= end_dt
+        ]
         
         #extract station predictor and response variables based on station coordinates
         for k in self.station_ids:
@@ -293,14 +301,14 @@ class DataPreprocessor:
             
             station_wfa = []
             for arr in wfa_list:
-                arr = arr.tocsr()
+                arr = arr['matrix'].tocsr()
                 station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
-            full_wfa_data.set_index(time_index, inplace=True)
-            full_wfa_data.index.name = 'time'  # Rename the index to 'time'
+            #full_wfa_data.set_index(time_index, inplace=True)
+            #full_wfa_data.index.name = 'time'  # Rename the index to 'time'
             
             #extract wfa data based on defined training period
-            wfa_data1 = full_wfa_data[self.train_start: self.train_end]
+            wfa_data1 = full_wfa_data
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
