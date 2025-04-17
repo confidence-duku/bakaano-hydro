@@ -140,7 +140,11 @@ class NDVI:
         :return: Dictionary of daily NDVI arrays for each day of the year.
         """
         daily_ndvi = {}
-        date_range = [datetime(2000, 1, 1) + timedelta(days=i) for i in range(366)]  # Leap year for 366 days
+        # Convert to datetime objects
+        start_dt = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(self.end_date, "%Y-%m-%d")
+
+        date_range = [start_dt + timedelta(days=i) for i in range((end_dt - start_dt).days + 1)]
         daily_doy = np.array([d.timetuple().tm_yday for d in date_range])  # Day of year for each date
     
         # Convert medians to a single 3D NumPy array (time, rows, cols)
