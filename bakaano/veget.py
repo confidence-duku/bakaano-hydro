@@ -163,7 +163,7 @@ class VegET:
                         for i in range((end - start).days + 1)]
             
             print('\n')
-            for count, date in tqdm(enumerate(date_list), desc="     Simulating and routing runoff", unit=" days", total=len(date_list)):
+            for count, date in tqdm(enumerate(date_list), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
