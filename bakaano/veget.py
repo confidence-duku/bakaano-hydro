@@ -10,6 +10,7 @@ import pickle
 import scipy as sp
 from bakaano.meteo import Meteo
 from tqdm import tqdm
+from datetime import datetime, timedelta
 
 class VegET:
     """Generate an instance
@@ -156,8 +157,13 @@ class VegET:
             self.mam_wfa, self.jja_wfa, self.son_wfa, self.djf_wfa = 0, 0, 0, 0
             this_date = datetime.strptime(self.start_date, '%Y-%m-%d')
 
+            start = datetime.strptime(self.start_date, "%Y-%m-%d")
+            end = datetime.strptime(self.end_date, "%Y-%m-%d")
+            date_list = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
+                        for i in range((end - start).days + 1)]
+            
             print('\n')
-            for count in tqdm(range(rf.shape[0]), desc="     Simulating and routing runoff", unit="day"):
+            for count, date in tqdm(enumerate(date_list), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
@@ -210,7 +216,8 @@ class VegET:
                     
                 wacc = wacc * facc_mask            
                 wacc = sp.sparse.coo_array(wacc)
-                self.wacc_list.append(wacc)            
+                #sparse_series.append({"time": date, "matrix": sparse_matrix})
+                self.wacc_list.append({"time": date, "matrix": wacc})            
                 
             # Save station weighted flow accumulation data
             filename = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
