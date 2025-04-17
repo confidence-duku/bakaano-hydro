@@ -145,7 +145,7 @@ class BakaanoHydro:
         else:
             predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
 
-        self.plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
+        self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
         
 #==============================================================================================================================
     def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback):
@@ -206,10 +206,10 @@ class BakaanoHydro:
         print(f' COMPLETED! csv files available at {out_folder}')
 #========================================================================================================================  
             
-    def plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
+    def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
         """Plot the observed and predicted streamflow data.
         """
-        nse, kge = self.compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
+        nse, kge = self._compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
         kge1 = kge[0][0]
         R = kge[1][0]
         Beta = kge[2][0]
@@ -226,7 +226,7 @@ class BakaanoHydro:
         plt.show()
 #========================================================================================================================  
         
-    def compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
+    def _compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
         """Compute performance metrics for the model.
         """
         observed = observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values

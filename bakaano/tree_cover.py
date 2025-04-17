@@ -16,6 +16,8 @@ class TreeCover:
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
         
         Methods
         -------
@@ -36,7 +38,7 @@ class TreeCover:
         self.start_date = start_date
         self.end_date = end_date
 
-    def download_tree_cover(self):
+    def _download_tree_cover(self):
         """Download fractional vegetation cover data.
         """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
@@ -58,7 +60,7 @@ class TreeCover:
         else:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping download.")
 
-    def preprocess_tree_cover(self):
+    def _preprocess_tree_cover(self):
         """Preprocess downloaded data
         """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
@@ -101,6 +103,11 @@ class TreeCover:
                 dst.write(mean_herb_raster.astype(rasterio.float32), 1)
         else:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping preprocessing.")
+    
+    def get_tree_cover_data(self):
+        self._download_tree_cover()
+        self._preprocess_tree_cover()
+
 
     def plot_tree_cover(self, variable='tree_cover'):
         """Plot mean tree cover data

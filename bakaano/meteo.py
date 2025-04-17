@@ -80,6 +80,10 @@ class Meteo:
             self.tasmax_path = local_tasmax_path
             self.tasmin_path = local_tasmin_path
             self.tmean_path = local_tmean_path
+
+            for path in [self.prep_path, self.tasmax_path, self.tasmin_path, self.tmean_path]:
+                if not os.path.isfile(path) or not path.endswith(".nc"):
+                    raise ValueError(f"File not found or not a NetCDF (.nc) file: {path}")
         else:
             if self.data_source == 'CHIRPS':
 

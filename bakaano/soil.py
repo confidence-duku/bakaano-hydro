@@ -57,12 +57,12 @@ class Soil:
                 
                 #extraction_path = f'{self.working_dir}/soil'  # Directory where files will be extracted
                 out_path = f'{self.working_dir}/soil/clipped_{filename}'
-                self.preprocess(local_filename, out_path)
+                self._preprocess(local_filename, out_path)
         else:
             print(f"     - Soil data already exists in {self.working_dir}/soil; skipping download.")
             
 
-    def preprocess(self, raster_dir, out_path):  
+    def _preprocess(self, raster_dir, out_path):  
         """Preprocess downloaded data.
         """
         self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True, crop_type=False)

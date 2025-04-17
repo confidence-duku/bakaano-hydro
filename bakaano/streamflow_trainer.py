@@ -38,8 +38,10 @@ class DataPreprocessor:
             working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile defining the study area.
             grdc_streamflow_nc_file (str): The path to the GRDC streamflow NetCDF file.
-            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
-            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
+            start_date (str): The start date for the simulation (training + validation) period in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the simulation (training + validation) period in 'YYYY-MM-DD' format.
+            train_start (str): The start date for the training period in 'YYYY-MM-DD' format.
+            train_end (str): The end date for the training period in 'YYYY-MM-DD' format.
 
         Methods
         -------
