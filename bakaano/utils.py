@@ -20,9 +20,11 @@ class Utils:
         """_summary_
 
         Args:
-            working_dir (_type_): _description_
-            study_area (_type_): _description_
+            working_dir (str): The parent working directory where files and outputs will be stored.
+            study_area (str): The path to the shapefile of the river basin or watershed.
+
         """
+
         self.study_area = study_area
         self.working_dir = working_dir
         # reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
