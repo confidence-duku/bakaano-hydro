@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 class BakaanoHydro:
     """Generate an instance
     """
-    def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source):
+    def __init__(self, working_dir, study_area_path, climate_data_source):
         """Initialize the BakaanoHydro object with project details.
 
         Args:
@@ -48,11 +48,8 @@ class BakaanoHydro:
         
         # Initialize utility class with project name and study area.
         self.uw = Utils(self.working_dir, self.study_area)
-        self.times = pd.date_range(start_date, end_date)
         
         # Set the start and end dates for the project
-        self.start_date = start_date
-        self.end_date = end_date
 
         # Create necessary directories for the project structure   
         os.makedirs(f'{self.working_dir}/models', exist_ok=True)
@@ -65,12 +62,12 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, train_start, train_end, grdc_netcdf,  loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, num_epochs):
         """Train the deep learning streamflow prediction model."
         """
     
-        print('TRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, self.start_date, self.end_date,train_start, train_end)
+        print('\nTRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
+        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, train_start, train_end)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         
@@ -99,7 +96,7 @@ class BakaanoHydro:
         """Evaluate the streamflow prediction model."
         """
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date,val_start, val_end, grdc_netcdf)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, val_start, val_end, grdc_netcdf)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
         print("Available station names:")
@@ -152,7 +149,7 @@ class BakaanoHydro:
         """Simulate streamflow in batch mode using the trained model."
         """
         print(' 1. Loading runoff data and other predictors')
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, self.start_date, self.end_date, sim_start, sim_end)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, sim_start, sim_end)
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 
         self.vmodel = PredictStreamflow(self.working_dir, lookback)
