@@ -21,6 +21,8 @@ class NDVI:
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
+            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
+            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
         Methods
         -------
         __init__(working_dir, study_area):
@@ -41,7 +43,7 @@ class NDVI:
         self.start_date = start_date
         self.end_date = end_date
 
-    def download_ndvi(self):
+    def _download_ndvi(self):
         """Download NDVI data from Google Earth Engine.
         """
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
@@ -62,7 +64,7 @@ class NDVI:
         else:
             print(f"     - NDVI data already exists in {self.working_dir}/ndvi/daily_ndvi_climatology.pkl; skipping download.")
 
-    def generate_intervals(self, year):
+    def _generate_intervals(self, year):
         """
         Generate 16-day intervals for a given year.
         
@@ -76,7 +78,7 @@ class NDVI:
             start_date += timedelta(days=16)
         return intervals
 
-    def group_files_by_intervals(self):
+    def _group_files_by_intervals(self):
         """
         Group NDVI files by their 16-day intervals.
         
@@ -84,7 +86,7 @@ class NDVI:
         """
         ndvi_files = glob.glob(os.path.join(self.ndvi_folder, '*NDVI.tif'))
         base_year = int(self.start_date[:4])  # A leap year to handle February 29
-        base_intervals = self.generate_intervals(base_year)  # Generate intervals for one year
+        base_intervals = self._generate_intervals(base_year)  # Generate intervals for one year
         
         groups = defaultdict(list)
         for file in ndvi_files:
@@ -104,7 +106,7 @@ class NDVI:
 
         return groups
 
-    def calculate_median_raster(self, file_list, output_path):
+    def _calculate_median_raster(self, file_list, output_path):
         """
         Calculate the median raster from a list of NDVI files and save as a TIF.
         
@@ -130,7 +132,7 @@ class NDVI:
         with rasterio.open(output_path, 'w', **meta) as dst:
             dst.write(median_raster.astype(rasterio.float32), 1)
 
-    def interpolate_daily_ndvi(self, medians, interval_dates):
+    def _interpolate_daily_ndvi(self, medians, interval_dates):
         """
         Linearly interpolate daily NDVI from 16-day median NDVI values.
         :param medians: List of 16-day median NDVI arrays.
@@ -161,7 +163,7 @@ class NDVI:
     
         return daily_ndvi
     
-    def save_daily_ndvi(self, daily_ndvi, template_file):
+    def _save_daily_ndvi(self, daily_ndvi, template_file):
         """
         Save daily NDVI arrays as GeoTIFF files.
         :param daily_ndvi: Dictionary of daily NDVI arrays.
@@ -176,20 +178,20 @@ class NDVI:
             with rasterio.open(output_path, "w", **meta) as dst:
                 dst.write(ndvi_array.astype("float32"), 1)
 
-    def preprocess_ndvi(self):
+    def _preprocess_ndvi(self):
         """
         Main process to compute the daily NDVI climatology.
         """
 
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         if not os.path.exists(ndvi_check):
-            groups = self.group_files_by_intervals()
+            groups = self._group_files_by_intervals()
             interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in groups.keys()]
 
             for interval_start, file_list in groups.items():
                 print(f'Processing {interval_start} with {len(file_list)} files...')
                 output_file = os.path.join(self.ndvi_folder, f'{interval_start}_median_ndvi.tif')
-                self.calculate_median_raster(file_list, output_file)
+                self._calculate_median_raster(file_list, output_file)
 
             medians = []
             medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
@@ -198,7 +200,7 @@ class NDVI:
                 medians.append(median_da)
 
             print("Interpolating daily NDVI...")
-            daily_ndvi = self.interpolate_daily_ndvi(medians, interval_dates)
+            daily_ndvi = self._interpolate_daily_ndvi(medians, interval_dates)
             for doy, arr in daily_ndvi.items():
                 daily_ndvi[doy] = xr.DataArray(
                     arr,
@@ -228,5 +230,9 @@ class NDVI:
             plt.show()
         else:
             raise ValueError("Invalid number. Choose number less than 22")
+        
+    def get_ndvi_data(self):
+        self._download_ndvi()
+        self._preprocess_ndvi()
 
     
