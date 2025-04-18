@@ -8,7 +8,7 @@ class RunoffRouter:
     A class that performs runoff routing using Pysheds library.
     """
     
-    def __init__(self, working_dir, dem):
+    def __init__(self, working_dir, dem, routing_method):
         """
         Initialize the RunoffRouter object.
         
@@ -21,6 +21,7 @@ class RunoffRouter:
         self.grid = None
         self.dem_filepath = dem
         self.inflated_dem = None
+        self.routing_method = routing_method
 
         with rasterio.open(self.dem_filepath) as dm:
             self.dem_ras = dm.read(1)
@@ -69,13 +70,13 @@ class RunoffRouter:
             Filename of the flow direction raster. If not provided, it will be computed.
         """
         inflated_dem = self.fill_dem()
-        self.fdir2 = self.grid.flowdir(inflated_dem, routing='mfd')
-        acc = self.grid.accumulation(fdir=self.fdir2, routing='mfd')
+        self.fdir2 = self.grid.flowdir(inflated_dem, routing=self.routing_method)
+        acc = self.grid.accumulation(fdir=self.fdir2, routing=self.routing_method)
         return self.fdir2, acc
             
     def compute_weighted_flow_accumulation(self, runoff_tiff):
         
         weight = self.grid.read_raster(runoff_tiff)
-        wacc = self.grid.accumulation(fdir=self.fdir2, weights=weight, routing='mfd')
+        wacc = self.grid.accumulation(fdir=self.fdir2, weights=weight, routing=self.routing_method)
         return wacc
  

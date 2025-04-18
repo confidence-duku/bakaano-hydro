@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 class VegET:
     """Generate an instance
     """
-    def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source):
+    def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source, routing_method='mfd'):
         """Initialize a VegET object.
 
         Args:
@@ -24,6 +24,7 @@ class VegET:
             start_date (str): The start date of the simulation period in YYYY-MM-DD format
             end_date (str): The end date of the simulation period in YYYY-MM-DD format
             climate_data_source (str): The source of climate data. Options are 'CHELSA', 'ERA5', or 'CHIRPS'.
+            routing_method (str): The method used for routing runoff. Options are 'mfd', 'd8' or 'dinf'. Default is 'mfd'.
 
         Methods
         -------
@@ -45,6 +46,7 @@ class VegET:
         # Set the start and end dates for the project
         self.start_date = start_date
         self.end_date = end_date
+        self.routing_method = routing_method
 
         # Create necessary directories for the project structure   
         os.makedirs(f'{self.working_dir}/models', exist_ok=True)
@@ -145,7 +147,7 @@ class VegET:
             total_ETc = 0
 
             # Initialize runoff router and compute flow direction
-            rout = RunoffRouter(self.working_dir, self.clipped_dem)
+            rout = RunoffRouter(self.working_dir, self.clipped_dem, self.routing_method)
             fdir, acc = rout.compute_flow_dir()
             
             facc_thresh = np.nanmax(acc) * 0.0001
