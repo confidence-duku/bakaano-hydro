@@ -128,7 +128,6 @@ class Meteo:
             print(f"     - Climate data already exists in {self.tasmax_path}, {self.tasmin_path}, {self.tmean_path} and {self.prep_path}; skipping download.")
     
     def _download_era5_land_data(self):
-
         ee.Authenticate()
         ee.Initialize()
        

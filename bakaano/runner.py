@@ -142,7 +142,7 @@ class BakaanoHydro:
         else:
             predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
 
-        self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn)
+        self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback)
         
 #==============================================================================================================================
     def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback):
@@ -203,7 +203,7 @@ class BakaanoHydro:
         print(f' COMPLETED! csv files available at {out_folder}')
 #========================================================================================================================  
             
-    def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn):
+    def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback):
         """Plot the observed and predicted streamflow data.
         """
         nse, kge = self._compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
@@ -211,11 +211,15 @@ class BakaanoHydro:
         R = kge[1][0]
         Beta = kge[2][0]
         Alpha = kge[3][0]
-        
+
+        start_date = pd.to_datetime(val_start) + pd.Timedelta(days=lookback)
+        num_days = len(predicted_streamflow)
+        date_range = pd.date_range(start=start_date, periods=num_days, freq='D')
+
         print(f"Nash-Sutcliffe Efficiency (NSE): {nse}")
         print(f"Kling-Gupta Efficiency (KGE): {kge1}")
-        plt.plot(predicted_streamflow[:], color='blue', label='Predicted Streamflow')
-        plt.plot(observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values[:], color='red', label='Observed Streamflow')
+        plt.plot(date_range, predicted_streamflow[:], color='blue', label='Predicted Streamflow')
+        plt.plot(date_range, observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values[:], color='red', label='Observed Streamflow')
         plt.title('Comparison of observed and simulated streamflow')  # Add a title
         plt.xlabel('Date')  # Label the x-axis
         plt.ylabel('River Discharge (m³/s)')
