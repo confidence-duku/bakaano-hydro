@@ -12,6 +12,7 @@ from tcn import TCN
 import pysheds.grid
 import rasterio
 import rioxarray
+from sklearn.preprocessing import MinMaxScaler
 from rasterio.transform import rowcol
 from keras.models import load_model # type: ignore
 import pickle
@@ -549,7 +550,7 @@ class PredictStreamflow:
             return
         
         train_catchment = train_catchment.reshape(-1, self.num_static_features)
-        scaled_trained_catchment = catchment_scaler.transform_minmax(train_catchment)
+        scaled_trained_catchment = catchment_scaler.transform(train_catchment)
         
         variables = ['mfd_wfa', 'scaled_acc', 'scaled_slp']  # Adjust as needed
         global_cdfs = self.load_global_cdfs_pkl()

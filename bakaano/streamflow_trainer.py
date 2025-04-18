@@ -520,9 +520,9 @@ class StreamflowModel:
         train_catchment_list = []
         full_local_predictors = []
         
-        #catchment_scaler = MinMaxScaler()
+        catchment_scaler = MinMaxScaler()
         #train_catchment = train_catchment.reshape(-1,1)
-        trained_catchment_scaler = self.fit_minmax(train_catchment)
+        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
         with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
             pickle.dump(trained_catchment_scaler, file)
 
@@ -542,7 +542,7 @@ class StreamflowModel:
             scaled_train_response = y.values/1
 
             z2 = z.reshape(-1,self.num_static_features)
-            scaled_train_catchment = trained_catchment_scaler.transform_minmax(z2)   
+            scaled_train_catchment = trained_catchment_scaler.transform(z2)   
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
