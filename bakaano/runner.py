@@ -62,12 +62,14 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn, num_input_branch, lookback, batch_size, num_epochs):
+    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn, num_input_branch, 
+                               lookback, batch_size, num_epochs, routing_method='mfd', catchment_size_threshold=1000):
         """Train the deep learning streamflow prediction model."
         """
     
         print('\nTRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
-        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, train_start, train_end)
+        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, train_start, train_end, 
+                               routing_method, catchment_size_threshold)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         
@@ -92,11 +94,12 @@ class BakaanoHydro:
         print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, num_input_branch, lookback):
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, 
+                                                num_input_branch, lookback, routing_method='mfd'):
         """Evaluate the streamflow prediction model."
         """
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, val_start, val_end, grdc_netcdf)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, val_start, val_end, routing_method, grdc_netcdf)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
         print("Available station names:")
@@ -145,11 +148,12 @@ class BakaanoHydro:
         self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback)
         
 #==============================================================================================================================
-    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, lookback):
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, 
+                            lookback, routing_method='mfd'):
         """Simulate streamflow in batch mode using the trained model."
         """
         print(' 1. Loading runoff data and other predictors')
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, sim_start, sim_end)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, sim_start, sim_end, routing_method)
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 
         self.vmodel = PredictStreamflow(self.working_dir, lookback)
