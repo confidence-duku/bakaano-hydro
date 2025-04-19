@@ -134,6 +134,8 @@ class Meteo:
         # Parse start and end dates
         start = datetime.strptime(self.start_date, "%Y-%m-%d")
         end = datetime.strptime(self.end_date, "%Y-%m-%d")
+
+        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy)
     
         # Step 1: Attempt bulk download by year using image collection
         start_year = start.year
@@ -152,14 +154,14 @@ class Meteo:
                 'temperature_2m'
             ).filterDate(i_date, f_date)
     
-            # geemap.ee_export_image_collection(
-            #     ee_object=df,
-            #     out_dir=self.era5_scratch,
-            #     scale=10000,
-            #     region=area,
-            #     crs='EPSG:4326',
-            #     file_per_band=True
-            # )
+            geemap.ee_export_image_collection(
+                ee_object=df,
+                out_dir=self.era5_scratch,
+                scale=10000,
+                region=area,
+                crs='EPSG:4326',
+                file_per_band=True
+            )
     
         print("Bulk download attempt completed. Verifying files...")
     
@@ -472,10 +474,10 @@ class Meteo:
     def get_chelsa_meteo_data(self):
         if self.local_data is False:
             climate_variables = {
-                'tasmax': 'tasmax',
-                'tasmin': 'tasmin',
-                'tas': 'tmean',
-                'pr': 'prep'
+                'tasmax': 'CHELSA/tasmax',
+                'tasmin': 'CHELSA/tasmin',
+                'tas': 'CHELSA/tmean',
+                'pr': 'CHELSA/prep'
             }
             
             with ThreadPoolExecutor(max_workers=4) as executor:

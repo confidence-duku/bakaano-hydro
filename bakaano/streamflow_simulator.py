@@ -19,7 +19,6 @@ import pickle
 import warnings
 import geopandas as gpd
 from scipy.spatial.distance import cdist
-from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 from datetime import datetime
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=FutureWarning)
