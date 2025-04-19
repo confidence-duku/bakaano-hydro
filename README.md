@@ -12,16 +12,16 @@ By learning spatially distributed, physically meaningful runoff and routing dyna
 ![image](https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf)
 
 ## 🔑 Key Features
-🌍 **Distributed architecture**: Captures spatial heterogeneity of hydrological processes using gridded runoff and flow routing.
-🧠 **Hybrid modeling**: Combines physically based hydrology with deep learning for enhanced accuracy and realism.
-📈 **Scalable and generalizable**: Trains a single model across basins, regions, or continents—no need for basin-specific calibration.
-🔬 **Physically interpretable**: Embeds hydrological principles (e.g. runoff generation, topographic routing) to improve model interpretability.
-💧 **Reliable in data-scarce regions**: Designed to perform well even with sparse observational data.
-🚀 **High-performance ready**: Compatible with GPU acceleration for fast training and inference on large-scale datasets.
-🔁 **Seamless integration**: Modular components allow for easy adaptation with other runoff models, routing schemes, or neural network architectures.
-⚙️ **Automated end-to-end pipeline**: From climate data ingestion and preprocessing to runoff simulation, routing, and streamflow prediction—Bakaano-Hydro automates the entire workflow with minimal user intervention.
-📦 **Easy deployment**: Installable via pip and designed with reproducibility in mind.
-📊 **Versatile applications**: Suitable for streamflow forecasting, climate adaptation planning, flood risk assessment, and more.
+- 🌍 **Distributed architecture**: Captures spatial heterogeneity of hydrological processes using gridded runoff and flow routing.
+- 🧠 **Hybrid modeling**: Combines physically based hydrology with deep learning for enhanced accuracy and realism.
+- 📈 **Scalable and generalizable**: Trains a single model across basins, regions, or continents—no need for basin-specific calibration.
+- 🔬 **Physically interpretable**: Embeds hydrological principles (e.g. runoff generation, topographic routing) to improve model interpretability.
+- 💧 **Reliable in data-scarce regions**: Designed to perform well even with sparse observational data.
+- 🚀 **High-performance ready**: Compatible with GPU acceleration for fast training and inference on large-scale datasets.
+- 🔁 **Seamless integration**: Modular components allow for easy adaptation with other runoff models, routing schemes, or neural network architectures.
+- ⚙️ **Automated end-to-end pipeline**: From climate data ingestion and preprocessing to runoff simulation, routing, and streamflow prediction—Bakaano-Hydro automates the entire workflow with minimal user intervention.
+- 📦 **Easy deployment**: Installable via pip and designed with reproducibility in mind.
+- 📊 **Versatile applications**: Suitable for streamflow forecasting, climate adaptation planning, flood risk assessment, and more.
 
 ## Installation
 
