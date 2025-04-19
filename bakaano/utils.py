@@ -177,6 +177,7 @@ class Utils:
                 
                 # Read the rectangular window
                 out_image = src.read(window=window).astype('float32')
+                out_image = np.where(out_image == src.nodata, -9999, out_image)
                 out_transform = src.window_transform(window)
                 
                 out_meta = src.meta.copy()
@@ -186,7 +187,7 @@ class Utils:
                 out_image, out_transform = rasterio.mask.mask(src, shapes, crop=crop_type)
                 out_meta = src.meta
                 out_image = out_image.astype('float32')
-                out_image[(out_image > 32600) | (out_image < -32600)] = -9999
+                out_image = np.where(out_image == src.nodata, -9999, out_image)
 
         if save_output==True:
             if out_path!=None:
@@ -198,8 +199,7 @@ class Utils:
                     "width": out_image.shape[2],
                     "transform": out_transform,
                     "dtype": "float32",
-                    "nodata": -9999.0,
-                    "compress": "lzw"
+                    "nodata": -9999.0
                 })
         
                 with rasterio.open(out_path, "w", **out_meta) as dest:
