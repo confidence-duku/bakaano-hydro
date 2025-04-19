@@ -39,7 +39,8 @@ setup(
         "tensorflow_probability==0.25.0",
         "tf_keras==2.18.0",
         "xarray==2024.10.0",
-        "tqdm==4.67.1"
+        "tqdm==4.67.1",
+        "scikit-learn==1.5.2"
     ],
     extras_require={
         "gpu": [
