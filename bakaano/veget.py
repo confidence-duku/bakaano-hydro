@@ -129,7 +129,7 @@ class VegET:
             tree_cover = np.where(tree_cover > 100, 0, tree_cover)
             herb_cover = np.where(herb_cover > 100, 0, herb_cover)
 
-            interception = (0.15 * tree_cover) + (0.1 * herb_cover)/100
+            interception = ((0.15 * tree_cover) + (0.1 * herb_cover))/100
             total_ETa = 0
             total_ETc = 0
 

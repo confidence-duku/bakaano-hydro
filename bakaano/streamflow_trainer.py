@@ -238,7 +238,7 @@ class DataPreprocessor:
             dst.write(river_ras.values, 1)  # Write data to the first band
         
         weight2 = grid.read_raster(slope)
-        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self)
+        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self.routing_method)
 
         weight3 = grid.read_raster(tree_cover)
         cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing=self.routing_method)
@@ -403,35 +403,7 @@ class StreamflowModel:
         self.num_static_features = 10
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
-        self.min_ = None
-        self.max_ = None
-        self.scale_ = None
-        self.feature_range = (0, 1)
-
-    def fit_minmax(self, X):
-        X = np.asarray(X, dtype=float)
-        self.min_ = np.nanmin(X, axis=0)
-        self.max_ = np.nanmax(X, axis=0)
         
-        data_range = self.max_ - self.min_
-        data_range[data_range == 0] = 1  # avoid division by zero
-
-        scale_min, scale_max = self.feature_range
-        self.scale_ = (scale_max - scale_min) / data_range
-        return self
-
-    def transform_minmax(self, X):
-        X = np.asarray(X, dtype=float)
-        scale_min = self.feature_range[0]
-        return (X - self.min_) * self.scale_ + scale_min
-
-    def fit_transform_minmax(self, X):
-        return self.fit_minmax(X).transform_minmax(X)
-
-    def inverse_transform_minmax(self, X_scaled):
-        X_scaled = np.asarray(X_scaled, dtype=float)
-        scale_min = self.feature_range[0]
-        return (X_scaled - scale_min) / self.scale_ + self.min_
 
     def compute_global_cdfs_pkl(self, df, variables):
         """
