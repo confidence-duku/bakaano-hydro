@@ -15,7 +15,7 @@ from datetime import datetime, timedelta
 class VegET:
     """Generate an instance
     """
-    def __init__(self, working_dir, study_area_path, start_date, end_date, climate_data_source, routing_method='mfd'):
+    def __init__(self, working_dir, study_area, start_date, end_date, climate_data_source, routing_method='mfd'):
         """Initialize a VegET object.
 
         Args:
@@ -37,7 +37,7 @@ class VegET:
         self.working_dir = working_dir
         
         # Initialize the study area
-        self.study_area = study_area_path
+        self.study_area = study_area
         
         # Initialize utility class with project name and study area.
         self.uw = Utils(self.working_dir, self.study_area)
@@ -71,44 +71,31 @@ class VegET:
             prep_nc, tasmax_nc, tasmin_nc, tmean_nc = cd.get_meteo_data()
 
             if self.climate_data_source == 'CHELSA':
-                # Load observed streamflow and climate data
-                tasmax_var = list(tasmax_nc.data_vars)[0]
-                tasmin_var = list(tasmin_nc.data_vars)[0]
-                tmean_var = list(tmean_nc.data_vars)[0]
-                prep_var = list(prep_nc.data_vars)[0]
 
-                tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                rf = prep_nc[prep_var].sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
-                #rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
+                tasmax_period = tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tasmin_period = tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tmean_period = tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                rf = prep_nc.pr.sel(time=slice(self.start_date, self.end_date)) * 86400  # Conversion from kg/m2/s to mm/day
+                rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
                 self.rf = rf
 
             elif self.climate_data_source == 'ERA5':
-                # Load observed streamflow and climate data
-                tasmax_var = list(tasmax_nc.data_vars)[1]
-                tasmin_var = list(tasmin_nc.data_vars)[1]
-                tmean_var = list(tmean_nc.data_vars)[1]
-                prep_var = list(prep_nc.data_vars)[1]
 
-                tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                rf = prep_nc[prep_var].sel(time=slice(self.start_date, self.end_date)) * 1000
+                tasmax_period = tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tasmin_period = tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tmean_period = tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                rf = prep_nc.pr.sel(time=slice(self.start_date, self.end_date)) * 1000
+                rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
                 self.rf = rf
                 #rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
             elif self.climate_data_source == 'CHIRPS':
-                tasmax_var = list(tasmax_nc.data_vars)[1]
-                tasmin_var = list(tasmin_nc.data_vars)[1]
-                tmean_var = list(tmean_nc.data_vars)[1]
-                prep_var = list(prep_nc.data_vars)[1]
                 
-                tasmax_period = tasmax_nc[tasmax_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tasmin_period = tasmin_nc[tasmin_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                tmean_period = tmean_nc[tmean_var].sel(time=slice(self.start_date, self.end_date)) - 273.15
-                rf = prep_nc[prep_var].sel(time=slice(self.start_date, self.end_date))
+                tasmax_period = tasmax_nc.tasmax.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tasmin_period = tasmin_nc.tasmin.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                tmean_period = tmean_nc.tas.sel(time=slice(self.start_date, self.end_date)) - 273.15
+                rf = prep_nc.pr.sel(time=slice(self.start_date, self.end_date))
+                rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
                 self.rf = rf
-                #rf = rf.astype(np.float32).assign_coords(lat=rf['lat'].astype(np.float32), lon=rf['lon'].astype(np.float32))
             
             td = np.sqrt(tasmax_period - tasmin_period)
             pet_params = 0.408 * 0.0023 * (tmean_period + 17.8) * td
@@ -142,7 +129,7 @@ class VegET:
             tree_cover = np.where(tree_cover > 100, 0, tree_cover)
             herb_cover = np.where(herb_cover > 100, 0, herb_cover)
 
-            interception = (0.15 * tree_cover) + (0.1 * herb_cover)
+            interception = (0.15 * tree_cover) + (0.1 * herb_cover)/100
             total_ETa = 0
             total_ETc = 0
 
