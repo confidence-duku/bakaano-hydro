@@ -5,18 +5,32 @@
 
 ## Description
 
-Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction. It employs a serial hybridization approach and integrates
+Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction. It uniquely integrates physically based hydrological principles with the generalization capacity of machine learning in a spatially explicit and physically meaningful way. This makes it particularly valuable in data-scarce regions, where traditional hydrological models often struggle due to sparse observations and calibration limitations, and where current state-of-the-art data-driven models are constrained by lumped modeling approaches that overlook spatial heterogeneity and the inability to capture hydrological connectivity. 
 
-- a gridded process-based rainfall-runoff method that captures spatial heterogeneity and climate, soil, topography, and vegetation interactions;
-- a flow routing method propagating runoff through the river network based on topographic constraints to preserve hydrological connectivity;
-- a sequential neural network that uses routed flow sequences extracted at along the river network to predict streamflow.
-
-This approach ensures that primary hydrological responses to climate, soil, topography, and vegetation interactions and changes are captured by process-based components, enhancing interpretability while leveraging deep learning for pattern recognition.
+By learning spatially distributed, physically meaningful runoff and routing dynamics, Bakaano-Hydro is able to generalize across diverse catchments and hydro-climatic regimes. This hybrid design enables the model to simulate streamflow more accurately and reliably—even in ungauged or poorly monitored basins—while retaining interpretability grounded in hydrological processes.
 
 ![image](https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf)
 
-Bakaano-Hydro leverages extensive data inputs—ranging from digital elevation models (DEMs) to meteorological time-series—and processes them through a robust sequence of automated steps. This includes the download, preprocessing, and alignment of source data, as well as regridding inputs to the desired spatial resolution, ensuring consistency and accuracy across all datasets.
-It is highly adaptable, providing users with two primary options for data input: they can either let the model automatically download and preprocess all relevant input data or supply their own datasets. If users choose the latter, Bakaano-Hydro accommodates them by accepting data in the widely-used WGS84 geographic coordinate system (EPSG:4326), without the need for time-consuming clipping or regridding. The model seamlessly adjusts input data to match the DEM's spatial resolution, ensuring that all variables are consistently aligned for optimal performance.
+## 🔑 Key Features
+🌍 **Distributed architecture**: Captures spatial heterogeneity of hydrological processes using gridded runoff and flow routing.
+
+🧠 **Hybrid modeling**: Combines physically based hydrology with deep learning for enhanced accuracy and realism.
+
+📈 **Scalable and generalizable**: Trains a single model across basins, regions, or continents—no need for basin-specific calibration.
+
+🔬 **Physically interpretable**: Embeds hydrological principles (e.g. runoff generation, topographic routing) to improve model interpretability.
+
+💧 **Reliable in data-scarce regions**: Designed to perform well even with sparse observational data.
+
+🚀 **High-performance ready**: Compatible with GPU acceleration for fast training and inference on large-scale datasets.
+
+🔁 **Seamless integration**: Modular components allow for easy adaptation with other runoff models, routing schemes, or neural network architectures.
+
+⚙️ **Automated end-to-end pipeline**: From climate data ingestion and preprocessing to runoff simulation, routing, and streamflow prediction—Bakaano-Hydro automates the entire workflow with minimal user intervention.
+
+📦 **Easy deployment**: Installable via pip and designed with reproducibility in mind.
+
+📊 **Versatile applications**: Suitable for streamflow forecasting, climate adaptation planning, flood risk assessment, and more.
 
 ## Installation
 
@@ -64,6 +78,8 @@ No contributions are currently accepted.
 ## Authors and acknowledgment
 
 See CITATION.cff file.
+
+Bakaano-Hydro was 
 
 ## License
 
