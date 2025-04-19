@@ -31,7 +31,8 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
 class DataPreprocessor:
-    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, train_start, train_end):
+    def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, train_start, 
+                 train_end, routing_method, catchment_size_threshold):
         """
         Initialize the DataPreprocessor with project details and dates.
         
@@ -68,6 +69,8 @@ class DataPreprocessor:
         self.train_end = train_end
         self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
         self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
+        self.catchment_size_threshold = catchment_size_threshold
+        self.routing_method = routing_method
     
     def _extract_station_rowcol(self, lat, lon):
         """
@@ -221,8 +224,8 @@ class DataPreprocessor:
         
         flooded_dem = grid.fill_depressions(dem)
         inflated_dem = grid.resolve_flats(flooded_dem)
-        fdir = grid.flowdir(inflated_dem, routing='mfd')
-        acc = grid.accumulation(fdir=fdir, routing='mfd')
+        fdir = grid.flowdir(inflated_dem, routing=self.routing_method)
+        acc = grid.accumulation(fdir=fdir, routing=self.routing_method)
         
         facc_thresh = np.nanmax(acc) * 0.0001
         self.river_grid = np.where(acc < facc_thresh, 0, 1)
@@ -235,19 +238,19 @@ class DataPreprocessor:
             dst.write(river_ras.values, 1)  # Write data to the first band
         
         weight2 = grid.read_raster(slope)
-        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
+        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self)
 
         weight3 = grid.read_raster(tree_cover)
-        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing='mfd')
+        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing=self.routing_method)
         
         weight4 = grid.read_raster(herb_cover)
-        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing='mfd')
+        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing=self.routing_method)
 
         weight5 = grid.read_raster(awc)
-        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing='mfd')
+        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing=self.routing_method)
         
         weight6 = grid.read_raster(sat_pt)
-        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing='mfd')
+        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing=self.routing_method)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
@@ -256,7 +259,7 @@ class DataPreprocessor:
         cum_awc = xr.DataArray(data=cum_awc, coords=[('lat', lat), ('lon', lon)])
         cum_satpt = xr.DataArray(data=cum_satpt, coords=[('lat', lat), ('lon', lon)])
  
-        #time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
+        time_index = pd.date_range(start=self.train_start, end=self.train_end, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
         start_dt = datetime.strptime(self.train_start, "%Y-%m-%d")
@@ -295,6 +298,9 @@ class DataPreprocessor:
             acc_data = acc_data.values
             slp_data = slp_data.values
 
+            if acc_data < self.catchment_size_threshold:
+                continue
+
             self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
         
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
@@ -304,9 +310,9 @@ class DataPreprocessor:
                 arr = arr['matrix'].tocsr()
                 station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
-            #full_wfa_data.set_index(time_index, inplace=True)
-            #full_wfa_data.index.name = 'time'  # Rename the index to 'time'
-            
+            full_wfa_data.set_index(time_index, inplace=True)
+            full_wfa_data.index.name = 'time'  # Rename the index to 'time'
+    
             #extract wfa data based on defined training period
             wfa_data1 = full_wfa_data
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
