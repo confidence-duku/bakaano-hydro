@@ -102,7 +102,7 @@ class DEM:
             elevation = src.read(1).astype(float)
             profile = src.profile.copy()
             res_x, res_y = src.res
-            cellsize = np.mean([abs(res_x), abs(res_y)])
+            cellsize = np.mean([abs(res_x), abs(res_y)]) *100000
             nodata = src.nodata
 
         # Handle NoData
