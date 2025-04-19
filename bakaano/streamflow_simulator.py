@@ -29,7 +29,7 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area,  sim_start, sim_end, grdc_streamflow_nc_file=None):
+    def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, grdc_streamflow_nc_file=None):
         """
         Initialize the PredictDataPreprocessor object.
         
@@ -52,6 +52,7 @@ class PredictDataPreprocessor:
         """
         self.study_area = study_area
         self.working_dir = working_dir
+        self.routing_method = routing_method
         
         self.data_list = []
         self.catchment = []  
@@ -192,8 +193,8 @@ class PredictDataPreprocessor:
         
         flooded_dem = grid.fill_depressions(dem)
         inflated_dem = grid.resolve_flats(flooded_dem)
-        fdir = grid.flowdir(inflated_dem, routing='mfd')
-        acc = grid.accumulation(fdir=fdir, routing='mfd')
+        fdir = grid.flowdir(inflated_dem, routing=self.routing_method)
+        acc = grid.accumulation(fdir=fdir, routing=self.routing_method)
         
         facc_thresh = np.nanmax(acc) * 0.0001
         self.river_grid = np.where(acc < facc_thresh, 0, 1)
@@ -206,19 +207,19 @@ class PredictDataPreprocessor:
             dst.write(river_ras.values, 1)  # Write data to the first band
         
         weight2 = grid.read_raster(slope)
-        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
+        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self.routing_method)
 
         weight3 = grid.read_raster(tree_cover)
-        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing='mfd')
+        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing=self.routing_method)
         
         weight4 = grid.read_raster(herb_cover)
-        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing='mfd')
+        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing=self.routing_method)
 
         weight5 = grid.read_raster(awc)
-        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing='mfd')
+        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing=self.routing_method)
         
         weight6 = grid.read_raster(sat_pt)
-        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing='mfd')
+        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing=self.routing_method)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
@@ -244,6 +245,8 @@ class PredictDataPreprocessor:
             if start_dt <= datetime.strptime(entry["time"], "%Y-%m-%d") <= end_dt
         ]
         
+        time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
+
         all_wfa = []
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
@@ -270,6 +273,8 @@ class PredictDataPreprocessor:
                 arr = arr['matrix'].tocsr()
                 station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
+            full_wfa_data.set_index(time_index, inplace=True)
+            full_wfa_data.index.name = 'time'  # Rename the index to 'time'
         
             wfa_data1 = full_wfa_data
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
@@ -318,8 +323,8 @@ class PredictDataPreprocessor:
         
         flooded_dem = grid.fill_depressions(dem)
         inflated_dem = grid.resolve_flats(flooded_dem)
-        fdir = grid.flowdir(inflated_dem, routing='mfd')
-        acc = grid.accumulation(fdir=fdir, routing='mfd')
+        fdir = grid.flowdir(inflated_dem, routing=self.routing_method)
+        acc = grid.accumulation(fdir=fdir, routing=self.routing_method)
         
         facc_thresh = np.nanmax(acc) * 0.0001
         self.river_grid = np.where(acc < facc_thresh, 0, 1)
@@ -332,19 +337,19 @@ class PredictDataPreprocessor:
             dst.write(river_ras.values, 1)  # Write data to the first band
         
         weight2 = grid.read_raster(slope)
-        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing='mfd')
+        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self.routing_method)
 
         weight3 = grid.read_raster(tree_cover)
-        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing='mfd')
+        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing=self.routing_method)
         
         weight4 = grid.read_raster(herb_cover)
-        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing='mfd')
+        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing=self.routing_method)
 
         weight5 = grid.read_raster(awc)
-        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing='mfd')
+        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing=self.routing_method)
         
         weight6 = grid.read_raster(sat_pt)
-        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing='mfd')
+        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing=self.routing_method)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
         cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
@@ -352,8 +357,11 @@ class PredictDataPreprocessor:
         cum_herb_cover = xr.DataArray(data=cum_herb_cover, coords=[('lat', lat), ('lon', lon)])
         cum_awc = xr.DataArray(data=cum_awc, coords=[('lat', lat), ('lon', lon)])
         cum_satpt = xr.DataArray(data=cum_satpt, coords=[('lat', lat), ('lon', lon)])
+
+        start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
+        end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
  
-        time_index = pd.date_range(start=self.start_date, end=self.end_date, freq='D')
+        time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
         #combine or all yearly output from the runoff and routing module into a single list
         all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
@@ -361,6 +369,12 @@ class PredictDataPreprocessor:
             with open(year, 'rb') as f:
                 this_arr = pickle.load(f)
             wfa_list = wfa_list + this_arr
+
+        # Filter based on time range
+        wfa_list = [
+            entry for entry in wfa_list
+            if start_dt <= datetime.strptime(entry["time"], "%Y-%m-%d") <= end_dt
+        ]
                 
         for olat, olon in zip(latlist, lonlist):
             snapped_y, snapped_x = self._snap_coordinates(olat, olon)
@@ -377,14 +391,14 @@ class PredictDataPreprocessor:
 
             station_wfa = []
             for arr in wfa_list:
-                arr = arr.tocsr()
+                arr = arr['matrix'].tocsr()
                 station_wfa.append(arr[int(row), int(col)])
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
 
             #extract wfa data based on defined training period
-            wfa_data1 = full_wfa_data[self.sim_start: self.sim_end]
+            wfa_data1 = full_wfa_data
             wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (self.acc_data * 1e6))
             wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
             wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
