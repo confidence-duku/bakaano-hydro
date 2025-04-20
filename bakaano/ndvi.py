@@ -199,12 +199,6 @@ class NDVI:
                 output_file = os.path.join(self.ndvi_folder, f'{interval_start}_median_ndvi.tif')
                 self._calculate_median_raster(file_list, output_file)
 
-            # medians = []
-            # medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
-            # for file in medians_list:
-            #     median_da = rioxarray.open_rasterio(file)[0]  # Extract the first band as DataArray
-            #     medians.append(median_da)
-
             medians_list = sorted(glob.glob(f'{self.ndvi_folder}/*median*.tif'),
                                   key=lambda x: datetime.strptime(os.path.basename(x).split('_')[0], "%m-%d")
             )
@@ -226,7 +220,7 @@ class NDVI:
             
             for doy, arr in daily_ndvi.items():
                 daily_ndvi[doy] = xr.DataArray(
-                    arr.astype(np.float16),
+                    arr.astype(np.float32),
                     dims=("y", "x"),  # Assuming the interpolated array has y and x dimensions
                     coords={"y": reference_da.y.astype(np.float16), "x": reference_da.x.astype(np.float16)},  # Use coordinates from a median DataArray
                     attrs={"day_of_year": doy},
@@ -247,7 +241,7 @@ class NDVI:
             this_ndvi = self.uw.clip(raster_path=nlist[interval_num], out_path=None, save_output=False, crop_type=True)[0] * 0.0001
             this_ndvi = np.where(this_ndvi<=0, np.nan, this_ndvi)
             file_name = os.path.basename(nlist[interval_num])[:5]
-            plt.imshow(this_ndvi, cmap='viridis_r', vmax=0.6)
+            plt.imshow(this_ndvi, cmap='viridis_r')
             plt.title(f'mean NDVI for {file_name}')
             plt.colorbar()
             plt.show()
@@ -255,7 +249,7 @@ class NDVI:
             raise ValueError("Invalid number. Choose number less than 22")
         
     def get_ndvi_data(self):
-        #self._download_ndvi()
+        self._download_ndvi()
         self._preprocess_ndvi()
 
     
