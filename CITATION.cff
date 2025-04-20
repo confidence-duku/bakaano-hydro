@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-title: Bakaano-Hydro
+title: Bakaano-Hydro: A distributed hydrology-guided deep learning model for streamflow prediction
 message: >-
   If you use this software, please cite it using the
   metadata from this file.
