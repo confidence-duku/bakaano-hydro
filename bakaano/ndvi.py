@@ -134,37 +134,38 @@ class NDVI:
 
     def _interpolate_daily_ndvi(self, medians, interval_dates):
         """
-        Linearly interpolate daily NDVI from 16-day median NDVI values.
-        :param medians: List of 16-day median NDVI arrays.
-        :param interval_dates: List of corresponding interval start dates as day-of-year.
-        :return: Dictionary of daily NDVI arrays for each day of the year.
+        Interpolate NDVI rasters from 16-day intervals to daily using row-wise interpolation.
+        Returns a dictionary of daily NDVI arrays.
         """
+        # Get shape
+        num_intervals = len(medians)
+        rows, cols = medians[0].shape
+        daily_doy = np.arange(1, 367)  # Days 1-366
         daily_ndvi = {}
-        # Convert to datetime objects
-        start_dt = datetime.strptime(self.start_date, "%Y-%m-%d")
-        end_dt = datetime.strptime(self.end_date, "%Y-%m-%d")
 
-        date_range = [start_dt + timedelta(days=i) for i in range((end_dt - start_dt).days + 1)]
-        daily_doy = np.array([d.timetuple().tm_yday for d in date_range])  # Day of year for each date
-    
-        # Convert medians to a single 3D NumPy array (time, rows, cols)
-        medians_array = np.stack(medians, axis=0)  # Shape: (num_intervals, rows, cols)
-    
-        # Reshape medians for interpolation
-        num_intervals, rows, cols = medians_array.shape
-        medians_flat = medians_array.reshape(num_intervals, -1)  # Shape: (num_intervals, pixels)
-        
-        # Perform interpolation for all pixels simultaneously
-        interpolator = interp1d(interval_dates, medians_flat, kind='linear', bounds_error=False, fill_value="extrapolate", axis=0)
-        interpolated_values = interpolator(daily_doy)  # Shape: (num_days, pixels)
-    
-        # Reshape back to (days, rows, cols)
-        daily_ndvi_array = interpolated_values.reshape(len(daily_doy), rows, cols)
-    
-        # Create dictionary with day-of-year keys
+        # Pre-allocate daily NDVI cube (366, rows, cols) with float16 to save memory
+        daily_ndvi_cube = np.empty((366, rows, cols), dtype=np.float16)
+
+        # Stack rasters row-wise
+        medians_stack = np.stack(medians, axis=0)  # shape: (23, rows, cols)
+
+        #print("Interpolating NDVI row by row...")
+        for i in range(rows):
+            row_slice = medians_stack[:, i, :]  # shape: (23, cols)
+            interp_func = interp1d(
+                interval_dates,
+                row_slice,
+                kind='linear',
+                axis=0,
+                bounds_error=False,
+                fill_value="extrapolate"
+            )
+            daily_ndvi_cube[:, i, :] = interp_func(daily_doy).astype(np.float16)
+
+        # Convert to dictionary keyed by day of year
         for d, doy in enumerate(daily_doy):
-            daily_ndvi[doy] = daily_ndvi_array[d]
-    
+            daily_ndvi[doy] = daily_ndvi_cube[d, :, :]
+
         return daily_ndvi
     
     def _save_daily_ndvi(self, daily_ndvi, template_file):
@@ -190,27 +191,44 @@ class NDVI:
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         if not os.path.exists(ndvi_check):
             groups = self._group_files_by_intervals()
-            interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in groups.keys()]
+            sorted_keys = sorted(groups.keys(), key=lambda k: datetime.strptime(k, '%m-%d'))
+            #interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in sorted_keys]
 
-            for interval_start, file_list in groups.items():
+            for interval_start, file_list in sorted(groups.items()):
                 print(f'Processing {interval_start} with {len(file_list)} files...')
                 output_file = os.path.join(self.ndvi_folder, f'{interval_start}_median_ndvi.tif')
                 self._calculate_median_raster(file_list, output_file)
 
-            medians = []
-            medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
-            for file in medians_list:
-                median_da = rioxarray.open_rasterio(file)[0]  # Extract the first band as DataArray
-                medians.append(median_da)
+            # medians = []
+            # medians_list = glob.glob(f'{self.working_dir}/ndvi/*median*.tif')
+            # for file in medians_list:
+            #     median_da = rioxarray.open_rasterio(file)[0]  # Extract the first band as DataArray
+            #     medians.append(median_da)
 
-            print("Interpolating daily NDVI...")
+            medians_list = sorted(glob.glob(f'{self.ndvi_folder}/*median*.tif'),
+                                  key=lambda x: datetime.strptime(os.path.basename(x).split('_')[0], "%m-%d")
+            )
+
+            interval_dates = [
+                datetime.strptime(os.path.basename(f).split('_')[0], "%m-%d").timetuple().tm_yday
+                for f in medians_list
+            ]
+
+            reference_da = rioxarray.open_rasterio(medians_list[0])[0]
+            medians = []
+            for file in medians_list:
+                with rasterio.open(file) as src:
+                    arr = src.read(1).astype("float32")
+                    medians.append(arr)
+
+            print("Interpolating NDVI...")
             daily_ndvi = self._interpolate_daily_ndvi(medians, interval_dates)
             
             for doy, arr in daily_ndvi.items():
                 daily_ndvi[doy] = xr.DataArray(
-                    arr.astype(np.float32),
+                    arr.astype(np.float16),
                     dims=("y", "x"),  # Assuming the interpolated array has y and x dimensions
-                    coords={"y": medians[0].y, "x": medians[0].x},  # Use coordinates from a median DataArray
+                    coords={"y": reference_da.y.astype(np.float16), "x": reference_da.x.astype(np.float16)},  # Use coordinates from a median DataArray
                     attrs={"day_of_year": doy},
                 )
 
@@ -237,7 +255,7 @@ class NDVI:
             raise ValueError("Invalid number. Choose number less than 22")
         
     def get_ndvi_data(self):
-        self._download_ndvi()
+        #self._download_ndvi()
         self._preprocess_ndvi()
 
     
