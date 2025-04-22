@@ -38,7 +38,6 @@ shapely==2.0.6
 tensorflow==2.18.0
 tensorflow_probability==0.25.0
 tf_keras==2.18.0
-whitebox==2.3.5
 xarray==2024.10.0
 tqdm==4.67.1
 
