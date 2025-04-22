@@ -4,14 +4,20 @@ import os
 from bakaano.utils import Utils
 from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 from bakaano.streamflow_simulator import PredictDataPreprocessor, PredictStreamflow
+from bakaano.router import RunoffRouter
 import hydroeval
 import matplotlib.pyplot as plt
+import xarray as xr
+import rasterio
+import pandas as pd
+import geopandas as gpd
+from leafmap.foliumap import Map
 
 #========================================================================================================================  
 class BakaanoHydro:
     """Generate an instance
     """
-    def __init__(self, working_dir, study_area_path, climate_data_source):
+    def __init__(self, working_dir, study_area, climate_data_source):
         """Initialize the BakaanoHydro object with project details.
 
         Args:
@@ -44,7 +50,7 @@ class BakaanoHydro:
         self.climate_data_source = climate_data_source
         
         # Initialize the study area
-        self.study_area = study_area_path
+        self.study_area = study_area
         
         # Initialize utility class with project name and study area.
         self.uw = Utils(self.working_dir, self.study_area)
@@ -246,5 +252,103 @@ class BakaanoHydro:
         kge = hydroeval.kge(predicted, observed)
         return nse, kge
   
+#===========================================================================================================================
+    def explore_data_interactively(self, start_date, end_date, grdc_netcdf=None):
+        m = Map()
+        rout = RunoffRouter(self.working_dir, self.clipped_dem, 'mfd')
+        fdir, acc = rout.compute_flow_dir()
 
+        with rasterio.open(self.clipped_dem) as dm:
+            dem_profile = dm.profile
+
+        dem_profile.update(dtype=rasterio.float32, count=1)
+        acc_name = f'{self.working_dir}/scratch/river_network.tif'
+        with rasterio.open(acc_name, 'w', **dem_profile) as dst:
+                dst.write(acc, 1)
     
+
+        try:
+            tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
+            dem = f'{self.working_dir}/elevation/dem_clipped.tif'
+            slope = f'{self.working_dir}/elevation/slope_clipped.tif'
+            awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
+        
+
+            m.add_raster(dem, layer_name="DEM", colormap='gist_ncar', zoom_to_layer=True, opacity=0.6)
+            vmx = np.nanmax(np.array(acc))*0.025
+            for path, name, cmap, vmax, opacity in [
+                (awc, "Available water content", "terrain", 10, 0.75),
+                (tree_cover, "Tree cover", "viridis_r", 70, 0.75),
+                (slope, "Slope", "gist_ncar", 20, 0.75),
+                (acc_name, "River network", "viridis", vmx, 0.9),
+            ]:
+                try:
+                    m.add_raster(path, layer_name=name, colormap=cmap, zoom_to_layer=True, opacity=opacity, 
+                                 vmax=vmax, visible=False)
+                except Exception as e:
+                    print(f"⚠️ Failed to load raster '{name}': {e}")
+
+        except Exception as e:
+            print(f"❌ Raster setup failed: {e}")
+
+        # Process GRDC data if provided
+        if grdc_netcdf is not None:
+            try:
+                grdc = xr.open_dataset(grdc_netcdf)
+
+                stations_df = pd.DataFrame({
+                    'station_name': grdc['station_name'].values,
+                    'geo_x': grdc['geo_x'].values,
+                    'geo_y': grdc['geo_y'].values
+                })
+
+                stations_gdf = gpd.GeoDataFrame(
+                    stations_df,
+                    geometry=gpd.points_from_xy(stations_df['geo_x'], stations_df['geo_y']),
+                    crs="EPSG:4326"
+                )
+
+                # Load region shapefile
+                try:
+                    region_shape = gpd.read_file(self.study_area)
+                except Exception as e:
+                    print(f"❌ Could not read study area shapefile: {e}")
+                    return m
+
+                # Spatial join
+                stations_in_region = gpd.sjoin(stations_gdf, region_shape, how='inner', predicate='intersects')
+                overlapping_station_names = stations_in_region['station_name'].unique()
+
+                # Filter by time and station
+                grdc_time_filtered = grdc.sel(time=slice(start_date, end_date))
+
+                filtered_grdc = grdc_time_filtered.where(
+                    grdc_time_filtered['station_name'].isin(overlapping_station_names), drop=True
+                )
+
+                x = filtered_grdc["geo_x"].values.flatten()
+                y = filtered_grdc["geo_y"].values.flatten()
+                name = filtered_grdc['station_name'].values.flatten()
+                runoff = filtered_grdc["runoff_mean"]
+
+                percent_missing = (
+                    runoff.isnull().sum(dim="time") / runoff.sizes["time"] * 100
+                ).round(1).values.flatten()
+
+                df = pd.DataFrame({
+                    'Station_name': name,
+                    'Percent_missing': percent_missing,
+                    "Longitude": x,
+                    "Latitude": y
+                }).dropna()
+
+                m.add_points_from_xy(
+                    data=df, x="Longitude", y="Latitude", color="brown",
+                    layer_name="Stations", radius=3
+                )
+
+            except Exception as e:
+                print(f"❌ Failed to process GRDC NetCDF: {e}")
+
+        return m
+
