@@ -33,7 +33,7 @@ setup(
         "pysheds==0.3.3",
         "rasterio==1.4.2",
         "requests==2.32.3",
-        "rioxarray==0.18.1",
+        "rioxarray",
         "scipy==1.14.1",
         "shapely==2.0.6",
         "tensorflow==2.18.0",
