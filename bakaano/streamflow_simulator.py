@@ -28,7 +28,8 @@ tfd = tfp.distributions  # TensorFlow Probability distributions
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, grdc_streamflow_nc_file=None):
+    def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, 
+                 grdc_streamflow_nc_file=None, catchment_size_threshold=None):
         """
         Initialize the PredictDataPreprocessor object.
         
@@ -57,6 +58,8 @@ class PredictDataPreprocessor:
         self.catchment = []  
         self.sim_start = sim_start
         self.sim_end = sim_end
+        self.sim_station_names= []
+        self.catchment_size_threshold = catchment_size_threshold
         if grdc_streamflow_nc_file is not None:
             self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
             self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
@@ -157,7 +160,7 @@ class PredictDataPreprocessor:
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
-        self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
+        #self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
         return filtered_grdc
     
     def encode_lat_lon(self, latitude, longitude):
@@ -249,6 +252,13 @@ class PredictDataPreprocessor:
         all_wfa = []
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
+
+            if self.catchment_size_threshold is not None:
+                catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
+                if catchment_size < self.catchment_size_threshold:
+                    continue
+
+            self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)

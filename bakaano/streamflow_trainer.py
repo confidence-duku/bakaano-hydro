@@ -281,6 +281,10 @@ class DataPreprocessor:
         #extract station predictor and response variables based on station coordinates
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
+            catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
+
+            if catchment_size < self.catchment_size_threshold:
+                continue
             
             # if station_discharge['station_discharge'].notna().sum() < 1095:
             #     continue
@@ -297,9 +301,6 @@ class DataPreprocessor:
             satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
             acc_data = acc_data.values
             slp_data = slp_data.values
-
-            if acc_data < self.catchment_size_threshold:
-                continue
 
             self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
         
