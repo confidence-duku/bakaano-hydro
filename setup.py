@@ -15,7 +15,6 @@ setup(
     url="https://github.com/confidence-duku/bakaano-hydro",
     packages=find_packages(exclude=["tests*", "docs*"]),
     install_requires=[
-        "dask==2024.11.2",
         "earthengine-api==1.4.3",
         "fiona==1.10.1",
         "future==1.0.0",
