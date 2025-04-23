@@ -101,11 +101,12 @@ class BakaanoHydro:
 #========================================================================================================================  
                 
     def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, 
-                                                num_input_branch, lookback, routing_method='mfd'):
+                                                num_input_branch, lookback, routing_method='mfd', catchment_size_threshold=1000):
         """Evaluate the streamflow prediction model."
         """
 
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, val_start, val_end, routing_method, grdc_netcdf)
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, val_start, val_end, routing_method, 
+                                      grdc_netcdf, catchment_size_threshold)
         fulldata = vdp.load_observed_streamflow(grdc_netcdf)
         self.stat_names = vdp.sim_station_names
         print("Available station names:")
