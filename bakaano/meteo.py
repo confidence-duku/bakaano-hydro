@@ -222,26 +222,7 @@ class Meteo:
     
         print("Bulk download attempt completed. Verifying files...")
     
-        # Step 2: Check for missing dates
-        # expected_dates = []
-        # current = start
-        # while current <= end:
-        #     expected_dates.append(current.strftime("%Y-%m-%d"))
-        #     current += timedelta(days=1)
-    
-        # # List downloaded files and extract dates from filenames
-        # downloaded_dates = set()
-        # for fname in os.listdir(self.era5_scratch):
-        #     if fname.endswith(".tif"):
-        #         try:
-        #             date_str_raw = fname.split('.')[0]  # Get '20010101'
-        #             date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
-        #             downloaded_dates.add(date_str)
-        #         except:
-        #             continue
-    
-        # # Find missing dates
-        # missing_dates = sorted(set(expected_dates) - downloaded_dates)
+
         variables = [
             'total_precipitation_sum',
             'temperature_2m_min',
