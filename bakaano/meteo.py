@@ -100,6 +100,63 @@ class Meteo:
                 self.prep_path = Path(f'{self.working_dir}/{self.data_source}/prep/')
                 self.era5_scratch = Path(f'{self.working_dir}/era5_scratch/')
 
+    
+    def check_missing_dates(self, variables=None):
+        import os
+        from collections import defaultdict
+        from datetime import datetime, timedelta
+    
+        # variables = [
+        #     'total_precipitation_sum',
+        #     'temperature_2m_min',
+        #     'temperature_2m_max',
+        #     'temperature_2m'
+        # ]
+    
+        # Generate list of all expected dates
+        start = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        expected_dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
+                          for i in range((end - start).days + 1)]
+    
+        files = os.listdir(self.era5_scratch)
+        var_dates = defaultdict(set)
+    
+        for fname in files:
+            if not fname.endswith(".tif"):
+                continue
+            parts = fname.split('.')
+            if len(parts) >= 3:
+                date_part, var_part = parts[0], parts[1]
+                if var_part in variables:
+                    try:
+                        # Convert YYYYMMDD → YYYY-MM-DD
+                        date_obj = datetime.strptime(date_part, "%Y%m%d")
+                        date_str = date_obj.strftime("%Y-%m-%d")
+                        var_dates[var_part].add(date_str)
+                    except Exception as e:
+                        print(f"⚠️ Skipping malformed filename: {fname} — {e}")
+    
+        if not var_dates:
+            print("❌ No valid ERA5-Land files detected — check filenames and variable matching.")
+            return []
+    
+        # Choose variable with fewest valid days
+        min_var = min(var_dates, key=lambda v: len(var_dates[v]))
+        observed_dates = var_dates[min_var]
+    
+        # Identify missing dates
+        missing = [d for d in expected_dates if d not in observed_dates]
+    
+        print(f"🔍 Checked using variable with shortest record: **{min_var}**")
+        print(f"📊 {len(observed_dates)} out of {len(expected_dates)} dates present for {min_var}")
+        if missing:
+            print(f"⚠️ {len(missing)} missing dates (e.g.): {missing[:5]}...")
+        else:
+            print("✅ All expected dates are present.")
+    
+        return missing
+
     def _download_chelsa_data(self, climate_variable, output_folder):
 
         if not any(folder.exists() and any(folder.iterdir()) for folder in [self.tasmax_path, self.tasmin_path, self.tmean_path, self.prep_path]):
@@ -166,25 +223,33 @@ class Meteo:
         print("Bulk download attempt completed. Verifying files...")
     
         # Step 2: Check for missing dates
-        expected_dates = []
-        current = start
-        while current <= end:
-            expected_dates.append(current.strftime("%Y-%m-%d"))
-            current += timedelta(days=1)
+        # expected_dates = []
+        # current = start
+        # while current <= end:
+        #     expected_dates.append(current.strftime("%Y-%m-%d"))
+        #     current += timedelta(days=1)
     
-        # List downloaded files and extract dates from filenames
-        downloaded_dates = set()
-        for fname in os.listdir(self.era5_scratch):
-            if fname.endswith(".tif"):
-                try:
-                    date_str_raw = fname.split('.')[0]  # Get '20010101'
-                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
-                    downloaded_dates.add(date_str)
-                except:
-                    continue
+        # # List downloaded files and extract dates from filenames
+        # downloaded_dates = set()
+        # for fname in os.listdir(self.era5_scratch):
+        #     if fname.endswith(".tif"):
+        #         try:
+        #             date_str_raw = fname.split('.')[0]  # Get '20010101'
+        #             date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
+        #             downloaded_dates.add(date_str)
+        #         except:
+        #             continue
     
-        # Find missing dates
-        missing_dates = sorted(set(expected_dates) - downloaded_dates)
+        # # Find missing dates
+        # missing_dates = sorted(set(expected_dates) - downloaded_dates)
+        variables = [
+            'total_precipitation_sum',
+            'temperature_2m_min',
+            'temperature_2m_max',
+            'temperature_2m'
+        ]
+        missing_dates = self.check_missing_dates(variables)
+    
         print(f"{len(missing_dates)} missing dates detected. Re-downloading...")
     
         # Step 3: Re-download only missing dates individually
@@ -192,14 +257,14 @@ class Meteo:
             try:
                 next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
                 img = era5.filterDate(date_str, next_day).select(
-                    ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                    ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m', 'total_precipitation_sum']
                 ).first()
         
                 if img:
                     date_raw = datetime.strptime(date_str, "%Y-%m-%d").strftime("%Y%m%d")
         
                     # Loop over each band and export separately
-                    band_names = ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m']
+                    band_names = ['temperature_2m_min', 'temperature_2m_max', 'temperature_2m', 'total_precipitation_sum']
                     for band in band_names:
                         single_band_img = img.select(band)
                         filename = os.path.join(self.era5_scratch, f"{date_raw}.{band}.tif")
@@ -267,18 +332,11 @@ class Meteo:
     
         print("Bulk CHIRPS and ERA5 download complete. Checking for missing files...")
     
-        # Step 2: Post-check and re-download CHIRPS missing dates
-        chirps_downloaded = set()
-        for fname in os.listdir(self.chirps_scratch):
-            if "precipitation" in fname and fname.endswith(".tif"):
-                try:
-                    date_str_raw = fname.split('.')[0]  # Get '20010101'
-                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")  #
-                    chirps_downloaded.add(date_str)
-                except:
-                    continue
-    
-        missing_chirps = sorted(set(expected_dates) - chirps_downloaded)
+        
+        variables = [
+            'precipitation'
+        ]
+        missing_chirps = self.check_missing_dates(variables)
         print(f"Missing CHIRPS dates: {len(missing_chirps)}")
     
         for date_str in missing_chirps:
@@ -299,18 +357,12 @@ class Meteo:
             except Exception as e:
                 print(f"Failed CHIRPS download for {date_str}: {e}")
     
-        # Step 3: Post-check and re-download ERA5 temperature missing dates
-        era5_downloaded = set()
-        for fname in os.listdir(self.era5_scratch):
-            if fname.endswith(".tif"):
-                try:
-                    date_str_raw = fname.split('.')[0]  # Get '20010101'
-                    date_str = datetime.strptime(date_str_raw, "%Y%m%d").strftime("%Y-%m-%d")
-                    era5_downloaded.add(date_str)
-                except:
-                    continue
-    
-        missing_era5 = sorted(set(expected_dates) - era5_downloaded)
+        variables = [
+            'temperature_2m_min',
+            'temperature_2m_max',
+            'temperature_2m'
+        ]
+        missing_era5 = self.check_missing_dates(variables)
         print(f"Missing ERA5 dates: {len(missing_era5)}")
     
         for date_str in missing_era5:
