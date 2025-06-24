@@ -58,7 +58,7 @@ class PredictDataPreprocessor:
         self.catchment = []  
         self.sim_start = sim_start
         self.sim_end = sim_end
-        self.sim_station_names= []
+        #self.sim_station_names= []
         self.catchment_size_threshold = catchment_size_threshold
         if grdc_streamflow_nc_file is not None:
             self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
@@ -160,7 +160,7 @@ class PredictDataPreprocessor:
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
-        #self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
+        self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
         return filtered_grdc
     
     def encode_lat_lon(self, latitude, longitude):
@@ -253,12 +253,9 @@ class PredictDataPreprocessor:
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
 
-            if self.catchment_size_threshold is not None:
-                catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
-                if catchment_size < self.catchment_size_threshold:
-                    continue
-
-            self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
+            # if self.catchment_size_threshold is not None:
+            #     catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
+        
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
@@ -274,6 +271,11 @@ class PredictDataPreprocessor:
             satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
             acc_data = acc_data.values
             slp_data = slp_data.values
+
+            if acc_data < self.catchment_size_threshold:
+                continue
+
+            #self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
                 
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
         
