@@ -1,26 +1,4 @@
 common_data
 **/*.pyc
 **/__pycache__
-volta
-hydrosheds_dem
-testing
-niger
-projects
-hydro
-parana
-sao_francisco
-chad
-south_africa_coastal
-tocantins
-brazil_coastal
-rio_colorado
-congo
-brazil_multi_basins
-**/test
-heat
-ecoeffect.py
-bakaano/flood_mapper_old.py
-bakaano/flood_mapper.py
-quick_start_old.ipynb
-quick_start copy.ipynb
-GRDC-Daily.nc
+**/tests

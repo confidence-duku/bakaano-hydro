@@ -27,9 +27,12 @@ class Utils:
 
         self.study_area = study_area
         self.working_dir = working_dir
-        # reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
-        # self.match = rioxarray.open_rasterio(reference_data)
-        # self.match = self.match.rio.write_crs(4326)
+        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
+        self.match = rioxarray.open_rasterio(reference_data)
+        self.match = self.match.rio.write_crs(4326)
+        self.ref_res = self.match.rio.resolution()
+        self.ref_bounds = self.match.rio.bounds()
+        self.ref_shape = self.match.shape[-2:]  # (height, width)
         
     def process_existing_file(self, file_path):
         directory, filename = os.path.split(file_path)
@@ -80,23 +83,37 @@ class Utils:
                         resampling=Resampling.nearest)
     
     def align_rasters(self, input_ras, israster=True):
-        #print('     - Aligning raster in terms of extent, resolution and projection')
-        reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
-        self.match = rioxarray.open_rasterio(reference_data)
-        self.match = self.match.rio.write_crs(4326)
-        # Read and align the input raster
+
+        # ---- 1. If array already matches reference grid, return early ----
+        if not israster:
+            # xarray DataArray case
+            if (
+                hasattr(input_ras, "shape") and 
+                tuple(input_ras.shape[-2:]) == self.ref_shape and
+                set(input_ras.dims) == {"y", "x"}
+            ):
+                return input_ras
+    
+        # ---- 2. Raster file case ----
         if israster:
+            # Open input raster only once
             ds = rioxarray.open_rasterio(input_ras)
             ds = ds.rio.write_crs(4326)
-            ds = ds.rio.reproject_match(self.match, resampling=Resampling.nearest)
-        else:
-            ds = input_ras
-            ds = ds.rio.write_crs(4326)
-            if 'lat' in ds.coords and 'lon' in ds.coords:
-                ds = ds.rename({'lon': 'x', 'lat': 'y'})
-            # ds = ds.chunk({'x': 100, 'y': 100})
-            ds = ds.rio.reproject_match(self.match, resampling=Resampling.average)
-        return ds
+            # Reproject to match
+            out = ds.rio.reproject_match(self.match, resampling=Resampling.nearest)
+            return out
+    
+        # ---- 3. Xarray case (e.g. rainfall, PET, NDVI) ----
+        ds = input_ras.rio.write_crs(4326)
+    
+        # Rename coords if necessary
+        if "lat" in ds.coords and "lon" in ds.coords:
+            ds = ds.rename({"lon": "x", "lat": "y"})
+    
+        # Reproject to match DEM grid
+        out = ds.rio.reproject_match(self.match, resampling=Resampling.average)
+        return out
+
     
     def get_bbox(self, dst_crs):
         shp = gpd.read_file(self.study_area)

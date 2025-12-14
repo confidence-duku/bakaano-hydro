@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import os
+import glob
 from bakaano.utils import Utils
 from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 from bakaano.streamflow_simulator import PredictDataPreprocessor, PredictStreamflow
@@ -10,6 +11,7 @@ import matplotlib.pyplot as plt
 import xarray as xr
 import rasterio
 import pandas as pd
+import pickle
 import geopandas as gpd
 from leafmap.foliumap import Map
 
@@ -68,40 +70,43 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn, num_input_branch, 
-                               lookback, batch_size, num_epochs, routing_method='mfd', catchment_size_threshold=1000):
+    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn,  
+                               lookback, batch_size, num_epochs, routing_method='mfd', catchment_size_threshold=1):
         """Train the deep learning streamflow prediction model."
         """
+
+        rawdata = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')[0]
     
         print('\nTRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
+        
+            
         sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, train_start, train_end, 
                                routing_method, catchment_size_threshold)
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
-        
         print(' 2. Loading runoff data and other predictors')
-        self.rawdata = sdp.get_data()
+        if os.path.exists(rawdata):
+            with open(rawdata, "rb") as f:
+                self.rawdata = pickle.load(f)
+        else:
+            self.rawdata = sdp.get_data()
         sn = str(len(sdp.sim_station_names))
         
-        print(f'     Training deepstrmm model based on {sn} stations in the GRDC database')
+        print(f'     Training bakaano-hydro model based on {sn} stations in the GRDC database')
         print(sdp.sim_station_names)
         
         print(' 3. Building neural network model')
-        smodel = StreamflowModel(self.working_dir, lookback, batch_size, num_epochs)
+        #datalist = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')
+        smodel = StreamflowModel(self.working_dir, lookback, batch_size, num_epochs, train_start, train_end)
         smodel.prepare_data(self.rawdata)
-        if num_input_branch == 3:
-            smodel.build_model_3_input_branches(loss_fn)
-        elif num_input_branch == 2:
-            smodel.build_model_2_input_branches(loss_fn)
-        else:
-            raise ValueError("Invalid number. Choose either 2 or 3")
+        smodel.build_model(loss_fn)
         print(' 4. Training neural network model')
-        smodel.train_model(loss_fn, num_input_branch)
-        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras')
+        smodel.train_model(loss_fn)
+        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}.keras')
 #========================================================================================================================  
                 
     def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, 
-                                                num_input_branch, lookback, routing_method='mfd', catchment_size_threshold=1000):
+                                                lookback, routing_method='mfd', catchment_size_threshold=1000):
         """Evaluate the streamflow prediction model."
         """
 
@@ -132,21 +137,18 @@ class BakaanoHydro:
         self.vmodel.prepare_data(rawdata)
 
         self.vmodel.load_model(model_path, loss_fn)
-        if num_input_branch == 3:
-            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size])
-        elif num_input_branch == 2:
-            predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
-        else:
-            raise ValueError("Invalid number. Choose either 2 or 3")
+    
+        predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
+
 
         if loss_fn == 'laplacian_nll':
         
             mu_log = predicted_streamflow[:, 0]  # Mean in log-space
-            b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
+            #b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
             
             # ✅ Convert back to original streamflow units
             mu = np.exp(mu_log) - 1  # Mean streamflow prediction
-            sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
+            #sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
             
             predicted_streamflow = mu
         else:
@@ -155,7 +157,7 @@ class BakaanoHydro:
         self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback)
         
 #==============================================================================================================================
-    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, num_input_branch, 
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, 
                             lookback, routing_method='mfd'):
         """Simulate streamflow in batch mode using the trained model."
         """
@@ -168,13 +170,7 @@ class BakaanoHydro:
         batch_size = len(self.vmodel.latlist)
         self.vmodel.load_model(model_path, loss_fn)
         print(' 2. Batch prediction')
-        if num_input_branch == 3:
-            predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.local_predictors, self.vmodel.catchment_size],
-                                                                  batch_size=batch_size)
-        elif num_input_branch ==2:
-            predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
-        else:
-            raise ValueError("Invalid number. Choose either 2 or 3")
+        predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
 
         if loss_fn == 'laplacian_nll':
             seq = int(len(predicted_streamflows)/batch_size)
