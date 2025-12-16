@@ -134,5 +134,17 @@ class AlphaEarth:
             )
     
         print("✓ Missing AlphaEarth bands downloaded successfully.")
+    
+    def plot_alpha_earth(self, variable='A00'):
+        """Plot alpha earth data
+        """
 
+        this_tc = self.uw.clip(raster_path=f'{self.working_dir}/alpha_earth/band_{variable}.tif', 
+                                out_path=None, save_output=False, crop_type=True)[0]
+        plt.title(f'Alpha Earth Vector {variable}')
+        this_tc = np.where(this_tc==0, np.nan, this_tc)
+        this_tc = np.where(this_tc>1, np.nan, this_tc)
+        plt.imshow(this_tc, cmap='viridis')
+        plt.colorbar()
+        plt.show()
 

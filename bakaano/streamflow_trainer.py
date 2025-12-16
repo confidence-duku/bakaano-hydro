@@ -1,14 +1,13 @@
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
 import numpy as np
 import pandas as pd
 import xarray as xr
+import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras.models import Model # type: ignore
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add, Reshape
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add, Reshape, Activation
 from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
 from tensorflow.keras.utils import register_keras_serializable
 from sklearn.preprocessing import StandardScaler
@@ -62,8 +61,11 @@ class DataPreprocessor:
         
         self.study_area = study_area
         self.working_dir = working_dir
+        #self.times = pd.date_range(start_date, end_date)
+        
         self.data_list = []
         self.catchment = []    
+        #self.sim_station_names= []
         self.train_start = train_start
         self.train_end = train_end
         self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
@@ -92,6 +94,7 @@ class DataPreprocessor:
 
         """
         with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as src:
+            #data = src.read(1)
             transform = src.transform
             row, col = rowcol(transform, lon, lat)
             return row, col
@@ -279,8 +282,6 @@ class DataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
     
-            #extract wfa data based on defined training period
-            #wfa_data = full_wfa_data[self.train_start: self.train_end]
             wfa_data = full_wfa_data
             
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
@@ -305,7 +306,7 @@ class DataPreprocessor:
             
         return self.data_list
 #=====================================================================================================================================                          
-@register_keras_serializable(package="Custom", name="laplacian_nll")
+@register_keras_serializable(package="Custom", name="laplace_nll")
 def laplacian_nll(y_true, y_pred):
 
     mu = y_pred[:, 0]  # Log-space mean prediction
@@ -319,6 +320,8 @@ def laplacian_nll(y_true, y_pred):
 
     # Compute NLL in log-space
     return -tf.reduce_mean(laplace_dist.log_prob(log_y_true))
+
+    
 class StreamflowModel:
     
     def __init__(self, working_dir, lookback, batch_size, num_epochs, train_start, train_end):
@@ -438,7 +441,10 @@ class StreamflowModel:
         train_predictors = list(map(lambda xy: xy[0], data_list))
         train_response = list(map(lambda xy: xy[1], data_list))
         catchment = list(map(lambda xy: xy[2], data_list))
-        train_catchment = np.array(catchment)
+        catchment_arr = np.array(catchment, dtype=np.float32)
+
+        area = catchment_arr[:, 0:1]      # shape (N, 1)
+        alphaearth = catchment_arr[:, 1:] # shape (N, D)
 
         train_response = [
             df.loc[self.train_start:self.train_end]
@@ -453,32 +459,34 @@ class StreamflowModel:
         full_train_predictors = []
         full_train_response = []
         train_catchment_list = []
+        full_alphaearth = []
+        full_catchsize = []
         
-        catchment_scaler = StandardScaler()
-        #train_catchment = train_catchment.reshape(-1,1)
-        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
-        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
-            pickle.dump(trained_catchment_scaler, file)
+        scaler = StandardScaler()
+        alphaearth_scaler = scaler.fit(alphaearth)
+        with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'wb') as file:
+            pickle.dump(alphaearth_scaler, file)
 
         concatenated_predictors = pd.concat(train_predictors, axis=0)
         variables = ['mfd_wfa']  # Adjust as needed
         self.compute_global_cdfs_pkl(concatenated_predictors, variables)
         global_cdfs = self.load_global_cdfs_pkl()
 
-        for x, y,z in zip(train_predictors, train_response, train_catchment):
+        for x, y,z,j in zip(train_predictors, train_response, alphaearth, area):
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
 
             scaled_train_response = y.values/1
 
-            z2 = z.reshape(-1,self.num_static_features)
-            scaled_train_catchment = trained_catchment_scaler.transform(z2)   
+            z2 = z.reshape(-1,64)
+            scaled_alphaearth = alphaearth_scaler.transform(z2)   
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
             predictor_samples = []
             response_samples = []
-            catchment_samples = []
+            area_samples = []
+            alphaearth_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
@@ -492,7 +500,9 @@ class StreamflowModel:
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
                 response_samples.append(response_batch)
-                catchment_samples.append(scaled_train_catchment)
+
+                alphaearth_samples.append(scaled_alphaearth)
+                area_samples.append(j)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -502,15 +512,18 @@ class StreamflowModel:
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
-            scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
+            scaled_alphaearth_filtered = np.array(alphaearth_samples)[timesteps_to_keep]
+            area_filtered = np.array(area_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
-            train_catchment_list.append(scaled_train_catchment_filtered)
+            full_alphaearth.append(scaled_alphaearth_filtered)
+            full_catchsize.append(area_filtered)
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
-        self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)  
+        self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
+        self.train_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)  
     
 
     def build_model(self, loss_fn):
@@ -524,94 +537,84 @@ class StreamflowModel:
         -------
         None
         """
-        #strategy = tf.distribute.MirroredStrategy()
-        #with strategy.scope():
-        global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
-        static_input = Input(shape=(self.num_static_features,), name="static_input")
+        strategy = tf.distribute.MirroredStrategy()
+        with strategy.scope():
+            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
+            alphaearth_input = Input(shape=(64,), name="alphaearth")
+            area_input       = Input(shape=(1,), name="catchment_area")
     
-        static_dense = Dense(128, activation="relu")(static_input)
-        static_dense = BatchNormalization()(static_dense)
+            tcn_output = TCN(nb_filters = 64, kernel_size=3, dilations=(1,2,4,8,16,32, 64),
+                             return_sequences=False)(global_input)
+            tcn_output = BatchNormalization()(tcn_output)
+            tcn_output = Dropout(0.4)(tcn_output)
+
         
-        static_dense = Dense(128, activation="relu")(static_dense)
-        static_dense = BatchNormalization()(static_dense)
+            # --- Enhanced FiLM Conditioning ---
+            def film_layer(alphaearth, feature_dim, hidden_dim=64, gamma_scale=0.1):
+                x = Dense(hidden_dim, activation="relu")(alphaearth)
+                x = Dense(hidden_dim, activation="relu")(x)
+            
+                gamma_raw = Dense(feature_dim)(x)
+                beta      = Dense(feature_dim)(x)
+            
+                gamma = 1.0 + gamma_scale * gamma_raw
+                return gamma, beta
         
-        static_dense = Dense(64, activation="relu")(static_dense)
-        static_dense = BatchNormalization()(static_dense)
-        static_dense = Dropout(0.3)(static_dense)
+            # Apply FiLM at multiple levels
+            gamma, beta = film_layer(alphaearth_input, feature_dim=64)
+            tcn_mod = Multiply()([tcn_output, gamma])
+            tcn_mod = Add()([tcn_mod, beta])
+
+            # --------------------------------------------------
+            # Prediction head (dynamic only)
+            # --------------------------------------------------
+            y_base = Dense(64, activation="relu")(tcn_mod)
+            y_base = Dense(32, activation="relu")(y_base)
+            y_base = Dense(1, activation=None)(y_base)
+
+            # --------------------------------------------------
+            # Catchment size → scale correction
+            # --------------------------------------------------
+            
+    
+            scale = Dense(1, activation=None)(area_input)
+            scale = Activation("exponential")(scale)
+    
+            y_hat = Multiply()([y_base, scale])
+
+
+            # --------------------------------------------------
+            # Output & loss
+            # --------------------------------------------------
+            if loss_fn == "laplacian_nll":
+                mu = y_hat
+                sigma = Dense(1, activation="softplus")(tcn_mod)
+                output = Concatenate(name="streamflow_distribution")([mu, sigma])
+    
+                model = Model(
+                    inputs=[global_input, alphaearth_input, area_input],
+                    outputs=output
+                )
+                model.compile(
+                    optimizer="adam",
+                    loss=laplacian_nll
+                )
+    
+            else:
+                output = y_hat
+                model = Model(
+                    inputs=[global_input, alphaearth_input, area_input],
+                    outputs=output
+                )
+                model.compile(
+                    optimizer="adam",
+                    loss='msle'
+                )
+    
+            self.regional_model = model
+            return model
 
     
-        # --- Enhanced FiLM Conditioning ---
-        def enhanced_film_layer(static_vec, time_steps, feature_dim, hidden_dim=128):
-        
-            x = Dense(hidden_dim, activation="relu")(static_vec)
-            x = BatchNormalization()(x)
-            x = Dense(hidden_dim, activation="relu")(x)
-            x = BatchNormalization()(x)
-
-            # Produce FiLM parameters for ALL timesteps + ALL dynamic features
-            gamma = Dense(time_steps * feature_dim, activation="sigmoid")(x)
-            beta  = Dense(time_steps * feature_dim, activation="tanh")(x)
-
-            # Reshape to match dynamic sequence shape
-            gamma = Reshape((time_steps, feature_dim))(gamma)
-            beta  = Reshape((time_steps, feature_dim))(beta)
-            return gamma, beta
-
-
-        # -------------------------
-        # Apply FiLM BEFORE TCN
-        # -------------------------
-        gamma1, beta1 = enhanced_film_layer(
-            static_dense,
-            time_steps=self.timesteps,
-            feature_dim=self.num_dynamic_features
-        )
-        film_output = Multiply()([global_input, gamma1])
-        film_output = Add()([film_output, beta1])
-
-        # (Optional) second FiLM layer
-        gamma2, beta2 = enhanced_film_layer(
-            static_dense,
-            time_steps=self.timesteps,
-            feature_dim=self.num_dynamic_features
-        )
-        film_output = Multiply()([film_output, gamma2])
-        film_output = Add()([film_output, beta2])
-        
-        tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                            return_sequences=False)(film_output)
-        tcn_output = BatchNormalization()(tcn_output)
-        tcn_output = Dropout(0.4)(tcn_output)
-
-        # Merge all outputs
-        merged_output = Concatenate()([tcn_output, static_dense])
-        merged_output = BatchNormalization()(merged_output)
-
-        # Fully connected layers
-        output3 = Dense(64, activation='relu')(merged_output)
-        output3 = BatchNormalization()(output3)
-        output3 = Dropout(0.4)(output3)
-
-        output2 = Dense(32, activation='relu')(output3)
-        output2 = BatchNormalization()(output2)
-        output2 = Dropout(0.4)(output2)
-
-        output1 = Dense(16)(output2)
-        output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
-
-        # Create the model
-        
-        if loss_fn == 'laplacian_nll':
-            mu = Dense(1, name="mu")(output1)  # Mean prediction
-            sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
-            output = Concatenate(name="streamflow_distribution")([mu, sigma])
-            self.regional_model = Model(inputs=[global_input, static_input], outputs=output)
-            self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
-        else:
-            output = Dense(1)(output1)
-            self.regional_model = Model(inputs=[global_input,  static_input], outputs=output)
-            self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
-        return self.regional_model
     
     def train_model(self, loss_fn): 
         """
@@ -625,10 +628,10 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}_branches.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, 
+        self.regional_model.fit(x=[self.train_predictors, self.train_alphaearth, self.train_catchsize], y=self.train_response, 
                                 batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
     def load_regional_model(self, path, loss_fn):

@@ -1,11 +1,10 @@
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
-import tensorflow as tf
-tf.config.set_visible_devices([], 'GPU')
 import numpy as np
 import pandas as pd
 import xarray as xr
+import tensorflow as tf
 import tensorflow_probability as tfp
 from keras.utils import register_keras_serializable
 import glob
@@ -361,8 +360,7 @@ class PredictDataPreprocessor:
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
 
             #extract wfa data based on defined training period
-            #wfa_data = full_wfa_data
-            wfa_data = full_wfa_data[self.sim_start: self.sim_end]
+            wfa_data = full_wfa_data
 
             predictors = wfa_data.copy()
             predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
@@ -395,6 +393,35 @@ def laplacian_nll(y_true, y_pred):
 
     # Compute NLL in log-space
     return -tf.reduce_mean(laplace_dist.log_prob(log_y_true))
+
+@register_keras_serializable(package="Bakaano", name='mdn_laplacian_nll')
+def mdn_laplace_nll_factory(K):
+    """
+    Serializable MDN Laplace negative log-likelihood loss.
+    K = number of mixture components
+    """
+
+    def mdn_laplace_nll(y_true, y_pred):
+        # Split parameters
+        logits = y_pred[:, :K]
+        mus    = y_pred[:, K:2*K]
+        sigmas = y_pred[:, 2*K:]
+
+        sigmas = tf.nn.softplus(sigmas) + 1e-6
+
+        mixture = tfd.MixtureSameFamily(
+            mixture_distribution=tfd.Categorical(logits=logits),
+            components_distribution=tfd.Laplace(
+                loc=mus,
+                scale=sigmas
+            )
+        )
+
+        return -tf.reduce_mean(
+            mixture.log_prob(tf.squeeze(y_true))
+        )
+
+    return mdn_laplace_nll
 
 class PredictStreamflow:
     def __init__(self, working_dir, lookback):
@@ -491,40 +518,45 @@ class PredictStreamflow:
         """
 
         predictors = list(map(lambda xy: xy[0], data_list))
-        train_catchment = list(map(lambda xy: xy[2], data_list))
-        train_catchment = np.array(train_catchment)
+        catchment = list(map(lambda xy: xy[2], data_list))
+        catchment_arr = np.array(catchment)
+
+        area = catchment_arr[:, 0:1]      # shape (N, 1)
+        alphaearth = catchment_arr[:, 1:] # shape (N, D)
      
         full_train_predictors = []
-        train_catchment_list = []
-        #full_local_predictors = []
+        full_alphaearth = []
+        full_catchsize = []
 
-        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
-            catchment_scaler = pickle.load(file)
+        with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
+            alphaearth_scaler = pickle.load(file)
 
-        if len(train_catchment) <= 0:
+        if len(catchment) <= 0:
             return
-        
-        train_catchment = train_catchment.reshape(-1, self.num_static_features)
-        scaled_trained_catchment = catchment_scaler.transform(train_catchment)
+
+        alphaearth = alphaearth.reshape(-1,64)
+        scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
+
         
         variables = ['mfd_wfa']  # Adjust as needed
         global_cdfs = self.load_global_cdfs_pkl()
 
-        for x, z in zip(predictors, scaled_trained_catchment):
+        for x, z, j in zip(predictors, scaled_alphaearth, area):
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps
             predictor_samples = []
-            catchment_samples = []
-            local_predictor_samples = []
+            area_samples = []
+            alphaearth_samples = []
             
             for i in range(num_samples):
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
 
                 predictor_samples.append(predictor_batch)
-                catchment_samples.append(z)
+                alphaearth_samples.append(z)
+                area_samples.append(j)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -533,13 +565,16 @@ class PredictStreamflow:
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)
-            scaled_train_catchment_filtered = np.array(catchment_samples)
+            scaled_alphaearth_filtered = np.array(alphaearth_samples)
+            area_filtered = np.array(area_samples)
             
             full_train_predictors.append(scaled_train_predictor_filtered)
-            train_catchment_list.append(scaled_train_catchment_filtered)
+            full_alphaearth.append(scaled_alphaearth_filtered)
+            full_catchsize.append(area_filtered)
             
         self.predictors = np.concatenate(full_train_predictors, axis=0)
-        self.catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1,self.num_static_features) 
+        self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
+        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1) 
     
     def prepare_data_latlng(self, data_list):
         
@@ -554,45 +589,48 @@ class PredictStreamflow:
         """
 
         predictors = list(map(lambda xy: xy[0], data_list[0]))
-        train_catchment = list(map(lambda xy: xy[1], data_list[0]))
-        train_catchment = np.array(train_catchment)
+        catchment = list(map(lambda xy: xy[1], data_list[0]))
+        catchment_arr = np.array(catchment)
+
+        area = catchment_arr[:, 0:1]      # shape (N, 1)
+        alphaearth = catchment_arr[:, 1:] # shape (N, D)
+     
+        full_train_predictors = []
+        full_alphaearth = []
+        full_catchsize = []
         
         self.latlist = data_list[2]
         self.lonlist = data_list[3] 
                 
-        full_train_predictors = []
-        train_catchment_list = []
         
-        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'rb') as file:
-            catchment_scaler = pickle.load(file)
+        with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
+            alphaearth_scaler = pickle.load(file)
 
-        if len(train_catchment) <= 0:
+        if len(catchment) <= 0:
             return
         
-        train_catchment = train_catchment.reshape(-1, self.num_static_features)
-        scaled_trained_catchment = catchment_scaler.transform(train_catchment)
+        alphaearth = alphaearth.reshape(-1,64)
+        scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
         
         variables = ['mfd_wfa']  # Adjust as needed
         global_cdfs = self.load_global_cdfs_pkl()
 
-        for x, z in zip(predictors, scaled_trained_catchment):
+        for x, z, j in zip(predictors, scaled_alphaearth, area):
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
-              
+
             num_samples = scaled_train_predictor.shape[0] - self.timesteps
             predictor_samples = []
-            catchment_samples = []
-            local_predictor_samples = []
+            area_samples = []
+            alphaearth_samples = []
             
-            # Iterate over each batch
             for i in range(num_samples):
-                # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-                
-                # Append the batch to the list
+
                 predictor_samples.append(predictor_batch)
-                catchment_samples.append(z)
+                alphaearth_samples.append(z)
+                area_samples.append(j)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -601,13 +639,16 @@ class PredictStreamflow:
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)
-            scaled_train_catchment_filtered = np.array(catchment_samples)
+            scaled_alphaearth_filtered = np.array(alphaearth_samples)
+            area_filtered = np.array(area_samples)
             
             full_train_predictors.append(scaled_train_predictor_filtered)
-            train_catchment_list.append(scaled_train_catchment_filtered)
+            full_alphaearth.append(scaled_alphaearth_filtered)
+            full_catchsize.append(area_filtered)
             
         self.predictors = np.concatenate(full_train_predictors, axis=0)
-        self.catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1,self.num_static_features)
+        self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
+        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
         
             
     def load_model(self, path, loss_fn):

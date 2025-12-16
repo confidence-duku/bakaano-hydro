@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import os
-import glob
 from bakaano.utils import Utils
 from bakaano.streamflow_trainer import DataPreprocessor, StreamflowModel
 from bakaano.streamflow_simulator import PredictDataPreprocessor, PredictStreamflow
@@ -10,8 +9,9 @@ import hydroeval
 import matplotlib.pyplot as plt
 import xarray as xr
 import rasterio
-import pandas as pd
+import glob
 import pickle
+import pandas as pd
 import geopandas as gpd
 from leafmap.foliumap import Map
 
@@ -92,17 +92,16 @@ class BakaanoHydro:
             self.rawdata = sdp.get_data()
         sn = str(len(sdp.sim_station_names))
         
-        print(f'     Training bakaano-hydro model based on {sn} stations in the GRDC database')
+        print(f'     Training deepstrmm model based on {sn} stations in the GRDC database')
         print(sdp.sim_station_names)
         
         print(' 3. Building neural network model')
-        #datalist = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')
         smodel = StreamflowModel(self.working_dir, lookback, batch_size, num_epochs, train_start, train_end)
         smodel.prepare_data(self.rawdata)
         smodel.build_model(loss_fn)
         print(' 4. Training neural network model')
         smodel.train_model(loss_fn)
-        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}.keras')
+        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_branches.keras')
 #========================================================================================================================  
                 
     def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, 
@@ -137,8 +136,8 @@ class BakaanoHydro:
         self.vmodel.prepare_data(rawdata)
 
         self.vmodel.load_model(model_path, loss_fn)
-    
-        predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size])
+
+        predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.sim_alphaearth, self.vmodel.sim_catchsize])
 
 
         if loss_fn == 'laplacian_nll':
@@ -170,7 +169,7 @@ class BakaanoHydro:
         batch_size = len(self.vmodel.latlist)
         self.vmodel.load_model(model_path, loss_fn)
         print(' 2. Batch prediction')
-        predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.catchment_size], batch_size=batch_size)
+        predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.sim_alphaearth, self.vmodel.sim_catchsize], batch_size=batch_size)
 
         if loss_fn == 'laplacian_nll':
             seq = int(len(predicted_streamflows)/batch_size)
@@ -198,7 +197,9 @@ class BakaanoHydro:
                 predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')
         for predicted_streamflow, lat, lon in zip(predicted_streamflow_list, latlist, lonlist):
-            adjusted_start_date = pd.to_datetime(self.start_date) + pd.DateOffset(days=lookback)
+            predicted_streamflow = predicted_streamflow.reshape(-1)
+
+            adjusted_start_date = pd.to_datetime(sim_start) + pd.DateOffset(days=lookback)
             period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
             df = pd.DataFrame({
                 'time': period,  # Adjusted time column
@@ -232,6 +233,8 @@ class BakaanoHydro:
         plt.ylabel('River Discharge (m³/s)')
         plt.legend()  # Add a legend to label the lines
         plt.show()
+
+
 #========================================================================================================================  
         
     def _compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
