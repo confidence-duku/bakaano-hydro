@@ -12,6 +12,42 @@ from bakaano.meteo import Meteo
 from tqdm import tqdm
 from datetime import datetime, timedelta
 
+from numba import njit, prange
+
+
+@njit(parallel=True, fastmath=True)
+def update_soil_and_runoff(soil_moisture, eff_rain, ETa, max_allowable_depletion, whc):
+    """
+    Corrected Numba-optimized soil moisture and runoff update.
+    All inputs must be float32 NumPy arrays (2D).
+    """
+    ny, nx = soil_moisture.shape
+    q_surf = np.empty((ny, nx), dtype=np.float32)
+
+    for i in prange(ny):
+        for j in prange(nx):
+
+            # soil update
+            sm = soil_moisture[i, j] + eff_rain[i, j] - ETa[i, j]
+
+            # no negative soil moisture
+            if sm < 0:
+                sm = 0.0
+
+            # compute runoff (excess water)
+            excess = sm - whc[i, j]
+
+            if excess > 0.0:
+                q_surf[i, j] = excess        # runoff is excess
+                sm = whc[i, j]               # enforce WHC cap (critical!)
+            else:
+                q_surf[i, j] = 0.0
+
+            # save updated soil moisture
+            soil_moisture[i, j] = sm
+
+    return soil_moisture, q_surf
+
 class VegET:
     """Generate an instance
     """
@@ -109,17 +145,27 @@ class VegET:
             latsg = tmean_period[0]['lat']
             latsg = latsg.astype(np.float32)
             self.latgrids = latsg.expand_dims(lon=tmean_period[0]['lon'], axis=[1]).values
+            lat_rad = np.radians(self.latgrids)
+            sin_lat   = np.sin(lat_rad)
+            cos_lat   = np.cos(lat_rad)
+            tan_lat   = np.tan(lat_rad)
+            doys = tmean_period['time'].dt.dayofyear.values
+
+            
             
             # Initial soil moisture condition
             soil_moisture = rf[0] * 0   #initialize soil moisture
             soil_moisture = self.uw.align_rasters(soil_moisture, israster=False)
+            soil_moisture = np.asarray(soil_moisture)
 
             pickle_file_path = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
             with open(pickle_file_path, 'rb') as f:
                 ndvi_array = pickle.load(f)
             
             water_holding_capacity = self.uw.align_rasters(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', israster=True) * 10
-            max_allowable_depletion = 0.5 * water_holding_capacity[0]
+            water_holding_capacity = np.asarray(water_holding_capacity[0])
+            max_allowable_depletion = 0.5 * water_holding_capacity
+            #max_allowable_depletion = np.asarray(max_allowable_depletion)
 
             tree_cover_tiff = f'{self.working_dir}/vcf/mean_tree_cover.tif'
             herb_cover_tiff = f'{self.working_dir}/vcf/mean_herb_cover.tif'
@@ -130,6 +176,7 @@ class VegET:
             herb_cover = np.where(herb_cover > 100, 0, herb_cover)
 
             interception = ((0.15 * tree_cover) + (0.1 * herb_cover))/100
+            interception = np.asarray(interception)
             total_ETa = 0
             total_ETc = 0
 
@@ -159,10 +206,12 @@ class VegET:
                 count2 = count+1
                 this_rf = rf[count]
                 this_rf = self.uw.align_rasters(this_rf, israster=False)
+                this_rf = np.asarray(this_rf)
                 eff_rain = this_rf * (1- interception)
                 eff_rain = np.where(eff_rain<0, 0, eff_rain)
 
-                this_et = eto.compute_PET(self.pet_params[count], self.latgrids, tmean_period[count])
+                doy = doys[count]
+                this_et = eto.compute_PET(self.pet_params[count], tan_lat, cos_lat, sin_lat, doy)
                 this_et = self.uw.align_rasters(this_et, israster=False)
 
                 day_num = tmean_period[count]['time'].dt.dayofyear
@@ -171,38 +220,56 @@ class VegET:
                 ndvi_day = ndvi_array[day_num] * 0.0001
                 ndvi_day = self.uw.align_rasters(ndvi_day, israster=False)
 
-                this_kcp = np.where(ndvi_day>0.4, (1.25*ndvi_day+0.2), (1.25*ndvi_day))
+                
+                this_et = np.asarray(this_et)
+                ndvi_day = np.asarray(ndvi_day)
 
-                ks = np.where(soil_moisture < max_allowable_depletion, (soil_moisture/max_allowable_depletion), 1)
+                #this_kcp = np.where(ndvi_day>0.4, (1.25*ndvi_day+0.2), (1.25*ndvi_day))
+                this_kcp = 1.25 * ndvi_day
+                this_kcp += 0.2 * (ndvi_day > 0.4)
+
+                
+                pks = soil_moisture - max_allowable_depletion
+                #ks = np.where(pks <0, (soil_moisture/max_allowable_depletion), 1)
+                ks = np.minimum(soil_moisture / max_allowable_depletion, 1.0)
+
                 ETa = this_et * ks * this_kcp
                 soil_moisture = soil_moisture + eff_rain - ETa
-                soil_moisture = soil_moisture.values
-                soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0
-                q_surf = np.where(soil_moisture > water_holding_capacity, (soil_moisture - water_holding_capacity), 0)
-                q_surf[np.isinf(q_surf) | np.isnan(q_surf)] = 0
+                #soil_moisture = soil_moisture.values
+                # soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0
+                
+                
+                
 
-                ETc = this_kcp * this_et
-                total_ETa = total_ETa + ETa
-                total_ETc = total_ETc + ETc
+                # pp = soil_moisture - water_holding_capacity
+                # q_surf = np.where(pp>0, pp, 0)
+
+                soil_moisture, q_surf = update_soil_and_runoff(
+                    soil_moisture,
+                    eff_rain,
+                    ETa,
+                    max_allowable_depletion,
+                    water_holding_capacity
+                )
+                
+                #q_surf[np.isinf(q_surf) | np.isnan(q_surf)] = 0
+                mask = ~np.isfinite(soil_moisture)
+                soil_moisture[mask] = 0
+
+                mask = ~np.isfinite(q_surf)
+                q_surf[mask] = 0
+
+                
+                
+                # ETc = this_kcp * this_et
+                # total_ETa = total_ETa + ETa
+                # total_ETc = total_ETc + ETc
 
                 # Use Pysheds for weighted flow accumulation            
-                ro_tiff = rout.convert_runoff_layers(q_surf[0])
+                ro_tiff = rout.convert_runoff_layers(q_surf)
                 wacc = rout.compute_weighted_flow_accumulation(ro_tiff)                  
                 
-                this_month = tmean_period[count]['time'].dt.month.values
-                if this_month in [1, 2, 12]:
-                    self.djf_ro = q_surf + self.djf_ro
-                    self.djf_wfa = wacc + self.djf_wfa
-                elif this_month in [3, 4, 5]:
-                    self.mam_ro = q_surf + self.mam_ro
-                    self.mam_wfa = wacc + self.mam_wfa
-                elif this_month in [6, 7, 8]:
-                    self.jja_ro = q_surf + self.jja_ro
-                    self.jja_wfa = wacc + self.jja_wfa
-                elif this_month in [9, 10, 11]:
-                    self.son_ro = q_surf + self.son_ro
-                    self.son_wfa = wacc + self.son_wfa
-                    
+            
                 wacc = wacc * facc_mask            
                 wacc = sp.sparse.coo_array(wacc)
                 #sparse_series.append({"time": date, "matrix": sparse_matrix})

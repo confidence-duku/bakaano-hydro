@@ -7,10 +7,10 @@ import xarray as xr
 import tensorflow as tf
 import tensorflow_probability as tfp
 from tensorflow.keras.models import Model # type: ignore
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add
+from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input, LeakyReLU, Multiply, Add, Reshape, Activation
 from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
 from tensorflow.keras.utils import register_keras_serializable
-from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import StandardScaler
 import glob
 import pysheds.grid
 import rasterio
@@ -20,6 +20,7 @@ from tcn import TCN
 from keras.models import load_model # type: ignore
 import pickle
 import warnings
+from itertools import chain
 import pandas as pd
 import geopandas as gpd
 from scipy.spatial.distance import cdist
@@ -64,7 +65,7 @@ class DataPreprocessor:
         
         self.data_list = []
         self.catchment = []    
-        self.sim_station_names= []
+        #self.sim_station_names= []
         self.train_start = train_start
         self.train_end = train_end
         self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
@@ -179,21 +180,9 @@ class DataPreprocessor:
             (grdc['station_name'].isin(overlapping_station_names)),
             drop=True
         )
-        
+        self.sim_station_names = list(overlapping_station_names)
         return filtered_grdc
     
-    def encode_lat_lon(self, latitude, longitude):
-        # Encode latitude
-        sin_latitude = np.sin(np.radians(latitude))
-        cos_latitude = np.cos(np.radians(latitude))
-        
-        # Encode longitude
-        sin_longitude = np.sin(np.radians(longitude))
-        cos_longitude = np.cos(np.radians(longitude))
-        
-        return sin_latitude, cos_latitude, sin_longitude, cos_longitude
-    
-                          
     def get_data(self):
         """
         Extract and preprocess predictor and response variables for each station based on its coordinates.
@@ -207,12 +196,7 @@ class DataPreprocessor:
         """
         count = 1
         
-        slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
-        tree_cover = f'{self.working_dir}/vcf/mean_tree_cover.tif'
-        herb_cover = f'{self.working_dir}/vcf/mean_herb_cover.tif'
-        awc = f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif'
-        sat_pt = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
         latlng_ras = latlng_ras.rio.write_crs(4326)
@@ -236,29 +220,17 @@ class DataPreprocessor:
 
         with rasterio.open(f'{self.working_dir}/catchment/river_grid.tif', 'w', **ref_meta) as dst:
             dst.write(river_ras.values, 1)  # Write data to the first band
-        
-        weight2 = grid.read_raster(slope)
-        cum_slp = grid.accumulation(fdir=fdir, weights=weight2, routing=self.routing_method)
 
-        weight3 = grid.read_raster(tree_cover)
-        cum_tree_cover = grid.accumulation(fdir=fdir, weights=weight3, routing=self.routing_method)
-        
-        weight4 = grid.read_raster(herb_cover)
-        cum_herb_cover = grid.accumulation(fdir=fdir, weights=weight4, routing=self.routing_method)
+        alpha_earth_bands = sorted(glob.glob(f'{self.working_dir}/alpha_earth/band*.tif'))
+        alpha_earth_list = []
 
-        weight5 = grid.read_raster(awc)
-        cum_awc = grid.accumulation(fdir=fdir, weights=weight5, routing=self.routing_method)
-        
-        weight6 = grid.read_raster(sat_pt)
-        cum_satpt = grid.accumulation(fdir=fdir, weights=weight6, routing=self.routing_method)
+        for band in alpha_earth_bands:
+            weight2 = grid.read_raster(band) + 1
+            cum_band = grid.accumulation(fdir=fdir, weights=weight2, routing=self.routing_method)
+            cum_band = xr.DataArray(data=cum_band, coords=[('lat', lat), ('lon', lon)])
+            alpha_earth_list.append(cum_band)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
-        cum_slp = xr.DataArray(data=cum_slp, coords=[('lat', lat), ('lon', lon)])
-        cum_tree_cover = xr.DataArray(data=cum_tree_cover, coords=[('lat', lat), ('lon', lon)])
-        cum_herb_cover = xr.DataArray(data=cum_herb_cover, coords=[('lat', lat), ('lon', lon)])
-        cum_awc = xr.DataArray(data=cum_awc, coords=[('lat', lat), ('lon', lon)])
-        cum_satpt = xr.DataArray(data=cum_satpt, coords=[('lat', lat), ('lon', lon)])
- 
         time_index = pd.date_range(start=self.train_start, end=self.train_end, freq='D')
         
         #combine or all yearly output from the runoff and routing module into a single list
@@ -281,24 +253,24 @@ class DataPreprocessor:
         #extract station predictor and response variables based on station coordinates
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
+            catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
+
+            # if catchment_size < self.catchment_size_threshold:
+            #     continue
+            
+            # if station_discharge['station_discharge'].notna().sum() < 1095:
+            #     continue
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
             snapped_y, snapped_x = self._snap_coordinates(station_y, station_x)
             
-            acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-            slp_data = cum_slp.sel(lat=snapped_y, lon=snapped_x, method='nearest')
-            tree_cover_data = cum_tree_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-            herb_cover_data = cum_herb_cover.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-            awc_data = cum_awc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-            satpt_data = cum_satpt.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
-            acc_data = acc_data.values
-            slp_data = slp_data.values
+            acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
 
-            if acc_data < self.catchment_size_threshold:
-                continue
-
-            self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
+            alpha_earth_stations = []
+            for band in alpha_earth_list:
+                pixel_data = band.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+                alpha_earth_stations.append(pixel_data/acc_data)
         
             row, col = self._extract_station_rowcol(snapped_y, snapped_x)
             
@@ -310,14 +282,7 @@ class DataPreprocessor:
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
     
-            #extract wfa data based on defined training period
-            wfa_data1 = full_wfa_data
-            wfa_data2 = wfa_data1 * ((24 * 60 * 60 * 1000) / (acc_data * 1e6))
-            wfa_data2.rename(columns={'mfd_wfa': 'scaled_acc'}, inplace=True)
-            wfa_data3 = wfa_data1  * ((24 * 60 * 60 * 1000) / (slp_data * 1e6))
-            wfa_data3.rename(columns={'mfd_wfa': 'scaled_slp'}, inplace=True)
-            wfa_data4 = wfa_data1.join([wfa_data2])
-            wfa_data = wfa_data4.join([wfa_data3])
+            wfa_data = full_wfa_data
             
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
 
@@ -325,9 +290,9 @@ class DataPreprocessor:
             predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
             response = station_discharge.drop(['id'], axis=1)
 
-            sin_lat, cos_lat, sin_lon, cos_lon = self.encode_lat_lon(snapped_y, snapped_x)
-            catch_list = [acc_data, slp_data, sin_lat, cos_lat, sin_lon, cos_lon, tree_cover_data, herb_cover_data, 
-                          awc_data, satpt_data]
+            log_acc = np.log1p(acc_data)
+            catch_list = [log_acc] + alpha_earth_stations
+            catch_list = [float(x) for x in catch_list]
             predictors2 = predictors
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
@@ -335,12 +300,13 @@ class DataPreprocessor:
             
             count = count + 1
 
-        with open(f'{self.working_dir}/models/predictor_response_data.pkl', 'wb') as file:
+        basin_name = os.path.split(self.study_area)[1][:-4]
+        with open(f'{self.working_dir}/models/{basin_name}_predictor_response_data.pkl', 'wb') as file:
                 pickle.dump(self.data_list, file)
             
         return self.data_list
 #=====================================================================================================================================                          
-@register_keras_serializable(package="Custom", name="laplacian_nll")
+@register_keras_serializable(package="Custom", name="laplace_nll")
 def laplacian_nll(y_true, y_pred):
 
     mu = y_pred[:, 0]  # Log-space mean prediction
@@ -354,9 +320,11 @@ def laplacian_nll(y_true, y_pred):
 
     # Compute NLL in log-space
     return -tf.reduce_mean(laplace_dist.log_prob(log_y_true))
+
+    
 class StreamflowModel:
     
-    def __init__(self, working_dir, lookback, batch_size, num_epochs):
+    def __init__(self, working_dir, lookback, batch_size, num_epochs, train_start, train_end):
         """
         Initialize the StreamflowModel with project details.
 
@@ -396,10 +364,12 @@ class StreamflowModel:
         self.batch_size = batch_size
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 3
-        self.num_static_features = 10
+        self.num_dynamic_features = 1
+        self.num_static_features = 65
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
+        self.train_start = train_start
+        self.train_end = train_end
         
 
     def compute_global_cdfs_pkl(self, df, variables):
@@ -421,23 +391,6 @@ class StreamflowModel:
         # Save as a pickle file
         with open(f'{self.working_dir}/models/global_cdfs.pkl', "wb") as f:
             pickle.dump(global_cdfs, f)
-
-    def compute_local_cdf(self, df, variables):
-        """
-        Compute and save the empirical CDF for each variable separately as a pickle file.
-    
-        Args:
-            df (pd.DataFrame): DataFrame containing multiple variables.
-            variables (list): List of column names to apply quantile scaling.
-            filename (str): File to save the computed CDFs.
-        """
-        transformed_df = pd.DataFrame(index=df.index)
-    
-        for var in variables:
-            sorted_values = np.sort(df[var].dropna().values)  # Remove NaNs and sort
-            quantiles = np.linspace(0, 1, len(sorted_values))  # Generate percentiles
-            transformed_df[var] = np.interp(df[var], sorted_values, quantiles)
-        return transformed_df
 
     def load_global_cdfs_pkl(self):
         """Load the saved empirical CDFs for multiple variables from a pickle file."""
@@ -488,62 +441,68 @@ class StreamflowModel:
         train_predictors = list(map(lambda xy: xy[0], data_list))
         train_response = list(map(lambda xy: xy[1], data_list))
         catchment = list(map(lambda xy: xy[2], data_list))
-        train_catchment = np.array(catchment)
+        catchment_arr = np.array(catchment, dtype=np.float32)
+
+        area = catchment_arr[:, 0:1]      # shape (N, 1)
+        alphaearth = catchment_arr[:, 1:] # shape (N, D)
+
+        train_response = [
+            df.loc[self.train_start:self.train_end]
+            for df in train_response
+        ]
+
+        train_predictors = [
+            df.loc[self.train_start:self.train_end]
+            for df in train_predictors
+        ]
                 
         full_train_predictors = []
         full_train_response = []
         train_catchment_list = []
-        full_local_predictors = []
+        full_alphaearth = []
+        full_catchsize = []
         
-        catchment_scaler = MinMaxScaler()
-        #train_catchment = train_catchment.reshape(-1,1)
-        trained_catchment_scaler = catchment_scaler.fit(train_catchment)
-        with open(f'{self.working_dir}/models/catchment_size_scaler_coarse.pkl', 'wb') as file:
-            pickle.dump(trained_catchment_scaler, file)
+        scaler = StandardScaler()
+        alphaearth_scaler = scaler.fit(alphaearth)
+        with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'wb') as file:
+            pickle.dump(alphaearth_scaler, file)
 
         concatenated_predictors = pd.concat(train_predictors, axis=0)
-        variables = ['mfd_wfa', 'scaled_acc', 'scaled_slp']  # Adjust as needed
+        variables = ['mfd_wfa']  # Adjust as needed
         self.compute_global_cdfs_pkl(concatenated_predictors, variables)
         global_cdfs = self.load_global_cdfs_pkl()
 
-        for x, y,z in zip(train_predictors, train_response, train_catchment):
+        for x, y,z,j in zip(train_predictors, train_response, alphaearth, area):
             scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
             scaled_train_predictor = scaled_train_predictor.values
 
-            local_var = ['scaled_acc']
-            local_predictor = self.compute_local_cdf(x, local_var)
-            local_predictor = local_predictor.values
-
             scaled_train_response = y.values/1
 
-            z2 = z.reshape(-1,self.num_static_features)
-            scaled_train_catchment = trained_catchment_scaler.transform(z2)   
+            z2 = z.reshape(-1,64)
+            scaled_alphaearth = alphaearth_scaler.transform(z2)   
             
             # Calculate the 
             num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
             predictor_samples = []
             response_samples = []
-            catchment_samples = []
-            local_predictor_samples = []
+            area_samples = []
+            alphaearth_samples = []
             
             # Iterate over each batch
             for i in range(num_samples):
                 # Slice the numpy array using the rolling window
                 predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
                 predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-
-                local_predictor_batch = local_predictor[i:i+self.timesteps, :]
-                local_predictor_batch = local_predictor_batch.reshape(self.timesteps, 1)
                 
                 response_batch = scaled_train_response[i+self.timesteps]
                 response_batch = response_batch.reshape(1)
                 
                 # Append the batch to the list
                 predictor_samples.append(predictor_batch)
-                local_predictor_samples.append(local_predictor_batch)
                 response_samples.append(response_batch)
 
-                catchment_samples.append(scaled_train_catchment)
+                alphaearth_samples.append(scaled_alphaearth)
+                area_samples.append(j)
             
             timesteps_to_keep = []
             for i in range(num_samples):
@@ -553,21 +512,21 @@ class StreamflowModel:
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
             scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
             scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
-            scaled_train_catchment_filtered = np.array(catchment_samples)[timesteps_to_keep]
-            train_local_predictor_filtered = np.array(local_predictor_samples)[timesteps_to_keep]
+            scaled_alphaearth_filtered = np.array(alphaearth_samples)[timesteps_to_keep]
+            area_filtered = np.array(area_samples)[timesteps_to_keep]
             
             full_train_predictors.append(scaled_train_predictor_filtered)
             full_train_response.append(scaled_train_response_filtered)
-            train_catchment_list.append(scaled_train_catchment_filtered)
-            full_local_predictors.append(train_local_predictor_filtered)
+            full_alphaearth.append(scaled_alphaearth_filtered)
+            full_catchsize.append(area_filtered)
             
         self.train_predictors = np.concatenate(full_train_predictors, axis=0)
         self.train_response = np.concatenate(full_train_response, axis=0)
-        self.train_local_predictors = np.concatenate(full_local_predictors, axis=0)
-        self.train_catchment_size = np.concatenate(train_catchment_list, axis=0).reshape(-1, self.num_static_features)  
+        self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
+        self.train_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)  
     
-              
-    def build_model_3_input_branches(self, loss_fn):
+
+    def build_model(self, loss_fn):
         """
         Build and compile the streamflow prediction model using TCN and dense layers.
 
@@ -581,196 +540,83 @@ class StreamflowModel:
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
-            local_input = Input(shape=(self.timesteps, 1), name='local_input')
-            static_input = Input(shape=(self.num_static_features,), name="static_input")
+            alphaearth_input = Input(shape=(64,), name="alphaearth")
+            area_input       = Input(shape=(1,), name="catchment_area")
     
-            tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(global_input)
-            tcn_output = BatchNormalization()(tcn_output)
-            tcn_output = Dropout(0.4)(tcn_output)
-
-
-            tcn_output1 = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
-                             return_sequences=False)(local_input)
-            tcn_output1 = BatchNormalization()(tcn_output1)
-            tcn_output1 = Dropout(0.4)(tcn_output1)
-        
-            static_dense = Dense(32, activation="relu")(static_input)
-            static_dense = BatchNormalization()(static_dense)
-            static_dense = Dropout(0.4)(static_dense)
-        
-            # --- Enhanced FiLM Conditioning ---
-            def enhanced_film_layer(static_input, feature_dim, hidden_dim=64):
-                """
-                Enhanced FiLM conditioning using a deeper MLP for gamma and beta modulation.
-                
-                Parameters:
-                    static_input: Tensor (Static catchment descriptors)
-                    feature_dim: int (Size of TCN output features)
-                    hidden_dim: int (Size of hidden layers in FiLM MLP)
-                
-                Returns:
-                    gamma, beta: Scaling and shifting parameters for FiLM conditioning
-                """
-                x = Dense(hidden_dim, activation="relu")(static_input)
-                x = BatchNormalization()(x)
-                x = Dense(hidden_dim, activation="relu")(x)
-                x = BatchNormalization()(x)
-        
-                gamma = Dense(feature_dim, activation="sigmoid")(x)  # Scaling
-                beta = Dense(feature_dim, activation="tanh")(x)  # Shifting
-                return gamma, beta
-        
-            # Apply FiLM at multiple levels
-            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=128)
-            tcn_output = Multiply()([tcn_output, gamma1])  # Scaling
-            tcn_output = Add()([tcn_output, beta1])  # Shifting
-        
-            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=128)
-            tcn_output = Multiply()([tcn_output, gamma2])  # Additional FiLM layer
-            tcn_output = Add()([tcn_output, beta2])
-    
-    
-            # --- Attention Mechanism ---
-            def attention_block(inputs):
-                attention_scores = Dense(1, activation="softmax")(inputs)
-                weighted_output = Multiply()([inputs, attention_scores])
-                return weighted_output
-    
-            tcn_output = attention_block(tcn_output)
-            tcn_output1 = attention_block(tcn_output1)
-    
-            # Merge all outputs
-            merged_output = Concatenate()([tcn_output, tcn_output1, static_dense])
-            merged_output = BatchNormalization()(merged_output)
-    
-            # Fully connected layers
-            output3 = Dense(64, activation='relu')(merged_output)
-            output3 = BatchNormalization()(output3)
-            output3 = Dropout(0.4)(output3)
-    
-            output2 = Dense(32, activation='relu')(output3)
-            output2 = BatchNormalization()(output2)
-            output2 = Dropout(0.4)(output2)
-    
-            output1 = Dense(16)(output2)
-            output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
-    
-            # Create the model
-            
-            if loss_fn == 'laplacian_nll':
-                mu = Dense(1, name="mu")(output1)  # Mean prediction
-                sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
-                output = Concatenate(name="streamflow_distribution")([mu, sigma])
-                self.regional_model = Model(inputs=[global_input, local_input, static_input], outputs=output)
-                self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
-            else:
-                output = Dense(1)(output1)
-                self.regional_model = Model(inputs=[global_input, local_input, static_input], outputs=output)
-                self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
-            return self.regional_model
-
-
-    def build_model_2_input_branches(self, loss_fn):
-        """
-        Build and compile the streamflow prediction model using TCN and dense layers.
-
-        The model uses a TCN for the dynamic input and a dense network for the static input,
-        then concatenates their outputs and passes them through additional dense layers.
-
-        Returns
-        -------
-        None
-        """
-        strategy = tf.distribute.MirroredStrategy()
-        with strategy.scope():
-            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
-            static_input = Input(shape=(self.num_static_features,), name="static_input")
-    
-            tcn_output = TCN(nb_filters = 128, kernel_size=3, dilations=(1,2,4,8,16,32, 64, 128, 256),
+            tcn_output = TCN(nb_filters = 64, kernel_size=3, dilations=(1,2,4,8,16,32, 64),
                              return_sequences=False)(global_input)
             tcn_output = BatchNormalization()(tcn_output)
             tcn_output = Dropout(0.4)(tcn_output)
 
         
-            static_dense = Dense(32, activation="relu")(static_input)
-            static_dense = BatchNormalization()(static_dense)
-            static_dense = Dropout(0.4)(static_dense)
-        
             # --- Enhanced FiLM Conditioning ---
-            def enhanced_film_layer(static_input, feature_dim, hidden_dim=64):
-                """
-                Enhanced FiLM conditioning using a deeper MLP for gamma and beta modulation.
-                
-                Parameters:
-                    static_input: Tensor (Static catchment descriptors)
-                    feature_dim: int (Size of TCN output features)
-                    hidden_dim: int (Size of hidden layers in FiLM MLP)
-                
-                Returns:
-                    gamma, beta: Scaling and shifting parameters for FiLM conditioning
-                """
-                x = Dense(hidden_dim, activation="relu")(static_input)
-                x = BatchNormalization()(x)
+            def film_layer(alphaearth, feature_dim, hidden_dim=64, gamma_scale=0.1):
+                x = Dense(hidden_dim, activation="relu")(alphaearth)
                 x = Dense(hidden_dim, activation="relu")(x)
-                x = BatchNormalization()(x)
-        
-                gamma = Dense(feature_dim, activation="sigmoid")(x)  # Scaling
-                beta = Dense(feature_dim, activation="tanh")(x)  # Shifting
+            
+                gamma_raw = Dense(feature_dim)(x)
+                beta      = Dense(feature_dim)(x)
+            
+                gamma = 1.0 + gamma_scale * gamma_raw
                 return gamma, beta
         
             # Apply FiLM at multiple levels
-            gamma1, beta1 = enhanced_film_layer(static_dense, feature_dim=128)
-            tcn_output = Multiply()([tcn_output, gamma1])  # Scaling
-            tcn_output = Add()([tcn_output, beta1])  # Shifting
-        
-            gamma2, beta2 = enhanced_film_layer(static_dense, feature_dim=128)
-            tcn_output = Multiply()([tcn_output, gamma2])  # Additional FiLM layer
-            tcn_output = Add()([tcn_output, beta2])
-    
-    
-            # --- Attention Mechanism ---
-            def attention_block(inputs):
-                attention_scores = Dense(1, activation="softmax")(inputs)
-                weighted_output = Multiply()([inputs, attention_scores])
-                return weighted_output
-    
-            tcn_output = attention_block(tcn_output)
-            #tcn_output1 = attention_block(tcn_output1)
-    
-            # Merge all outputs
-            merged_output = Concatenate()([tcn_output, static_dense])
-            merged_output = BatchNormalization()(merged_output)
-    
-            # Fully connected layers
-            output3 = Dense(64, activation='relu')(merged_output)
-            output3 = BatchNormalization()(output3)
-            output3 = Dropout(0.4)(output3)
-    
-            output2 = Dense(32, activation='relu')(output3)
-            output2 = BatchNormalization()(output2)
-            output2 = Dropout(0.4)(output2)
-    
-            output1 = Dense(16)(output2)
-            output1 = LeakyReLU(alpha=0.01)(output1) # LeakyReLU with alpha=0.01
-    
-            # Create the model
+            gamma, beta = film_layer(alphaearth_input, feature_dim=64)
+            tcn_mod = Multiply()([tcn_output, gamma])
+            tcn_mod = Add()([tcn_mod, beta])
+
+            # --------------------------------------------------
+            # Prediction head (dynamic only)
+            # --------------------------------------------------
+            y_base = Dense(64, activation="relu")(tcn_mod)
+            y_base = Dense(32, activation="relu")(y_base)
+            y_base = Dense(1, activation=None)(y_base)
+
+            # --------------------------------------------------
+            # Catchment size → scale correction
+            # --------------------------------------------------
             
-            if loss_fn == 'laplacian_nll':
-                mu = Dense(1, name="mu")(output1)  # Mean prediction
-                sigma = Dense(1, activation="softplus", name="sigma")(output1)  # Std dev (must be positive)
-                output = Concatenate(name="streamflow_distribution")([mu, sigma])
-                self.regional_model = Model(inputs=[global_input, static_input], outputs=output)
-                self.regional_model.compile(optimizer='adam', loss=laplacian_nll)
-            else:
-                output = Dense(1)(output1)
-                self.regional_model = Model(inputs=[global_input,  static_input], outputs=output)
-                self.regional_model.compile(optimizer='adam', loss='mean_squared_logarithmic_error')
-            return self.regional_model
+    
+            scale = Dense(1, activation=None)(area_input)
+            scale = Activation("exponential")(scale)
+    
+            y_hat = Multiply()([y_base, scale])
 
+
+            # --------------------------------------------------
+            # Output & loss
+            # --------------------------------------------------
+            if loss_fn == "laplacian_nll":
+                mu = y_hat
+                sigma = Dense(1, activation="softplus")(tcn_mod)
+                output = Concatenate(name="streamflow_distribution")([mu, sigma])
+    
+                model = Model(
+                    inputs=[global_input, alphaearth_input, area_input],
+                    outputs=output
+                )
+                model.compile(
+                    optimizer="adam",
+                    loss=laplacian_nll
+                )
+    
+            else:
+                output = y_hat
+                model = Model(
+                    inputs=[global_input, alphaearth_input, area_input],
+                    outputs=output
+                )
+                model.compile(
+                    optimizer="adam",
+                    loss='msle'
+                )
+    
+            self.regional_model = model
+            return model
 
     
-    def train_model(self, loss_fn, num_input_branch): 
+    
+    def train_model(self, loss_fn): 
         """
         Train the streamflow prediction model using the prepared training data.
 
@@ -782,15 +628,11 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}_{num_input_branch}_branches.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        if num_input_branch == 3:
-            self.regional_model.fit(x=[self.train_predictors, self.train_local_predictors, self.train_catchment_size], y=self.train_response, 
-                                    batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
-        else:
-            self.regional_model.fit(x=[self.train_predictors, self.train_catchment_size], y=self.train_response, 
-                                    batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
+        self.regional_model.fit(x=[self.train_predictors, self.train_alphaearth, self.train_catchsize], y=self.train_response, 
+                                batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
     def load_regional_model(self, path, loss_fn):
         """
