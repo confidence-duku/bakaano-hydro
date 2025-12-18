@@ -50,19 +50,20 @@ Below is an updated workflow diagram illustrating the steps in the `quick_start.
 
 ```mermaid
 graph TD
-    A --> B[Download and Preprocess Input Data]
-    B --> C[Visualize Downloaded Input Data (Check for Verification)]
-    C --> D[Compute Runoff using VegET and Route Flow to River Network]
-    D --> E[Visualize Routed Runoff (Check for Verification)]
-    E --> F[Explore Data Interactively (Check for Verification)]
+    A[Start] --> B[Download and Preprocess Input Data]
+    B --> C[Visualize Downloaded Input Data]
+    C --> D[Compute Runoff and Route Flow to River Network]
+    D --> E[Visualize Routed Runoff]
+    E --> F[Explore Data Interactively]
     F --> G[Train Bakaano-Hydro Model]
-    G --> H[Evaluate and Apply Model]
-    H --> I[End]
+    G --> H[Evaluate Trained Model]
+    H --> I[Simulate Streamflow]
+    I --> J[End]
 
     subgraph Data Sources
         B1[Shapefile of Study Area]
-        B2[GRDC Daily Streamflow NetCDF Data]
-        B3[Google Earth Engine Registration]
+        B2[GRDC Daily Streamflow Data]
+        B3[Google Earth Engine Data]
     end
 
     B1 --> B
@@ -95,8 +96,6 @@ study_area='/home/WUR/duku002/Scripts/NBAT/hydro/common_data/niger.shp'
 
 ```python
 
-# download and preprocess MODIS vegetation continuous fields from Google Earth Engine Data catalog
-
 from bakaano.tree_cover import TreeCover
 vf = TreeCover(
     working_dir=working_dir, 
@@ -110,7 +109,6 @@ vf.plot_tree_cover(variable='tree_cover') # options for plot are 'tree_cover' an
 
          - Tree cover data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/vcf/mean_tree_cover.tif; skipping download.
          - Tree cover data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/vcf/mean_tree_cover.tif; skipping preprocessing.
-
 
 
     
@@ -317,9 +315,6 @@ bk = BakaanoHydro(
 # TRAINING BAKAANO-HYDRO MODEL
 
 # The model is trained using the GRDC streamflow data.
-# Note: The training process is computationally expensive and may take a long time to complete.
-# trained model is always in the models folder in the working_dir and with a .keras extension
-# the model names is always in the format: bakaano_model_<loss_fn>_<num_input_branch>_branches.keras
 
 bk.train_streamflow_model(
     train_start='1991-01-01', 
@@ -336,10 +331,6 @@ bk.train_streamflow_model(
 # EVALUATING THE TRAINED MODEL INTERACTIVELY
 
 # The model is evaluated using the GRDC streamflow data.
-
-
-# trained model is always in the models folder in the working_dir and with a .keras extension
-# the model names is always in the format: bakaano_model_<loss_fn>_<num_input_branch>_branches.keras
 model_path = f'{working_dir}/models/bakaano_model.keras' 
 
 bk.evaluate_streamflow_model_interactively(
@@ -350,55 +341,9 @@ bk.evaluate_streamflow_model_interactively(
     lookback=365
 )
 ```
-
-
-
-<style>
-    .geemap-dark {
-        --jp-widgets-color: white;
-        --jp-widgets-label-color: white;
-        --jp-ui-font-color1: white;
-        --jp-layout-color2: #454545;
-        background-color: #383838;
-    }
-
-    .geemap-dark .jupyter-button {
-        --jp-layout-color3: #383838;
-    }
-
-    .geemap-colab {
-        background-color: var(--colab-primary-surface-color, white);
-    }
-
-    .geemap-colab .jupyter-button {
-        --jp-layout-color3: var(--colab-primary-surface-color, white);
-    }
-</style>
-
-
-
     Available station names:
-    ['AKKA' 'ALCONGUI' 'ANSONGO' 'BADEGUICHERI' 'BANANKORO' 'BARO' 'BAROU'
-     'BENENY-KEGNY' 'BOUGOUNI' 'CAMPEMENT DU DOUBLE VE' 'COUBERI' 'DABOLA'
-     'DEBETE' 'DIALAKORO' 'DIOILA' 'DIONGORE AMONT' 'DIRE' 'DJIRILA' 'DOLBEL'
-     'DOUNA' 'FARANAH' 'GARBE-KOUROU' 'GOUALA' 'GOUNDAM' 'GOUNOU-GAYA'
-     'GUELELINKORO' 'GUINDAM ROUMDJI' 'GUINGUERINI' 'IBI' 'IRADOUGOU'
-     'KAKASSI' 'KANDADJI' 'KANKAN' 'KARA' 'KE-MACINA' 'KEROU' 'KEROUANE'
-     'KIRANGO AVAL' 'KISSIDOUGOU' 'KLELA' 'KOLONDIEBA' 'KOMPONGOU'
-     'KONSANKORO' 'KORYOUME' 'KOULIKORO' 'KOUORO 1' 'KOUORO 2' 'KOUROUSSA'
-     'KOUTAKOUKROU' 'KOUTO AMONT' 'KOUTO AVAL' 'LOKOJA' 'MADAROUNFA'
-     'MADINA DIASSA' 'MALANVILLE' 'MANANKORO' 'MANDIANA' 'MOLOKORO' 'MOPTI'
-     'NANTAKA (MOPTI)' 'NIAMEY' 'NIELLOUA' 'OUARAN' 'PANKOUROU' 'PAPARA'
-     'PONONDOUGOU' 'PONT CAROL' 'ROUTE KANDI-BANIKOARA AMONT'
-     'ROUTE KANDI-BANIKOARA AVAL' 'RTE KANDI-SEGBANA AMONT'
-     'RTE KANDI-SEGBANA AVAL' 'SAMATIGUILA' 'SARAFERE' 'SELINGUE' 'SOFARA'
-     'TAMOU' 'TERA' 'TIGUIBERY' 'TILEMBEYA' 'TINKISSO' 'TOMBOUGOU 1'
-     'TOMBOUGOU 2' 'TONKA' 'TOSSAYE' 'TSERNAOUA' 'W' 'WAHIRE' 'YAKOUTA'
-     'YANFOLILA' 'YIDERE BODE' 'ZIEMOUGOULA']
+    ['AKKA' 'ALCONGUI' 'ANSONGO' ...]
     INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:CPU:0',)
-
-
-    2025-12-18 13:29:04.706041: E external/local_xla/xla/stream_executor/cuda/cuda_driver.cc:152] failed call to cuInit: INTERNAL: CUDA error: Failed call to cuInit: CUDA_ERROR_NO_DEVICE: no CUDA-capable device is detected
 
 
     [1m80/80[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m6s[0m 65ms/step
