@@ -306,22 +306,70 @@ class DataPreprocessor:
             
         return self.data_list
 #=====================================================================================================================================                          
-@register_keras_serializable(package="Custom", name="laplace_nll")
-def laplacian_nll(y_true, y_pred):
+class LogZScoreScaler:
+    """
+    Log(1+x) + Z-score scaler for hydrological variables.
+    Preserves NaNs (for masked loss).
+    """
 
-    mu = y_pred[:, 0]  # Log-space mean prediction
-    b = tf.nn.softplus(y_pred[:, 1]) + 1e-6  # Scale parameter (uncertainty)
+    def __init__(self, eps=1e-6, clip_min=0.0, clip_max=None):
+        self.eps = eps
+        self.clip_min = clip_min
+        self.clip_max = clip_max
+        self.mean_ = None
+        self.std_ = None
+        self.fitted_ = False
 
-    # ✅ Log-transform the observed streamflow
-    log_y_true = tf.math.log(y_true[:, 0] + 1)  # Avoid log(0) issues
+    def fit(self, x):
+        x = np.asarray(x, dtype=np.float64)
 
-    # Define Laplacian distribution in log-space
-    laplace_dist = tfd.Laplace(loc=mu, scale=b)
+        mask = np.isfinite(x)
+        if mask.sum() == 0:
+            raise ValueError("No finite values to fit scaler.")
 
-    # Compute NLL in log-space
-    return -tf.reduce_mean(laplace_dist.log_prob(log_y_true))
+        x_valid = x[mask]
+        x_valid = np.maximum(x_valid, self.clip_min)
 
-    
+        if self.clip_max is not None:
+            x_valid = np.minimum(x_valid, self.clip_max)
+
+        x_log = np.log1p(x_valid)
+
+        self.mean_ = x_log.mean()
+        self.std_ = max(x_log.std(), self.eps)
+        self.fitted_ = True
+        return self
+
+    def transform(self, x):
+        if not self.fitted_:
+            raise RuntimeError("Scaler must be fitted first.")
+
+        x = np.asarray(x, dtype=np.float64)
+        x_scaled = np.full_like(x, np.nan)
+
+        mask = np.isfinite(x)
+        if mask.any():
+            x_valid = np.maximum(x[mask], self.clip_min)
+
+            if self.clip_max is not None:
+                x_valid = np.minimum(x_valid, self.clip_max)
+
+            x_log = np.log1p(x_valid)
+            x_scaled[mask] = (x_log - self.mean_) / self.std_
+
+        return x_scaled
+
+    def inverse_transform(self, x_scaled):
+        x = np.full_like(x_scaled, np.nan)
+        mask = np.isfinite(x_scaled)
+
+        if mask.any():
+            x_log = x_scaled[mask] * self.std_ + self.mean_
+            x[mask] = np.maximum(np.expm1(x_log), 0.0)
+
+        return x
+
+
 class StreamflowModel:
     
     def __init__(self, working_dir, lookback, batch_size, num_epochs, train_start, train_end):
@@ -370,59 +418,6 @@ class StreamflowModel:
         self.working_dir = working_dir
         self.train_start = train_start
         self.train_end = train_end
-        
-
-    def compute_global_cdfs_pkl(self, df, variables):
-        """
-        Compute and save the empirical CDF for each variable separately as a pickle file.
-    
-        Args:
-            df (pd.DataFrame): DataFrame containing multiple variables.
-            variables (list): List of column names to apply quantile scaling.
-            filename (str): File to save the computed CDFs.
-        """
-        global_cdfs = {}
-    
-        for var in variables:
-            sorted_values = np.sort(df[var].dropna().values)  # Remove NaNs and sort
-            quantiles = np.linspace(0, 1, len(sorted_values))  # Generate percentiles
-            global_cdfs[var] = (sorted_values, quantiles)  # Store CDF mapping
-        
-        # Save as a pickle file
-        with open(f'{self.working_dir}/models/global_cdfs.pkl', "wb") as f:
-            pickle.dump(global_cdfs, f)
-
-    def load_global_cdfs_pkl(self):
-        """Load the saved empirical CDFs for multiple variables from a pickle file."""
-        with open(f'{self.working_dir}/models/global_cdfs.pkl', "rb") as f:
-            global_cdfs = pickle.load(f)
-        return global_cdfs
-
-    def quantile_transform(self, df, variables, global_cdfs):
-        """
-        Apply quantile scaling to multiple variables using precomputed global CDFs.
-    
-        Args:
-            df (pd.DataFrame): DataFrame to transform.
-            variables (list): List of column names to scale.
-            global_cdfs (dict): Dictionary of saved CDF mappings.
-        
-        Returns:
-            pd.DataFrame: Transformed DataFrame.
-        """
-        transformed_df = df.copy()
-    
-        for var in variables:
-            sorted_values, quantiles = global_cdfs[var]
-            
-            # Apply interpolation to transform values to the percentile space
-            transformed_df[var] = np.interp(df[var], sorted_values, quantiles)
-    
-            # Handle out-of-range values
-            transformed_df[var][df[var] < sorted_values[0]] = 0.001  # Assign near 0 for very low values
-            transformed_df[var][df[var] > sorted_values[-1]] = 0.999  # Assign near 1 for very high values
-    
-        return transformed_df
 
     
     def prepare_data(self, data_list):
@@ -458,7 +453,6 @@ class StreamflowModel:
                 
         full_train_predictors = []
         full_train_response = []
-        train_catchment_list = []
         full_alphaearth = []
         full_catchsize = []
         
@@ -467,16 +461,23 @@ class StreamflowModel:
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'wb') as file:
             pickle.dump(alphaearth_scaler, file)
 
-        concatenated_predictors = pd.concat(train_predictors, axis=0)
-        variables = ['mfd_wfa']  # Adjust as needed
-        self.compute_global_cdfs_pkl(concatenated_predictors, variables)
-        global_cdfs = self.load_global_cdfs_pkl()
+        scaler2 = LogZScoreScaler()
+        preds = np.array(train_predictors).reshape(-1,1)
+        predictor_scaler = scaler2.fit(preds)
+
+        scaler3 = LogZScoreScaler()
+        resp = np.array(train_response).reshape(-1,1)
+        response_scaler = scaler3.fit(resp)
+
+        with open(f'{self.working_dir}/models/mfd_wfa_scaler.pkl', 'wb') as file:
+            pickle.dump(predictor_scaler, file)
+
+        with open(f'{self.working_dir}/models/response_scaler.pkl', 'wb') as file:
+            pickle.dump(response_scaler, file)
 
         for x, y,z,j in zip(train_predictors, train_response, alphaearth, area):
-            scaled_train_predictor = self.quantile_transform(x, variables, global_cdfs)
-            scaled_train_predictor = scaled_train_predictor.values
-
-            scaled_train_response = y.values/1
+            scaled_train_predictor = predictor_scaler.transform(x)
+            scaled_train_response = response_scaler.transform(y.values)
 
             z2 = z.reshape(-1,64)
             scaled_alphaearth = alphaearth_scaler.transform(z2)   
@@ -526,7 +527,7 @@ class StreamflowModel:
         self.train_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)  
     
 
-    def build_model(self, loss_fn):
+    def build_model(self):
         """
         Build and compile the streamflow prediction model using TCN and dense layers.
 
@@ -576,47 +577,31 @@ class StreamflowModel:
             # Catchment size → scale correction
             # --------------------------------------------------
             
-    
             scale = Dense(1, activation=None)(area_input)
             scale = Activation("exponential")(scale)
     
             y_hat = Multiply()([y_base, scale])
 
-
             # --------------------------------------------------
             # Output & loss
             # --------------------------------------------------
-            if loss_fn == "laplacian_nll":
-                mu = y_hat
-                sigma = Dense(1, activation="softplus")(tcn_mod)
-                output = Concatenate(name="streamflow_distribution")([mu, sigma])
-    
-                model = Model(
-                    inputs=[global_input, alphaearth_input, area_input],
-                    outputs=output
-                )
-                model.compile(
-                    optimizer="adam",
-                    loss=laplacian_nll
-                )
-    
-            else:
-                output = y_hat
-                model = Model(
-                    inputs=[global_input, alphaearth_input, area_input],
-                    outputs=output
-                )
-                model.compile(
-                    optimizer="adam",
-                    loss='msle'
-                )
+            
+            output = y_hat
+            model = Model(
+                inputs=[global_input, alphaearth_input, area_input],
+                outputs=output
+            )
+            model.compile(
+                optimizer="adam",
+                loss='huber'
+            )
     
             self.regional_model = model
             return model
 
     
     
-    def train_model(self, loss_fn): 
+    def train_model(self): 
         """
         Train the streamflow prediction model using the prepared training data.
 
@@ -628,13 +613,13 @@ class StreamflowModel:
         None
         """
         # Define the checkpoint callback
-        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model_{loss_fn}.keras', 
+        checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
         self.regional_model.fit(x=[self.train_predictors, self.train_alphaearth, self.train_catchsize], y=self.train_response, 
                                 batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
-    def load_regional_model(self, path, loss_fn):
+    def load_regional_model(self, path):
         """
         Load a pre-trained regional model from the specified path.
 
@@ -652,13 +637,8 @@ class StreamflowModel:
         from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope # type: ignore
 
-        if loss_fn == 'laplacian_nll':
-            custom_objects = {"TCN": TCN, "laplacian_nll": laplacian_nll}
-        else:
-            custom_objects = {"TCN": TCN}
-        
+        custom_objects = {"TCN": TCN}
         strategy = tf.distribute.MirroredStrategy()
-        
         with strategy.scope():
             with custom_object_scope(custom_objects):  
                 self.regional_model = load_model(path, custom_objects=custom_objects)

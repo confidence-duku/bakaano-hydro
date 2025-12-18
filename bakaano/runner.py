@@ -16,6 +16,69 @@ import geopandas as gpd
 from leafmap.foliumap import Map
 
 #========================================================================================================================  
+class LogZScoreScaler:
+    """
+    Log(1+x) + Z-score scaler for hydrological variables.
+    Preserves NaNs (for masked loss).
+    """
+
+    def __init__(self, eps=1e-6, clip_min=0.0, clip_max=None):
+        self.eps = eps
+        self.clip_min = clip_min
+        self.clip_max = clip_max
+        self.mean_ = None
+        self.std_ = None
+        self.fitted_ = False
+
+    def fit(self, x):
+        x = np.asarray(x, dtype=np.float64)
+
+        mask = np.isfinite(x)
+        if mask.sum() == 0:
+            raise ValueError("No finite values to fit scaler.")
+
+        x_valid = x[mask]
+        x_valid = np.maximum(x_valid, self.clip_min)
+
+        if self.clip_max is not None:
+            x_valid = np.minimum(x_valid, self.clip_max)
+
+        x_log = np.log1p(x_valid)
+
+        self.mean_ = x_log.mean()
+        self.std_ = max(x_log.std(), self.eps)
+        self.fitted_ = True
+        return self
+
+    def transform(self, x):
+        if not self.fitted_:
+            raise RuntimeError("Scaler must be fitted first.")
+
+        x = np.asarray(x, dtype=np.float64)
+        x_scaled = np.full_like(x, np.nan)
+
+        mask = np.isfinite(x)
+        if mask.any():
+            x_valid = np.maximum(x[mask], self.clip_min)
+
+            if self.clip_max is not None:
+                x_valid = np.minimum(x_valid, self.clip_max)
+
+            x_log = np.log1p(x_valid)
+            x_scaled[mask] = (x_log - self.mean_) / self.std_
+
+        return x_scaled
+
+    def inverse_transform(self, x_scaled):
+        x = np.full_like(x_scaled, np.nan)
+        mask = np.isfinite(x_scaled)
+
+        if mask.any():
+            x_log = x_scaled[mask] * self.std_ + self.mean_
+            x[mask] = np.maximum(np.expm1(x_log), 0.0)
+
+        return x
+
 class BakaanoHydro:
     """Generate an instance
     """
@@ -70,7 +133,7 @@ class BakaanoHydro:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
 #=========================================================================================================================================
-    def train_streamflow_model(self, train_start, train_end, grdc_netcdf, loss_fn,  
+    def train_streamflow_model(self, train_start, train_end, grdc_netcdf,  
                                lookback, batch_size, num_epochs, routing_method='mfd', catchment_size_threshold=1):
         """Train the deep learning streamflow prediction model."
         """
@@ -98,13 +161,13 @@ class BakaanoHydro:
         print(' 3. Building neural network model')
         smodel = StreamflowModel(self.working_dir, lookback, batch_size, num_epochs, train_start, train_end)
         smodel.prepare_data(self.rawdata)
-        smodel.build_model(loss_fn)
+        smodel.build_model()
         print(' 4. Training neural network model')
-        smodel.train_model(loss_fn)
-        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_{loss_fn}_branches.keras')
+        smodel.train_model()
+        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model_branches.keras')
 #========================================================================================================================  
                 
-    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf, loss_fn, 
+    def evaluate_streamflow_model_interactively(self, model_path, val_start, val_end, grdc_netcdf,
                                                 lookback, routing_method='mfd', catchment_size_threshold=1000):
         """Evaluate the streamflow prediction model."
         """
@@ -135,28 +198,20 @@ class BakaanoHydro:
         self.vmodel = PredictStreamflow(self.working_dir, lookback)
         self.vmodel.prepare_data(rawdata)
 
-        self.vmodel.load_model(model_path, loss_fn)
+        self.vmodel.load_model(model_path)
+
+        with open(f'{self.working_dir}/models/response_scaler.pkl', 'rb') as file:
+            response_scaler = pickle.load(file)
 
         predicted_streamflow = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.sim_alphaearth, self.vmodel.sim_catchsize])
-
-
-        if loss_fn == 'laplacian_nll':
         
-            mu_log = predicted_streamflow[:, 0]  # Mean in log-space
-            #b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
-            
-            # ✅ Convert back to original streamflow units
-            mu = np.exp(mu_log) - 1  # Mean streamflow prediction
-            #sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
-            
-            predicted_streamflow = mu
-        else:
-            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+        predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow) 
+        predicted_streamflow = response_scaler.inverse_transform(predicted_streamflow)
 
-        self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback)
+        self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow,  val_start, lookback)
         
 #==============================================================================================================================
-    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, loss_fn, 
+    def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, 
                             lookback, routing_method='mfd'):
         """Simulate streamflow in batch mode using the trained model."
         """
@@ -167,34 +222,21 @@ class BakaanoHydro:
         self.vmodel = PredictStreamflow(self.working_dir, lookback)
         self.vmodel.prepare_data_latlng(rawdata)
         batch_size = len(self.vmodel.latlist)
-        self.vmodel.load_model(model_path, loss_fn)
+        self.vmodel.load_model(model_path)
         print(' 2. Batch prediction')
         predicted_streamflows = self.vmodel.model.predict([self.vmodel.predictors, self.vmodel.sim_alphaearth, self.vmodel.sim_catchsize], batch_size=batch_size)
 
-        if loss_fn == 'laplacian_nll':
-            seq = int(len(predicted_streamflows)/batch_size)
-            predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 2)
+        with open(f'{self.working_dir}/models/response_scaler.pkl', 'rb') as file:
+            response_scaler = pickle.load(file)
 
-            predicted_streamflow_list = []
-        
-            for predicted_streamflow in predicted_streamflows:
-                mu_log = predicted_streamflow[:, 0]  # Mean in log-space
-                b_log = predicted_streamflow[:, 1]  # Uncertainty in log-space
-                
-                # ✅ Convert back to original streamflow units
-                mu = np.exp(mu_log) - 1  # Mean streamflow prediction
-                sigma = (np.exp(mu_log) - 1) * (np.exp(b_log) - 1) # Uncertainty in original scale
-                
-                predicted_streamflow = mu
-                predicted_streamflow_list.append(predicted_streamflow)
-        else:
-            seq = int(len(predicted_streamflows)/batch_size)
-            predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
+        seq = int(len(predicted_streamflows)/batch_size)
+        predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
 
-            predicted_streamflow_list = []
-            for predicted_streamflow in predicted_streamflows:
-                predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
-                predicted_streamflow_list.append(predicted_streamflow)
+        predicted_streamflow_list = []
+        for predicted_streamflow in predicted_streamflows:
+            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+            predicted_streamflow = response_scaler.inverse_transform(predicted_streamflow)
+            predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')
         for predicted_streamflow, lat, lon in zip(predicted_streamflow_list, latlist, lonlist):
             predicted_streamflow = predicted_streamflow.reshape(-1)
@@ -211,10 +253,10 @@ class BakaanoHydro:
         print(f' COMPLETED! csv files available at {out_folder}')
 #========================================================================================================================  
             
-    def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, loss_fn, val_start, lookback):
+    def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, val_start, lookback):
         """Plot the observed and predicted streamflow data.
         """
-        nse, kge = self._compute_metrics(observed_streamflow, predicted_streamflow, loss_fn)
+        nse, kge = self._compute_metrics(observed_streamflow, predicted_streamflow)
         kge1 = kge[0][0]
         R = kge[1][0]
         Beta = kge[2][0]
@@ -234,17 +276,13 @@ class BakaanoHydro:
         plt.legend()  # Add a legend to label the lines
         plt.show()
 
-
 #========================================================================================================================  
         
-    def _compute_metrics(self, observed_streamflow, predicted_streamflow, loss_fn):
+    def _compute_metrics(self, observed_streamflow, predicted_streamflow):
         """Compute performance metrics for the model.
         """
         observed = observed_streamflow[0]['station_discharge'][self.vmodel.timesteps:].values
-        if loss_fn == 'laplacian_nll':
-            predicted = predicted_streamflow[:]
-        else: 
-            predicted = predicted_streamflow[:, 0].flatten()
+        predicted = predicted_streamflow[:, 0].flatten()
         nan_indices = np.isnan(observed) | np.isnan(predicted)
         observed = observed[~nan_indices]
         predicted = predicted[~nan_indices]

@@ -1,4 +1,3 @@
-
 [![DOI](https://zenodo.org/badge/923830097.svg)](https://doi.org/10.5194/egusphere-2025-1633) [![License](https://img.shields.io/github/license/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/blob/main/LICENSE) [![PyPI version](https://badge.fury.io/py/bakaano-hydro.svg)](https://pypi.org/project/bakaano-hydro/)
  [![GitHub release](https://img.shields.io/github/v/release/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/releases) [![Last Commit](https://img.shields.io/github/last-commit/confidence-duku/bakaano-hydro.svg)](https://github.com/confidence-duku/bakaano-hydro/commits/main) [![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/) 
 
@@ -15,59 +14,70 @@ The name Bakaano comes from Fante, a language spoken along the southern coast of
 
 ![image](https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf)
 
-## Key Features
-- **Distributed architecture**: Captures spatial heterogeneity of hydrological processes using gridded runoff and flow routing.
-- **Hybrid modeling**: Combines physically based hydrology with deep learning for enhanced accuracy and realism.
-- **Scalable and generalizable**: Trains a single model across basins, regions, or continents—no need for basin-specific calibration.
-- **Reliable in data-scarce regions**: Designed to perform well even with sparse observational data.
-- **High-performance ready**: Compatible with GPU acceleration for fast training and inference on large-scale datasets.
-- **Seamless integration**: Modular components allow for easy adaptation with other runoff models, routing schemes, or neural network architectures.
-- **Automated end-to-end pipeline**: From climate data ingestion and preprocessing to runoff simulation, routing, and streamflow prediction—Bakaano-Hydro automates the entire workflow with minimal user intervention.
-- **Easy deployment**: Installable via pip and designed with reproducibility in mind.
-- **Versatile applications**: Suitable for streamflow forecasting, climate adaptation planning, flood risk assessment, and more.
-
+# Key Workflows
 ## Installation
-
 Bakaano-Hydro is built on TensorFlow and is designed to leverage GPU acceleration for training. This requires a system with an NVIDIA GPU installed or bundled CUDA and cuDNN runtime libraries.
 GPU acceleration is strongly recommended for training deep learning components and running large-scale simulations, as it significantly improves speed and scalability.
 
-If you have a compatible NVIDIA GPU and drivers installed, install with:
-
-```bash
-pip install bakaano-hydro[gpu]
-```
-
-This will automatically install the correct version of TensorFlow along with CUDA and cuDNN runtime libraries
-
-If you do not have access to a GPU, you can still install and use Bakaano-Hydro in CPU mode (e.g., for inference, testing or small-scale evaluation):
-
-```bash
-pip install bakaano-hydro
-```
-
 Note: Training on CPU is supported but will be significantly slower, especially on large datasets or deep learning tasks.
+- For GPU acceleration:
+  ```bash
+  pip install bakaano-hydro[gpu]
+  ```
+  This will automatically install the correct version of TensorFlow along with CUDA and cuDNN runtime libraries
 
-## Getting started / Example notebooks
+- For CPU-only usage:
+  ```bash
+  pip install bakaano-hydro
+  ```
 
-Bakaano-Hydro requires three primary data or inputs
+## Data Requirements
 
-1. Shapefile of study area or river basin
-2. Observed streamflow data in NetCDF format from Global Runoff Data Center (<https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Home>). Because Bakaano-Hydro aims to use only open-source data, it currently accepts observed streamflow data only from GRDC.
-3. Registration at Google Earth Engine (<https://code.earthengine.google.com/register>). Bakaano-Hydro retrieves, NDVI, tree cover and meteorological variables from ERA5-land or CHIRPS from Google Earth Engine Data Catalog. This platform requires prior registration for subsequent authentication during execution of the model
+1. **Shapefile**: Defines the study area or river basin.
+2. **Observed Streamflow Data**: NetCDF format from the Global Runoff Data Center.
+3. **Google Earth Engine Registration**: Required for retrieving NDVI, tree cover, and meteorological data.
 
-Model execution then involves only a few guided steps. See the quick start notebook <https://github.com/confidence-duku/bakaano-hydro/blob/main/quick_start.ipynb> for guidance.
+## Project-Specific Conventions
 
-## Code architecture
+- **Data Sources**: The model relies on open-source data, including GRDC for streamflow and Google Earth Engine for tree cover, NDVI, Alpha Earth satellite embeddings, and meteorological variables.
+- **End-to-End Automation**: The `runner.py` script automates the entire workflow, from data ingestion to streamflow prediction.
+- **Modularity**: Each component is designed to be replaceable, allowing for easy adaptation to other datasets or modeling approaches.
 
-![bakaanohydro-2025-04-16-132235](https://github.com/user-attachments/assets/4a98f643-b703-4352-bfd7-3d4d13e9fdfe)
+## Running the Model
 
-## Support
+Refer to the `quick_start.ipynb` notebook for step-by-step guidance on executing the model pipeline. The steps include:
 
-For assistance, please contact Confidence Duku (<confidence.duku@wur.nl>)
+1. Preprocessing input data (e.g., shapefiles, GRDC data).
+2. Training the model using the provided pipeline.
+3. Evaluating the model's performance interactively.
+4. Simulating streamflow and visualizing results.
 
-## Contributing
+## Workflow Diagram
 
-No contributions are currently accepted.
+Below is an updated workflow diagram illustrating the steps in the `quick_start.ipynb` notebook:
+
+```mermaid
+graph TD
+    A[Start] --> B[Downloading and Preprocessing Input Data]
+    B --> C[Compute Runoff and Route Flow]
+    C --> D[Visualize Routed Runoff]
+    D --> E[Explore Data Interactively]
+    E --> F[Train Bakaano-Hydro Model]
+    F --> G[Evaluate and Apply Model]
+    G --> H[End]
+
+    subgraph Data Sources
+        B1[Shapefiles]
+        B2[GRDC Streamflow Data]
+        B3[Google Earth Engine Data]
+    end
+
+    B1 --> B
+    B2 --> B
+    B3 --> B
+```
+
+This updated diagram reflects the step "Downloading and Preprocessing Input Data" as described in the `quick_start.ipynb` notebook.
 
 ## Authors and acknowledgment
 
