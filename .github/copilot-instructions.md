@@ -21,6 +21,7 @@ graph TD
     B --> L[router.py: Flow Routing]
     B --> M[runner.py: Pipeline Orchestration]
     B --> N[veget.py: Vegetation Data]
+    B --> O[alpha_earth.py: Alpha Earth Data Integration]
 ```
 
 Each component is designed to be modular and replaceable, allowing for flexibility in adapting to different datasets or modeling approaches.
@@ -56,6 +57,11 @@ Refer to the `quick_start.ipynb` notebook for step-by-step guidance on executing
 - **TensorFlow**: For deep learning components.
 - **Google Earth Engine API**: For data retrieval.
 - **NetCDF4**: For handling NetCDF data.
+- **Hydroeval**: For hydrological evaluation metrics.
+- **Leafmap**: For interactive mapping and visualization.
+- **Geopandas**: For geospatial data processing.
+- **Rasterio**: For raster data manipulation.
+- **Xarray**: For handling multi-dimensional arrays.
 
 ## Examples
 - Example usage and workflows are demonstrated in the `quick_start.ipynb` notebook.
@@ -65,3 +71,30 @@ Refer to the `quick_start.ipynb` notebook for step-by-step guidance on executing
 
 ## Contact
 For assistance, contact Confidence Duku at <confidence.duku@wur.nl>.
+
+## Workflow Diagram
+
+Below is a high-level workflow diagram illustrating the end-to-end process of the Bakaano-Hydro model pipeline:
+
+```mermaid
+graph TD
+    A[Start] --> B[Input Data Collection]
+    B --> C[Preprocessing]
+    C --> D[Model Training]
+    D --> E[Model Evaluation]
+    E --> F[Streamflow Simulation]
+    F --> G[Results Visualization]
+    G --> H[End]
+
+    subgraph Data Sources
+        B1[Shapefiles]
+        B2[GRDC Streamflow Data]
+        B3[Google Earth Engine Data]
+    end
+
+    B1 --> B
+    B2 --> B
+    B3 --> B
+```
+
+This diagram provides an overview of the key steps in the pipeline, from data collection to results visualization.
