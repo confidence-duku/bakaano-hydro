@@ -2,3 +2,9 @@ common_data
 **/*.pyc
 **/__pycache__
 **/tests
+Dockerfile
+README.Docker.md
+.dockerignore
+overrides.json
+compose.yaml
+.devcontainer
