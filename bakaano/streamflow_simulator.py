@@ -163,10 +163,18 @@ class PredictDataPreprocessor:
         return filtered_grdc
                           
     def get_data(self):
+        """
+        Extract and preprocess predictor and response variables for each station based on its coordinates.
 
+        Returns
+        -------
+        list
+            A list containing two elements:
+            - self.data_list: A list of tuples, each containing predictors (DataFrame) and response (DataFrame).
+            - self.catchment: A list of tuples, each containing catchment data (accumulation and slope values).
+        """
         count = 1
         
-        #slope = f'{self.working_dir}/elevation/slope_clipped.tif'
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
@@ -202,11 +210,12 @@ class PredictDataPreprocessor:
             alpha_earth_list.append(cum_band)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
-
-        start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
-        end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
+        
         
         #combine or all yearly output from the runoff and routing module into a single list
+        start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
+        end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
+
         all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
@@ -219,34 +228,31 @@ class PredictDataPreprocessor:
             entry for entry in wfa_list
             if start_dt <= datetime.strptime(entry["time"], "%Y-%m-%d") <= end_dt
         ]
-        
         time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
-
-        all_wfa = []
+        #extract station predictor and response variables based on station coordinates
         for k in self.station_ids:
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
+            catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
 
-            # if self.catchment_size_threshold is not None:
-            #     catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
-            #     if catchment_size < self.catchment_size_threshold:
-            #         continue
-
-            # self.sim_station_names.append(list(self.grdc_subset['station_name'].sel(id=k).values)[0])
+            # if catchment_size < self.catchment_size_threshold:
+            #     continue
+            
+            # if station_discharge['station_discharge'].notna().sum() < 1095:
+            #     continue
                           
             station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
             station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
             snapped_y, snapped_x = self._snap_coordinates(station_y, station_x)
-            self.x = snapped_x
-            self.y = snapped_y
             
             acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
+
             alpha_earth_stations = []
             for band in alpha_earth_list:
                 pixel_data = band.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
                 alpha_earth_stations.append(pixel_data/acc_data)
-                
-            row, col = self._extract_station_rowcol(snapped_y, snapped_x)
         
+            row, col = self._extract_station_rowcol(snapped_y, snapped_x)
+            
             station_wfa = []
             for arr in wfa_list:
                 arr = arr['matrix'].tocsr()
@@ -254,11 +260,9 @@ class PredictDataPreprocessor:
             full_wfa_data = pd.DataFrame(station_wfa, columns=['mfd_wfa'])
             full_wfa_data.set_index(time_index, inplace=True)
             full_wfa_data.index.name = 'time'  # Rename the index to 'time'
-        
-            #wfa_data = full_wfa_data
-            wfa_data = full_wfa_data[self.sim_start: self.sim_end]
-            all_wfa.append(wfa_data)
-
+    
+            wfa_data = full_wfa_data
+            
             station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
 
             predictors = wfa_data.copy()
@@ -270,9 +274,14 @@ class PredictDataPreprocessor:
             catch_list = [float(x) for x in catch_list]
             predictors2 = predictors
             catch_tup = tuple(catch_list)
-            self.catchment.append(catch_tup)  
+            self.catchment.append(catch_tup)
             self.data_list.append((predictors2, response, catch_tup))
+            
             count = count + 1
+
+        # basin_name = os.path.split(self.study_area)[1][:-4]
+        # with open(f'{self.working_dir}/models/{basin_name}_predictor_response_data.pkl', 'wb') as file:
+        #         pickle.dump(self.data_list, file)
             
         return self.data_list
     
@@ -281,7 +290,6 @@ class PredictDataPreprocessor:
         count = 1
         
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
-        
         
         latlng_ras = rioxarray.open_rasterio(dem_filepath)
         latlng_ras = latlng_ras.rio.write_crs(4326)
@@ -316,13 +324,12 @@ class PredictDataPreprocessor:
             alpha_earth_list.append(cum_band)
         
         acc = xr.DataArray(data=acc, coords=[('lat', lat), ('lon', lon)])
+        time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
         
-
+        #combine or all yearly output from the runoff and routing module into a single list
         start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
         end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
- 
-        time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
-        #combine or all yearly output from the runoff and routing module into a single list
+
         all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
@@ -335,7 +342,6 @@ class PredictDataPreprocessor:
             entry for entry in wfa_list
             if start_dt <= datetime.strptime(entry["time"], "%Y-%m-%d") <= end_dt
         ]
-
         
         for olat, olon in zip(latlist, lonlist):
             snapped_y, snapped_x = self._snap_coordinates(olat, olon)
@@ -378,71 +384,10 @@ class PredictDataPreprocessor:
 
     
 #=====================================================================================================================================
-class LogZScoreScaler:
-    """
-    Log(1+x) + Z-score scaler for hydrological variables.
-    Preserves NaNs (for masked loss).
-    """
 
-    def __init__(self, eps=1e-6, clip_min=0.0, clip_max=None):
-        self.eps = eps
-        self.clip_min = clip_min
-        self.clip_max = clip_max
-        self.mean_ = None
-        self.std_ = None
-        self.fitted_ = False
-
-    def fit(self, x):
-        x = np.asarray(x, dtype=np.float64)
-
-        mask = np.isfinite(x)
-        if mask.sum() == 0:
-            raise ValueError("No finite values to fit scaler.")
-
-        x_valid = x[mask]
-        x_valid = np.maximum(x_valid, self.clip_min)
-
-        if self.clip_max is not None:
-            x_valid = np.minimum(x_valid, self.clip_max)
-
-        x_log = np.log1p(x_valid)
-
-        self.mean_ = x_log.mean()
-        self.std_ = max(x_log.std(), self.eps)
-        self.fitted_ = True
-        return self
-
-    def transform(self, x):
-        if not self.fitted_:
-            raise RuntimeError("Scaler must be fitted first.")
-
-        x = np.asarray(x, dtype=np.float64)
-        x_scaled = np.full_like(x, np.nan)
-
-        mask = np.isfinite(x)
-        if mask.any():
-            x_valid = np.maximum(x[mask], self.clip_min)
-
-            if self.clip_max is not None:
-                x_valid = np.minimum(x_valid, self.clip_max)
-
-            x_log = np.log1p(x_valid)
-            x_scaled[mask] = (x_log - self.mean_) / self.std_
-
-        return x_scaled
-
-    def inverse_transform(self, x_scaled):
-        x = np.full_like(x_scaled, np.nan)
-        mask = np.isfinite(x_scaled)
-
-        if mask.any():
-            x_log = x_scaled[mask] * self.std_ + self.mean_
-            x[mask] = np.maximum(np.expm1(x_log), 0.0)
-
-        return x
 
 class PredictStreamflow:
-    def __init__(self, working_dir, lookback):
+    def __init__(self, working_dir):
         """
         Initializes the PredictStreamflow class for streamflow prediction using a temporal convolutional network (TCN).
 
@@ -463,16 +408,9 @@ class PredictStreamflow:
         """
         self.regional_model = None
         self.train_data_list = []
-        self.timesteps = lookback
-        self.num_epochs = 10
-        
-        self.train_predictors = None
-        self.train_response = None
-        self.num_dynamic_features = 1
-        self.num_static_features = 65
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
-    
+
     def prepare_data(self, data_list):
         
         """
@@ -492,7 +430,8 @@ class PredictStreamflow:
         area = catchment_arr[:, 0:1]      # shape (N, 1)
         alphaearth = catchment_arr[:, 1:] # shape (N, D)
      
-        full_train_predictors = []
+        full_train_30d, full_train_90d = [], []
+        full_train_180d, full_train_365d = [], []
         full_alphaearth = []
         full_catchsize = []
 
@@ -505,44 +444,52 @@ class PredictStreamflow:
         alphaearth = alphaearth.reshape(-1,64)
         scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
 
-        with open(f'{self.working_dir}/models/mfd_wfa_scaler.pkl', 'rb') as file:
-            predictor_scaler = pickle.load(file)
-
         for x, z, j in zip(predictors, scaled_alphaearth, area):
-            scaled_train_predictor = predictor_scaler.transform(x)
+            this_area = np.expm1(j)
+            scaled_train_predictor = np.log1p((x.values /this_area) + 0.001)
 
-            num_samples = scaled_train_predictor.shape[0] - self.timesteps
-            predictor_samples = []
+            num_samples = scaled_train_predictor.shape[0] - 365
+            p30_samples, p90_samples, p180_samples, p365_samples = [], [], [], []
             area_samples = []
             alphaearth_samples = []
 
             self.catch_area = np.expm1(j)
             
             for i in range(num_samples):
-                predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
-                predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-
-                predictor_samples.append(predictor_batch)
+                full_window = scaled_train_predictor[i : i + 365, :]
+                
+                # --- MULTI-SCALE SLICING ---
+                # We slice from the END of the full_window so all branches share 'Day 365'
+                p30_samples.append(full_window[-30:, :])
+                p90_samples.append(full_window[-90:, :])
+                p180_samples.append(full_window[-180:, :])
+                p365_samples.append(full_window) # This is the full 365
+        
                 alphaearth_samples.append(z)
                 area_samples.append(j)
             
+            # --- FILER NAANS ---
             timesteps_to_keep = []
             for i in range(num_samples):
-                if not np.isnan(predictor_samples[i]).any():
+                if not np.isnan(p365_samples[i]).any():
                     timesteps_to_keep.append(i)
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            scaled_train_predictor_filtered = np.array(predictor_samples)
-            scaled_alphaearth_filtered = np.array(alphaearth_samples)
-            area_filtered = np.array(area_samples)
+            full_train_30d.append(np.array(p30_samples))
+            full_train_90d.append(np.array(p90_samples))
+            full_train_180d.append(np.array(p180_samples))
+            full_train_365d.append(np.array(p365_samples))
             
-            full_train_predictors.append(scaled_train_predictor_filtered)
-            full_alphaearth.append(scaled_alphaearth_filtered)
-            full_catchsize.append(area_filtered)
+            full_alphaearth.append(np.array(alphaearth_samples))
+            full_catchsize.append(np.array(area_samples))
             
-        self.predictors = np.concatenate(full_train_predictors, axis=0)
+        self.sim_30d = np.concatenate(full_train_30d, axis=0)
+        self.sim_90d = np.concatenate(full_train_90d, axis=0)
+        self.sim_180d = np.concatenate(full_train_180d, axis=0)
+        self.sim_365d = np.concatenate(full_train_365d, axis=0)
+        
         self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1) 
+        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
     
     def prepare_data_latlng(self, data_list):
         
@@ -563,12 +510,10 @@ class PredictStreamflow:
         area = catchment_arr[:, 0:1]      # shape (N, 1)
         alphaearth = catchment_arr[:, 1:] # shape (N, D)
      
-        full_train_predictors = []
+        full_train_30d, full_train_90d = [], []
+        full_train_180d, full_train_365d = [], []
         full_alphaearth = []
-        full_catchsize = []
-        
-        self.latlist = data_list[2]
-        self.lonlist = data_list[3] 
+        full_catchsize = [] 
                 
         
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
@@ -579,45 +524,55 @@ class PredictStreamflow:
         
         alphaearth = alphaearth.reshape(-1,64)
         scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
-        
-        with open(f'{self.working_dir}/models/mfd_wfa_scaler.pkl', 'rb') as file:
-            predictor_scaler = pickle.load(file)
 
+        self.catch_area_list = []
         for x, z, j in zip(predictors, scaled_alphaearth, area):
-            scaled_train_predictor = predictor_scaler.transform(x)
+            this_area = np.expm1(j)
+            self.catch_area_list.append(this_area)
+            scaled_train_predictor = np.log1p((x.values /this_area) + 0.001)
 
-            num_samples = scaled_train_predictor.shape[0] - self.timesteps
-            predictor_samples = []
+            num_samples = scaled_train_predictor.shape[0] - 365
+            p30_samples, p90_samples, p180_samples, p365_samples = [], [], [], []
             area_samples = []
             alphaearth_samples = []
 
-            self.catch_area = np.expm1(j)
+            #self.catch_area = np.expm1(j)
             
             for i in range(num_samples):
-                predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
-                predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
-
-                predictor_samples.append(predictor_batch)
+                full_window = scaled_train_predictor[i : i + 365, :]
+                
+                # --- MULTI-SCALE SLICING ---
+                # We slice from the END of the full_window so all branches share 'Day 365'
+                p30_samples.append(full_window[-30:, :])
+                p90_samples.append(full_window[-90:, :])
+                p180_samples.append(full_window[-180:, :])
+                p365_samples.append(full_window) # This is the full 365
+        
                 alphaearth_samples.append(z)
                 area_samples.append(j)
             
+            # --- FILER NAANS ---
             timesteps_to_keep = []
             for i in range(num_samples):
-                if not np.isnan(predictor_samples[i]).any():
+                if not np.isnan(p365_samples[i]).any():
                     timesteps_to_keep.append(i)
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            scaled_train_predictor_filtered = np.array(predictor_samples)
-            scaled_alphaearth_filtered = np.array(alphaearth_samples)
-            area_filtered = np.array(area_samples)
+            full_train_30d.append(np.array(p30_samples))
+            full_train_90d.append(np.array(p90_samples))
+            full_train_180d.append(np.array(p180_samples))
+            full_train_365d.append(np.array(p365_samples))
             
-            full_train_predictors.append(scaled_train_predictor_filtered)
-            full_alphaearth.append(scaled_alphaearth_filtered)
-            full_catchsize.append(area_filtered)
+            full_alphaearth.append(np.array(alphaearth_samples))
+            full_catchsize.append(np.array(area_samples))
             
-        self.predictors = np.concatenate(full_train_predictors, axis=0)
+        self.sim_30d = np.concatenate(full_train_30d, axis=0)
+        self.sim_90d = np.concatenate(full_train_90d, axis=0)
+        self.sim_180d = np.concatenate(full_train_180d, axis=0)
+        self.sim_365d = np.concatenate(full_train_365d, axis=0)
+        
         self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1) 
+        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
     
             
     def load_model(self, path):

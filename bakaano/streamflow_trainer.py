@@ -306,73 +306,9 @@ class DataPreprocessor:
             
         return self.data_list
 #=====================================================================================================================================                          
-class LogZScoreScaler:
-    """
-    Log(1+x) + Z-score scaler for hydrological variables.
-    Preserves NaNs (for masked loss).
-    """
-
-    def __init__(self, eps=1e-6, clip_min=0.0, clip_max=None):
-        self.eps = eps
-        self.clip_min = clip_min
-        self.clip_max = clip_max
-        self.mean_ = None
-        self.std_ = None
-        self.fitted_ = False
-
-    def fit(self, x):
-        x = np.asarray(x, dtype=np.float64)
-
-        mask = np.isfinite(x)
-        if mask.sum() == 0:
-            raise ValueError("No finite values to fit scaler.")
-
-        x_valid = x[mask]
-        x_valid = np.maximum(x_valid, self.clip_min)
-
-        if self.clip_max is not None:
-            x_valid = np.minimum(x_valid, self.clip_max)
-
-        x_log = np.log1p(x_valid)
-
-        self.mean_ = x_log.mean()
-        self.std_ = max(x_log.std(), self.eps)
-        self.fitted_ = True
-        return self
-
-    def transform(self, x):
-        if not self.fitted_:
-            raise RuntimeError("Scaler must be fitted first.")
-
-        x = np.asarray(x, dtype=np.float64)
-        x_scaled = np.full_like(x, np.nan)
-
-        mask = np.isfinite(x)
-        if mask.any():
-            x_valid = np.maximum(x[mask], self.clip_min)
-
-            if self.clip_max is not None:
-                x_valid = np.minimum(x_valid, self.clip_max)
-
-            x_log = np.log1p(x_valid)
-            x_scaled[mask] = (x_log - self.mean_) / self.std_
-
-        return x_scaled
-
-    def inverse_transform(self, x_scaled):
-        x = np.full_like(x_scaled, np.nan)
-        mask = np.isfinite(x_scaled)
-
-        if mask.any():
-            x_log = x_scaled[mask] * self.std_ + self.mean_
-            x[mask] = np.maximum(np.expm1(x_log), 0.0)
-
-        return x
-
-
 class StreamflowModel:
     
-    def __init__(self, working_dir, lookback, batch_size, num_epochs, train_start, train_end):
+    def __init__(self, working_dir, batch_size, num_epochs, train_start, train_end):
         """
         Initialize the StreamflowModel with project details.
 
@@ -407,13 +343,11 @@ class StreamflowModel:
         """
         self.regional_model = None
         self.train_data_list = []
-        self.timesteps = lookback
+        
         self.num_epochs = num_epochs
         self.batch_size = batch_size
         self.train_predictors = None
         self.train_response = None
-        self.num_dynamic_features = 1
-        self.num_static_features = 65
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
         self.train_start = train_start
@@ -451,7 +385,8 @@ class StreamflowModel:
             for df in train_predictors
         ]
                 
-        full_train_predictors = []
+        full_train_30d, full_train_90d = [], []
+        full_train_180d, full_train_365d = [], []
         full_train_response = []
         full_alphaearth = []
         full_catchsize = []
@@ -461,70 +396,71 @@ class StreamflowModel:
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'wb') as file:
             pickle.dump(alphaearth_scaler, file)
 
-        scaler2 = LogZScoreScaler()
-        preds = np.array(train_predictors).reshape(-1,1)
-        predictor_scaler = scaler2.fit(preds)
-
-        scaler3 = LogZScoreScaler()
-        resp = np.array(train_response).reshape(-1,1)
-        response_scaler = scaler3.fit(resp)
-
-        with open(f'{self.working_dir}/models/mfd_wfa_scaler.pkl', 'wb') as file:
-            pickle.dump(predictor_scaler, file)
-
-        with open(f'{self.working_dir}/models/response_scaler.pkl', 'wb') as file:
-            pickle.dump(response_scaler, file)
-
         for x, y,z,j in zip(train_predictors, train_response, alphaearth, area):
-            scaled_train_predictor = predictor_scaler.transform(x)
-            scaled_train_response = response_scaler.transform(y.values)
+            this_area = np.expm1(j)
+            scaled_train_predictor = np.log1p((x.values/this_area) + 0.001)
+            scaled_train_response = np.log1p((y.values * 86400 * 1000/this_area) + 0.001)
 
             z2 = z.reshape(-1,64)
             scaled_alphaearth = alphaearth_scaler.transform(z2)   
             
             # Calculate the 
-            num_samples = scaled_train_predictor.shape[0] - self.timesteps - 1
-            predictor_samples = []
+            num_samples = scaled_train_predictor.shape[0] - 365 - 1
+            
+            # Temporary lists for this specific basin
+            p30_samples, p90_samples, p180_samples, p365_samples = [], [], [], []
             response_samples = []
             area_samples = []
             alphaearth_samples = []
             
-            # Iterate over each batch
             for i in range(num_samples):
-                # Slice the numpy array using the rolling window
-                predictor_batch = scaled_train_predictor[i:i+self.timesteps, :]
-                predictor_batch = predictor_batch.reshape(self.timesteps, self.num_dynamic_features)
+                # Slice the 365-day MASTER window
+                full_window = scaled_train_predictor[i : i + 365, :]
                 
-                response_batch = scaled_train_response[i+self.timesteps]
-                response_batch = response_batch.reshape(1)
+                # --- MULTI-SCALE SLICING ---
+                # We slice from the END of the full_window so all branches share 'Day 365'
+                p30_samples.append(full_window[-30:, :])
+                p90_samples.append(full_window[-90:, :])
+                p180_samples.append(full_window[-180:, :])
+                p365_samples.append(full_window) # This is the full 365
                 
-                # Append the batch to the list
-                predictor_samples.append(predictor_batch)
+                # Target value is the day immediately following the window
+                response_batch = scaled_train_response[i + 365].reshape(1)
                 response_samples.append(response_batch)
-
+        
                 alphaearth_samples.append(scaled_alphaearth)
                 area_samples.append(j)
             
+            # --- FILER NAANS ---
             timesteps_to_keep = []
             for i in range(num_samples):
-                if not np.isnan(predictor_samples[i]).any() and not np.isnan(response_samples[i]).any():
+                # Checking the 365d window automatically validates the 30/90/180 subsets
+                if not np.isnan(p365_samples[i]).any() and not np.isnan(response_samples[i]).any():
                     timesteps_to_keep.append(i)
-
+        
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            scaled_train_predictor_filtered = np.array(predictor_samples)[timesteps_to_keep]
-            scaled_train_response_filtered = np.array(response_samples)[timesteps_to_keep]
-            scaled_alphaearth_filtered = np.array(alphaearth_samples)[timesteps_to_keep]
-            area_filtered = np.array(area_samples)[timesteps_to_keep]
-            
-            full_train_predictors.append(scaled_train_predictor_filtered)
-            full_train_response.append(scaled_train_response_filtered)
-            full_alphaearth.append(scaled_alphaearth_filtered)
-            full_catchsize.append(area_filtered)
-            
-        self.train_predictors = np.concatenate(full_train_predictors, axis=0)
+        
+            if len(timesteps_to_keep) > 0:
+                # Filter and append this basin's data to the global lists
+                full_train_30d.append(np.array(p30_samples)[timesteps_to_keep])
+                full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
+                full_train_180d.append(np.array(p180_samples)[timesteps_to_keep])
+                full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
+                
+                full_train_response.append(np.array(response_samples)[timesteps_to_keep])
+                full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
+                full_catchsize.append(np.array(area_samples)[timesteps_to_keep])
+        
+        # --- FINAL CONCATENATION ---
+        # These are the variables your model.fit() will use
+        self.train_30d = np.concatenate(full_train_30d, axis=0)
+        self.train_90d = np.concatenate(full_train_90d, axis=0)
+        self.train_180d = np.concatenate(full_train_180d, axis=0)
+        self.train_365d = np.concatenate(full_train_365d, axis=0)
+        
         self.train_response = np.concatenate(full_train_response, axis=0)
         self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.train_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)  
+        self.train_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
     
 
     def build_model(self):
@@ -540,60 +476,91 @@ class StreamflowModel:
         """
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
-            global_input = Input(shape=(self.timesteps, self.num_dynamic_features), name='global_input')
-            alphaearth_input = Input(shape=(64,), name="alphaearth")
-            area_input       = Input(shape=(1,), name="catchment_area")
     
-            tcn_output = TCN(nb_filters = 64, kernel_size=3, dilations=(1,2,4,8,16,32, 64),
-                             return_sequences=False)(global_input)
-            tcn_output = BatchNormalization()(tcn_output)
-            tcn_output = Dropout(0.4)(tcn_output)
-
-        
-            # --- Enhanced FiLM Conditioning ---
-            def film_layer(alphaearth, feature_dim, hidden_dim=64, gamma_scale=0.1):
-                x = Dense(hidden_dim, activation="relu")(alphaearth)
-                x = Dense(hidden_dim, activation="relu")(x)
-            
-                gamma_raw = Dense(feature_dim)(x)
-                beta      = Dense(feature_dim)(x)
-            
-                gamma = 1.0 + gamma_scale * gamma_raw
+            # --------------------------------------------------
+            # 1. Temporal inputs
+            # --------------------------------------------------
+            input_30d  = Input((30,  self.num_dynamic_features), name="input_30d")
+            input_90d  = Input((90,  self.num_dynamic_features), name="input_90d")
+            input_180d = Input((180, self.num_dynamic_features), name="input_180d")
+            input_365d = Input((365, self.num_dynamic_features), name="input_365d")
+    
+            alphaearth_input = Input((64,), name="alphaearth")
+            area_input       = Input((1,),  name="catchment_area")  # log(area)
+    
+            # --------------------------------------------------
+            # 2. Multi-timescale TCNs
+            # --------------------------------------------------
+            def tcn_block(x, filters, kernel, dilations, name):
+                x = TCN(
+                    nb_filters=filters,
+                    kernel_size=kernel,
+                    dilations=dilations,
+                    return_sequences=False,
+                    name=name
+                )(x)
+                return BatchNormalization()(x)
+    
+            t30  = tcn_block(input_30d,  32, 3, (1,2,4,8),        "tcn_30")
+            t90  = tcn_block(input_90d,  32, 3, (1,2,4,8,16),     "tcn_90")
+            t180 = tcn_block(input_180d, 32, 5, (1,2,4,8,16),     "tcn_180")
+            t365 = tcn_block(input_365d, 64, 7, (1,2,4,8,16),     "tcn_365")
+    
+            merged_temporal = Concatenate()([t30, t90, t180, t365])
+            merged_temporal = BatchNormalization()(merged_temporal)
+            merged_temporal = Dropout(0.4)(merged_temporal)
+    
+            temporal_dim = 160
+    
+            # --------------------------------------------------
+            # 3. AlphaEarth encoder (NEW)
+            # --------------------------------------------------
+            alpha_latent = Dense(64, activation="relu")(alphaearth_input)
+            alpha_latent = BatchNormalization()(alpha_latent)
+    
+            # --------------------------------------------------
+            # 4. FiLM conditioning (single, controlled)
+            # --------------------------------------------------
+            def film(alpha, dim, gamma_scale=0.1):
+                x = Dense(64, activation="relu")(alpha)
+                x = Dense(64, activation="relu")(x)
+                gamma = Dense(dim)(x)
+                beta  = Dense(dim)(x)
+                gamma = 1.0 + gamma_scale * gamma
                 return gamma, beta
-        
-            # Apply FiLM at multiple levels
-            gamma, beta = film_layer(alphaearth_input, feature_dim=64)
-            tcn_mod = Multiply()([tcn_output, gamma])
-            tcn_mod = Add()([tcn_mod, beta])
-
+    
+            gamma, beta = film(alpha_latent, temporal_dim)
+            h = gamma * merged_temporal + beta
+    
             # --------------------------------------------------
-            # Prediction head (dynamic only)
+            # 5. Base predictor (shape)
             # --------------------------------------------------
-            y_base = Dense(64, activation="relu")(tcn_mod)
-            y_base = Dense(32, activation="relu")(y_base)
-            y_base = Dense(1, activation=None)(y_base)
-
+            h = Dense(64, activation="relu")(h)
+            h = Dense(32, activation="relu")(h)
+            y_base = Dense(1, activation=None)(h)
+    
             # --------------------------------------------------
-            # Catchment size → scale correction
+            # 6. Amplitude scaling (area only)
             # --------------------------------------------------
-            
             scale = Dense(1, activation=None)(area_input)
             scale = Activation("exponential")(scale)
     
             y_hat = Multiply()([y_base, scale])
-
+    
             # --------------------------------------------------
-            # Output & loss
+            # 7. Model
             # --------------------------------------------------
-            
-            output = y_hat
             model = Model(
-                inputs=[global_input, alphaearth_input, area_input],
-                outputs=output
+                inputs=[
+                    input_30d, input_90d, input_180d, input_365d,
+                    alphaearth_input, area_input
+                ],
+                outputs=y_hat
             )
+    
             model.compile(
                 optimizer="adam",
-                loss='huber'
+                loss="msle"
             )
     
             self.regional_model = model
@@ -616,7 +583,8 @@ class StreamflowModel:
         checkpoint_callback = ModelCheckpoint(filepath=f'{self.working_dir}/models/bakaano_model.keras', 
                                               save_best_only=True, monitor='loss', mode='min')
 
-        self.regional_model.fit(x=[self.train_predictors, self.train_alphaearth, self.train_catchsize], y=self.train_response, 
+        self.regional_model.fit(x=[self.train_30d, self.train_90d, self.train_180d, self.train_365d, self.train_alphaearth, 
+                                   self.train_catchsize], y=self.train_response, 
                                 batch_size=self.batch_size, epochs=self.num_epochs, verbose=2, callbacks=[checkpoint_callback])
         
     def load_regional_model(self, path):
