@@ -364,7 +364,7 @@ bk.simulate_streamflow(
 
 If you use Bakaano-Hydro in academic work, please cite:
 
-DDuku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
+Duku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
 
 See CITATION.cff.
 
