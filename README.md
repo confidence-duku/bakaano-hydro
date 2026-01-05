@@ -331,16 +331,6 @@ bk.evaluate_streamflow_model_interactively(
     grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
 )
 ```
-    Available station names:
-    ['AKKA' 'ALCONGUI' 'ANSONGO' ...]
-    INFO:tensorflow:Using MirroredStrategy with devices ('/job:localhost/replica:0/task:0/device:CPU:0',)
-
-
-    [1m80/80[0m [32m━━━━━━━━━━━━━━━━━━━━[0m[37m[0m [1m6s[0m 65ms/step
-    Nash-Sutcliffe Efficiency (NSE): 0.7122612622507017
-    Kling-Gupta Efficiency (KGE): 0.7443427177596089
-
-
 
     
 ![png](quick_start_files/quick_start_17_5.png)
@@ -364,7 +354,7 @@ bk.simulate_streamflow(
 
 If you use Bakaano-Hydro in academic work, please cite:
 
-DDuku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
+Duku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
 
 See CITATION.cff.
 
