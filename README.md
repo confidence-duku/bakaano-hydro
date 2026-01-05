@@ -25,7 +25,7 @@ Vegetation, soil, and meteorological drivers are used to compute grid-cell runof
 Runoff is routed through the river network using flow-direction-based routing (e.g. MFD/WFA), preserving spatial connectivity.
 
 **3. Neural network**
-A Temporal Convolutional Network (TCN), conditioned on static catchment descriptors, learns residual dynamics and improves generalization across basins.
+A Temporal Convolutional Network (TCN), conditioned on static catchment descriptors, learns hydrological dynamics from physically routed runoff, enabling robust generalization across diverse basins.
 
 The neural network augments hydrology—it does not replace it.
 
@@ -65,15 +65,6 @@ graph TD
     F --> G[6. Apply trained model for analysis or scenarios]
     G --> H[End]
 
-    subgraph Data Sources
-        B1[Shapefile of Study Area]
-        B2[GRDC Daily Streamflow Data (https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Stations)]
-        B3[Google Earth Engine Data Registration at https://earthengine.google.com/signup/]
-    end
-
-    B1 --> B
-    B2 --> B
-    B3 --> B
 ```
 The Quick start section below follows this workflow step-by-step.
 Each code block corresponds directly to a numbered node in the diagram.
@@ -83,55 +74,57 @@ Each code block corresponds directly to a numbered node in the diagram.
 
 After running Bakaano-Hydro, the working directory follows this structure:
 
+```text
 working_dir/
-├── alpha_earth/                 # AlphaEarth satellite embeddings (A00–A63)
+├── alpha_earth/                     # AlphaEarth satellite embeddings (A00–A63)
 │   ├── A00.tif
 │   ├── ...
 │   └── A63.tif
 │
-├── catchment/                   # Catchment-level static descriptors
+├── catchment/                       # Catchment-level static descriptors
 │   └── river_grid.tif
-│   
-├── elevation/                   # DEM and derived topographic layers
+│
+├── elevation/                       # DEM and derived topographic layers
 │   ├── dem_clipped.tif
 │   ├── hyd_glo_dem_30s.tif
 │   └── hyd_glo_dem_30s.zip
 │
-├── ERA5/                        # ERA5-Land meteorological forcing (processed)
+├── ERA5/                            # ERA5-Land meteorological forcing (processed)
 │   ├── precip.nc
 │   ├── tasmin.nc
 │   ├── tasmax.nc
 │   └── tmean.nc
 │
-├── era5_scratch/                # Temporary ERA5 download & reprojection files
+├── era5_scratch/                    # Temporary ERA5 download & reprojection files
 │   └── *.tmp
 │
-├── models/                      # Trained Bakaano-Hydro models and saved alpha_earth scaler
+├── models/                          # Trained Bakaano-Hydro models & scalers
 │   ├── bakaano_model.keras
 │   └── alpha_earth_scaler.pkl
 │
-├── ndvi/                        # MODIS NDVI products
+├── ndvi/                            # MODIS NDVI products
 │   └── daily_ndvi_climatology.pkl
 │
-├── predicted_streamflow_data/   # Model simulation outputs
-│   ├── streamflow_lat*_lon*.csv
+├── predicted_streamflow_data/       # Model simulation outputs
+│   ├── streamflow_lat_lon*.csv
 │   └── metadata.json
 │
-├── runoff_output/               # Distributed runoff & routed flow tensors
-│   ├── wacc_sparse_arrays.pkl
+├── runoff_output/                   # Distributed runoff & routed flow tensors
+│   └── wacc_sparse_arrays.pkl
 │
-├── scratch/                     # Temporary working files (safe to delete)
+├── scratch/                         # Temporary working files (safe to delete)
 │   └── *.tmp
 │
-├── soil/                        # Soil hydraulic properties
+├── soil/                            # Soil hydraulic properties
 │   ├── wilting_point.tif
 │   ├── saturation_point.tif
 │   └── available_water_content.tif
 │
-└── vcf/                         # Vegetation cover fractions
+└── vcf/                             # Vegetation cover fractions
     ├── mean_tree_cover.tif
     ├── mean_herb_cover.tif
     └── vegetation_metadata.json
+```
 
 ## Quick start: runnable walkthrough (↔ workflow steps)
 
@@ -350,7 +343,7 @@ bk.evaluate_streamflow_model_interactively(
 
 
     
-![png](quick_start_files/quick_start_17_4.png)
+![png](quick_start_files/quick_start_17_5.png)
     
 
 
