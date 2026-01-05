@@ -4,7 +4,7 @@
 
 # Bakaano-Hydro
 
-## Description
+## Overview
 
 Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction. It uniquely integrates physically based hydrological principles with the generalization capacity of machine learning in a spatially explicit and physically meaningful way. This makes it particularly valuable in data-scarce regions, where traditional hydrological models often struggle due to sparse observations and calibration limitations, and where current state-of-the-art data-driven models are constrained by lumped modeling approaches that overlook spatial heterogeneity and the inability to capture hydrological connectivity. 
 
@@ -14,88 +14,137 @@ The name Bakaano comes from Fante, a language spoken along the southern coast of
 
 ![image](https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf)
 
-# Key Workflows
-## Installation
-Bakaano-Hydro is built on TensorFlow and is designed to leverage GPU acceleration for training. This requires a system with an NVIDIA GPU installed or bundled CUDA and cuDNN runtime libraries.
-GPU acceleration is strongly recommended for training deep learning components and running large-scale simulations, as it significantly improves speed and scalability.
+## Conceptual model
 
-Note: Training on CPU is supported but will be significantly slower, especially on large datasets or deep learning tasks.
-- For GPU acceleration:
-  ```bash
+Bakaano-Hydro consists of three tightly coupled components:
+
+**1. Distributed runoff generation**
+Vegetation, soil, and meteorological drivers are used to compute grid-cell runoff using a VegET-based approach.
+
+**2. Physically informed routing**
+Runoff is routed through the river network using flow-direction-based routing (e.g. MFD/WFA), preserving spatial connectivity.
+
+**3. Neural network**
+A Temporal Convolutional Network (TCN), conditioned on static catchment descriptors, learns residual dynamics and improves generalization across basins.
+
+The neural network augments hydrology—it does not replace it.
+
+## Installation
+
+Bakaano-Hydro is built on TensorFlow and supports both CPU and GPU execution.
+
+**GPU (recommended)**
+```bash
   pip install bakaano-hydro[gpu]
   ```
-  This will automatically install the correct version of TensorFlow along with CUDA and cuDNN runtime libraries
+This installs TensorFlow with compatible CUDA and cuDNN runtime libraries as well as supported versions of dependent libraries 
 
-- For CPU-only usage:
-  ```bash
+CPU-only
+```bash
   pip install bakaano-hydro
   ```
+⚠️ CPU training is supported but can be slow for large basins or long time series.
+
 
 ## Data Requirements
 
 1. **Shapefile**: Defines the study area or river basin.
-2. **Observed Streamflow Data**: NetCDF format from the Global Runoff Data Center.
-3. **Google Earth Engine Registration**: Required for retrieving NDVI, tree cover, and meteorological data.
-
-## Project-Specific Conventions
-
-- **Data Sources**: The model relies on open-source data, including GRDC for streamflow and Google Earth Engine for tree cover, NDVI, Alpha Earth satellite embeddings, and meteorological variables.
-- **End-to-End Automation**: The `runner.py` script automates the entire workflow, from data ingestion to streamflow prediction.
-- **Modularity**: Each component is designed to be replaceable, allowing for easy adaptation to other datasets or modeling approaches.
+2. **Observed Streamflow Data**: NetCDF format from the Global Runoff Data Center (https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Stations)
+3. **Google Earth Engine Registration**: Required for retrieving NDVI, tree cover, and meteorological data (https://earthengine.google.com/signup/).
 
 
-## Workflow Diagram
-
-Below is an updated workflow diagram illustrating the steps in the `quick_start.ipynb` notebook:
+## End-to-end workflow (mapped to code)
 
 ```mermaid
 graph TD
-    A[Start] --> B[Download and Preprocess Input Data]
-    B --> C[Visualize Downloaded Input Data]
-    C --> D[Compute Runoff and Route Flow to River Network]
-    D --> E[Visualize Routed Runoff]
-    E --> F[Explore Data Interactively]
-    F --> G[Train Bakaano-Hydro Model]
-    G --> H[Evaluate Trained Model]
-    H --> I[Simulate Streamflow]
-    I --> J[End]
+    A[Start] --> B[1. Download, preprocess & visualize input data]
+    B --> C[2. Compute runoff, route flow to river network & visualize routed runoff series]
+    C --> D[3. Explore observed streamflow data from GRDC]
+    D --> E[4. Train Bakaano-Hydro model]
+    E --> F[5. Evaluate trained model]
+    F --> G[6. Apply trained model for analysis or scenarios]
+    G --> H[End]
 
     subgraph Data Sources
         B1[Shapefile of Study Area]
-        B2[GRDC Daily Streamflow Data]
-        B3[Google Earth Engine Data]
+        B2[GRDC Daily Streamflow Data (https://portal.grdc.bafg.de/applications/public.html?publicuser=PublicUser#dataDownload/Stations)]
+        B3[Google Earth Engine Data Registration at https://earthengine.google.com/signup/]
     end
 
     B1 --> B
     B2 --> B
     B3 --> B
 ```
-
-## Authors and acknowledgment
-
-See CITATION.cff file.
-
-Bakaano-Hydro was developed as part of Wageningen University & Research Investment theme 'Data-driven discoveries in a changing climate' and also as part of the KB program 'Climate resilient land use'.
-
-## License
-
-Apache License
-
-## Quick demo
-#####   1. Getting and preprocessing input data
-
-If you have previously executed this step and downloaded all input data you can skip this step and proceed directly to step 2. However, if you are not sure, run step 1 and the model will either confirm that a specific data has aready been downloaded and subsequently viualize it or it will proceeed to download the data if it is not available or prior download was incomplete.
+The Quick start section below follows this workflow step-by-step.
+Each code block corresponds directly to a numbered node in the diagram.
 
 
+## Project directory structure
+
+After running Bakaano-Hydro, the working directory follows this structure:
+
+working_dir/
+├── alpha_earth/                 # AlphaEarth satellite embeddings (A00–A63)
+│   ├── A00.tif
+│   ├── ...
+│   └── A63.tif
+│
+├── catchment/                   # Catchment-level static descriptors
+│   └── river_grid.tif
+│   
+├── elevation/                   # DEM and derived topographic layers
+│   ├── dem_clipped.tif
+│   ├── hyd_glo_dem_30s.tif
+│   └── hyd_glo_dem_30s.zip
+│
+├── ERA5/                        # ERA5-Land meteorological forcing (processed)
+│   ├── precip.nc
+│   ├── tasmin.nc
+│   ├── tasmax.nc
+│   └── tmean.nc
+│
+├── era5_scratch/                # Temporary ERA5 download & reprojection files
+│   └── *.tmp
+│
+├── models/                      # Trained Bakaano-Hydro models and saved alpha_earth scaler
+│   ├── bakaano_model.keras
+│   └── alpha_earth_scaler.pkl
+│
+├── ndvi/                        # MODIS NDVI products
+│   └── daily_ndvi_climatology.pkl
+│
+├── predicted_streamflow_data/   # Model simulation outputs
+│   ├── streamflow_lat*_lon*.csv
+│   └── metadata.json
+│
+├── runoff_output/               # Distributed runoff & routed flow tensors
+│   ├── wacc_sparse_arrays.pkl
+│
+├── scratch/                     # Temporary working files (safe to delete)
+│   └── *.tmp
+│
+├── soil/                        # Soil hydraulic properties
+│   ├── wilting_point.tif
+│   ├── saturation_point.tif
+│   └── available_water_content.tif
+│
+└── vcf/                         # Vegetation cover fractions
+    ├── mean_tree_cover.tif
+    ├── mean_herb_cover.tif
+    └── vegetation_metadata.json
+
+## Quick start: runnable walkthrough (↔ workflow steps)
+
+### Step 1 – Download & preprocess input data
+(Workflow node 1)
 
 ```python
 working_dir='/lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger'
 study_area='/home/WUR/duku002/Scripts/NBAT/hydro/common_data/niger.shp'
 ```
 
-
+**Tree cover**
 ```python
-
 from bakaano.tree_cover import TreeCover
 vf = TreeCover(
     working_dir=working_dir, 
@@ -106,20 +155,13 @@ vf = TreeCover(
 vf.get_tree_cover_data()
 vf.plot_tree_cover(variable='tree_cover') # options for plot are 'tree_cover' and 'herb_cover'
 ```
-
-         - Tree cover data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/vcf/mean_tree_cover.tif; skipping download.
-         - Tree cover data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/vcf/mean_tree_cover.tif; skipping preprocessing.
-
-
     
 ![png](quick_start_files/quick_start_3_1.png)
     
 
-
+**NDVI**
 
 ```python
-# download and preprocess MODIS NDVI data from Google Earth Engine Data catalog
-
 from bakaano.ndvi import NDVI
 nd = NDVI(
     working_dir=working_dir, 
@@ -131,22 +173,14 @@ nd.get_ndvi_data()
 nd.plot_ndvi(interval_num=10)  # because NDVI is in 16-day interval the 'interval_num' represents a 16-day period. 
                                #Hence 0 is the first 16 day period
 ```
-
-
-         - NDVI data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/ndvi/daily_ndvi_climatology.pkl; skipping download.
-         - NDVI data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/ndvi/daily_ndvi_climatology.pkl; skipping preprocessing.
-
-
-
     
 ![png](quick_start_files/quick_start_4_2.png)
     
 
 
+**DEM**
 
 ```python
-# Get elevation data
-
 from bakaano.dem import DEM
 dd = DEM(
     working_dir=working_dir, 
@@ -158,20 +192,13 @@ dd.get_dem_data()
 dd.plot_dem()
 ```
 
-
-         - DEM data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/elevation; skipping download.
-
-
-
     
 ![png](quick_start_files/quick_start_5_2.png)
     
 
-
+**Soil**
 
 ```python
-# Get soil data
-
 from bakaano.soil import Soil
 sgd = Soil(
     working_dir=working_dir, 
@@ -180,21 +207,13 @@ sgd = Soil(
 sgd.get_soil_data()
 sgd.plot_soil(variable='wilting_point')  #options are 'wilting_point', 'saturation_point' and 'available_water_content'
 ```
-
-
-         - Soil data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/soil; skipping download.
-
-
-
     
 ![png](quick_start_files/quick_start_6_2.png)
     
 
-
+**Alpha Earth Embeddings**
 
 ```python
-#  Get alpha earth satellite embedding dataset
-
 from bakaano.alpha_earth import AlphaEarth
 dd = AlphaEarth(
     working_dir=working_dir, 
@@ -206,21 +225,14 @@ dd.get_alpha_earth()
 dd.plot_alpha_earth('A35') #Band options are A00 to A63
 ```
 
-
-
-    ✓ All 64 AlphaEarth bands already downloaded. Skipping.
-
-
-
     
 ![png](quick_start_files/quick_start_7_2.png)
     
 
 
+**Meteorological forcings**
 
 ```python
-#get meteo
-
 from bakaano.meteo import Meteo
 cd = Meteo(
     working_dir=working_dir, 
@@ -233,21 +245,16 @@ cd = Meteo(
 cd.plot_meteo(variable='tasmin', date='2006-12-01') # variable options are 'tmean', 'precip', 'tasmax', 'tasmin'
 ```
 
-
-         - ERA5 Land daily data already exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/era5_land; skipping download.
-
-
-
     
 ![png](quick_start_files/quick_start_8_2.png)
     
 
 
-#####   2. Computing runoff and routing to river network
+### Step 2 – Compute runoff, route to river network & visualize output
 
+(Workflow node 2)
 
 ```python
-
 from bakaano.veget import VegET
 vg = VegET(
     working_dir=working_dir, 
@@ -261,13 +268,7 @@ vg.compute_veget_runoff_route_flow()
 ```
 
 
-    Routed runoff data exists in /lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger/runoff_output/wacc_sparse_arrays.pkl. Skipping processing
-
-
-
 ```python
-#visualize routed runoff data
-
 from bakaano.plot_runoff import RoutedRunoff
 rr = RoutedRunoff(
     working_dir=working_dir, 
@@ -279,9 +280,12 @@ rr.map_routed_runoff(date='2020-09-03', vmax=6) #output values have been log tra
     
 ![png](quick_start_files/quick_start_11_1.png)
     
+This step computes grid-cell runoff and routes it through the river network using a multi-flow direction routing scheme.
 
 
-#####   3. Explore input data, river networks and hydrological stations interactively
+### Step 3 – Interactive exploration of GRDC data (optional but recommended)
+
+(Workflow node 3)
 
 
 ```python
@@ -293,15 +297,15 @@ bk = BakaanoHydro(
 )
 bk.explore_data_interactively('1981-01-01', '2016-12-31', '/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc')
 ```
+Use this to inspect station coverage before training.
 
 
+### Step 4 – Train an instance of Bakaano-Hydro model
 
-#####   4. Training, Evaluating and Applying Bakaano-Hydro model 
+(Workflow node 4)
 
 
 ```python
-# INITIALIZE INSTANCE OF BAKAANO-HYDRO MODEL
-
 from bakaano.runner import BakaanoHydro
 bk = BakaanoHydro(  
     working_dir=working_dir, 
@@ -312,25 +316,19 @@ bk = BakaanoHydro(
 
 
 ```python
-# TRAINING BAKAANO-HYDRO MODEL
-
-# The model is trained using the GRDC streamflow data.
-
 bk.train_streamflow_model(
     train_start='1991-01-01', 
     train_end='2020-12-31', 
     grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
-    lookback=365, 
     batch_size=1024, 
     num_epochs=100
 )
 ```
+### Step 5 – Evaluate and apply the model
 
+(Workflow node 5)
 
 ```python
-# EVALUATING THE TRAINED MODEL INTERACTIVELY
-
-# The model is evaluated using the GRDC streamflow data.
 model_path = f'{working_dir}/models/bakaano_model.keras' 
 
 bk.evaluate_streamflow_model_interactively(
@@ -338,7 +336,6 @@ bk.evaluate_streamflow_model_interactively(
     val_start='1981-01-01', 
     val_end='1988-12-31', 
     grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
-    lookback=365
 )
 ```
     Available station names:
@@ -359,9 +356,6 @@ bk.evaluate_streamflow_model_interactively(
 
 
 ```python
-# PREDICTING STREAMFLOW USING THE TRAINED MODEL AND STORING AS CSV FILES 
-# The model is used to predict streamflow in any location in the study area. 
-
 model_path = f'{working_dir}/models/bakaano_model.keras'
 
 bk.simulate_streamflow(
@@ -370,9 +364,24 @@ bk.simulate_streamflow(
     sim_end='1988-12-31', 
     latlist=[13.8, 13.9, 9.15, 8.75, 10.66, 9.32, 7.8, 8.76, 6.17],
     lonlist=[3.0, 4.0, 4.77, 5.91, 4.69, 4.63, 8.91, 10.82, 6.77],
-    lookback=365
 )
 
 ```
+## How to cite
 
+If you use Bakaano-Hydro in academic work, please cite:
+
+DDuku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
+
+See CITATION.cff.
+
+## Authors and acknowledgment
+
+See CITATION.cff file.
+
+Bakaano-Hydro was developed as part of Wageningen University & Research Investment theme 'Data-Driven Discoveries in a Changing Climate' and also as part of the KB program 'Climate Resilient Land Use'.
+
+## License
+
+Apache License
 

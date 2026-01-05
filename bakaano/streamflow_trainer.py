@@ -289,6 +289,7 @@ class DataPreprocessor:
             predictors = wfa_data.copy()
             predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
             response = station_discharge.drop(['id'], axis=1)
+            this_id = tuple([k])
 
             log_acc = np.log1p(acc_data)
             catch_list = [log_acc] + alpha_earth_stations
@@ -296,7 +297,7 @@ class DataPreprocessor:
             predictors2 = predictors
             catch_tup = tuple(catch_list)
             self.catchment.append(catch_tup)
-            self.data_list.append((predictors2, response, catch_tup))
+            self.data_list.append((predictors2, response, catch_tup, this_id))
             
             count = count + 1
 
@@ -480,10 +481,10 @@ class StreamflowModel:
             # --------------------------------------------------
             # 1. Temporal inputs
             # --------------------------------------------------
-            input_30d  = Input((30,  self.num_dynamic_features), name="input_30d")
-            input_90d  = Input((90,  self.num_dynamic_features), name="input_90d")
-            input_180d = Input((180, self.num_dynamic_features), name="input_180d")
-            input_365d = Input((365, self.num_dynamic_features), name="input_365d")
+            input_30d  = Input((30,  1), name="input_30d")
+            input_90d  = Input((90,  1), name="input_90d")
+            input_180d = Input((180, 1), name="input_180d")
+            input_365d = Input((365, 1), name="input_365d")
     
             alphaearth_input = Input((64,), name="alphaearth")
             area_input       = Input((1,),  name="catchment_area")  # log(area)

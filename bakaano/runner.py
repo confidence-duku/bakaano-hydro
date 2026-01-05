@@ -75,7 +75,7 @@ class BakaanoHydro:
         """Train the deep learning streamflow prediction model."
         """
 
-        rawdata = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')[0]
+        rawdata = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')
     
         print('\nTRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
         
@@ -85,8 +85,8 @@ class BakaanoHydro:
         print(' 1. Loading observed streamflow')
         sdp.load_observed_streamflow(grdc_netcdf)
         print(' 2. Loading runoff data and other predictors')
-        if os.path.exists(rawdata):
-            with open(rawdata, "rb") as f:
+        if len(rawdata) > 0:
+            with open(rawdata[0], "rb") as f:
                 self.rawdata = pickle.load(f)
         else:
             self.rawdata = sdp.get_data()
