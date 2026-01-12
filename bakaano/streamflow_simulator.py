@@ -444,8 +444,10 @@ class PredictStreamflow:
         alphaearth = alphaearth.reshape(-1,64)
         scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
 
+        self.catch_area_list = []
         for x, z, j in zip(predictors, scaled_alphaearth, area):
             this_area = np.expm1(j)
+            self.catch_area_list.append(this_area)
             scaled_train_predictor = np.log1p((x.values /this_area) + 0.001)
 
             num_samples = scaled_train_predictor.shape[0] - 365
