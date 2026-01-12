@@ -185,6 +185,52 @@ class BakaanoHydro:
             df.to_csv(output_path, index=False)
         out_folder = os.path.join(self.working_dir, 'predicted_streamflow_data')
         print(f' COMPLETED! csv files available at {out_folder}')
+
+#==============================================================================================================================
+    def simulate_grdc_stations(self, model_path, sim_start, sim_end, grdc_netcdf, routing_method='mfd'):
+        """Simulate streamflow in batch mode using the trained model."
+        """
+        print(' 1. Loading runoff data and other predictors')
+        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, sim_start, sim_end, routing_method, grdc_netcdf)
+    
+        self.stat_names = vdp.sim_station_names
+        print("Available station names:")
+        print(self.stat_names)
+
+        rawdata = vdp.get_data()
+
+        self.vmodel = PredictStreamflow(self.working_dir)
+        self.vmodel.prepare_data(rawdata)
+        batch_size = len(vdp.station_ids)
+        self.vmodel.load_model(model_path)
+        print(' 2. Batch prediction')
+        predicted_streamflows = self.vmodel.model.predict([self.vmodel.sim_30d, self.vmodel.sim_90d, self.vmodel.sim_180d, self.vmodel.sim_365d,
+                                                          self.vmodel.sim_alphaearth, self.vmodel.sim_catchsize], batch_size=batch_size)
+
+        seq = int(len(predicted_streamflows)/batch_size)
+        predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
+
+        predicted_streamflow_list = []
+        for predicted_streamflow, catch_area in zip(predicted_streamflows, self.vmodel.catch_area_list):
+            predicted_streamflow = (np.expm1(predicted_streamflow) * catch_area) / (86400 * 1000)
+            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+            
+            predicted_streamflow_list.append(predicted_streamflow)
+        print(' 3. Generating csv file for each coordinate')
+        for predicted_streamflow, snames, sids in zip(predicted_streamflow_list, vdp.sim_station_names, vdp.station_ids):
+            predicted_streamflow = predicted_streamflow.reshape(-1)
+
+            adjusted_start_date = pd.to_datetime(sim_start) + pd.DateOffset(days=365)
+            period = pd.date_range(adjusted_start_date, periods=len(predicted_streamflow), freq='D')  # Match time length with mu
+            df = pd.DataFrame({
+                'time': period,  # Adjusted time column
+                'streamflow (m3/s)': predicted_streamflow
+            })
+            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/predicted_streamflow_{snames}_lon{sids}.csv")
+            df.to_csv(output_path, index=False)
+        out_folder = os.path.join(self.working_dir, 'predicted_streamflow_data')
+        print(f' COMPLETED! csv files available at {out_folder}')
+
 #========================================================================================================================  
             
     def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, val_start):

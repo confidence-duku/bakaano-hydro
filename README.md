@@ -53,22 +53,6 @@ CPU-only
 3. **Google Earth Engine Registration**: Required for retrieving NDVI, tree cover, and meteorological data (https://earthengine.google.com/signup/).
 
 
-## End-to-end workflow (mapped to code)
-
-```mermaid
-graph TD
-    A[Start] --> B[1. Download, preprocess & visualize input data]
-    B --> C[2. Compute runoff, route flow to river network & visualize routed runoff series]
-    C --> D[3. Explore observed streamflow data from GRDC]
-    D --> E[4. Train Bakaano-Hydro model]
-    E --> F[5. Evaluate trained model]
-    F --> G[6. Apply trained model for analysis or scenarios]
-    G --> H[End]
-
-```
-The Quick start section below follows this workflow step-by-step.
-Each code block corresponds directly to a numbered node in the diagram.
-
 
 ## Project directory structure
 
@@ -129,7 +113,6 @@ working_dir/
 ## Quick start: runnable walkthrough (↔ workflow steps)
 
 ### Step 1 – Download & preprocess input data
-(Workflow node 1)
 
 ```python
 working_dir='/lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger'
@@ -245,8 +228,6 @@ cd.plot_meteo(variable='tasmin', date='2006-12-01') # variable options are 'tmea
 
 ### Step 2 – Compute runoff, route to river network & visualize output
 
-(Workflow node 2)
-
 ```python
 from bakaano.veget import VegET
 vg = VegET(
@@ -277,8 +258,6 @@ This step computes grid-cell runoff and routes it through the river network usin
 
 
 ### Step 3 – Interactive exploration of GRDC data (optional but recommended)
-
-(Workflow node 3)
 
 
 ```python
@@ -318,8 +297,6 @@ bk.train_streamflow_model(
 )
 ```
 ### Step 5 – Evaluate and apply the model
-
-(Workflow node 5)
 
 ```python
 model_path = f'{working_dir}/models/bakaano_model.keras' 
@@ -362,7 +339,7 @@ See CITATION.cff.
 
 See CITATION.cff file.
 
-Bakaano-Hydro was developed as part of Wageningen University & Research Investment theme 'Data-Driven Discoveries in a Changing Climate' and also as part of the KB program 'Climate Resilient Land Use'.
+Bakaano-Hydro was developed at Wageningen Environmental Research with funding from the Netherlands Ministry of Agriculture, Fisheries, Food Security and Nature (LVVN). This work is part of the Knowledge Base (KB) programme **Climate Resilient Water and Land Use**, within the project **Compound and Cascading Climate Risks and Social Tipping Points**, and builds directly on earlier research conducted under the programme **Data-Driven Discoveries in a Changing Climate**.
 
 ## License
 
