@@ -1,4 +1,4 @@
-cff-version: 1.2.0
+cff-version: 2.0
 title: Bakaano-Hydro: A distributed hydrology-guided deep learning model for streamflow prediction
 message: >-
   If you use this software, please cite it using the
@@ -17,4 +17,4 @@ abstract: >-
   A distributed hydrology-guided neural network model for streamflow simulation
 keywords:
   - Simulation
-version: "1.0"
+version: "2.0"

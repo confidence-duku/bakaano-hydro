@@ -32,6 +32,11 @@ The neural network augments hydrology—it does not replace it.
 ## Installation
 
 Bakaano-Hydro is built on TensorFlow and supports both CPU and GPU execution.
+Create new environment
+```bash
+  conda create --name bakaano_env python=3.10
+  conda activate bakaano_env
+  ```
 
 **GPU (recommended)**
 ```bash
@@ -331,13 +336,13 @@ bk.simulate_streamflow(
 
 If you use Bakaano-Hydro in academic work, please cite:
 
-Duku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
+- Duku, C.: Bakaano-Hydro (v1.1). A distributed hydrology-guided deep learning model for streamflow prediction, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-1633, 2025.
+
+- Duku, C.: Enhancing flood forecasting reliability in data-scarce regions with a distributed hydrology-guided neural network framework, EGUsphere [preprint], https://doi.org/10.5194/egusphere-2025-2294, 2025.
 
 See CITATION.cff.
 
-## Authors and acknowledgment
-
-See CITATION.cff file.
+## Acknowledgment
 
 Bakaano-Hydro was developed at Wageningen Environmental Research with funding from the Netherlands Ministry of Agriculture, Fisheries, Food Security and Nature (LVVN). This work is part of the Knowledge Base (KB) programme **Climate Resilient Water and Land Use**, within the project **Compound and Cascading Climate Risks and Social Tipping Points**, and builds directly on earlier research conducted under the programme **Data-Driven Discoveries in a Changing Climate**.
 
