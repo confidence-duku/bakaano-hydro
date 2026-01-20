@@ -226,7 +226,7 @@ class BakaanoHydro:
                 'time': period,  # Adjusted time column
                 'streamflow (m3/s)': predicted_streamflow
             })
-            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/predicted_streamflow_{snames}_lon{sids}.csv")
+            output_path = os.path.join(self.working_dir, f"predicted_streamflow_data/bakaano_{sids}.csv")
             df.to_csv(output_path, index=False)
         out_folder = os.path.join(self.working_dir, 'predicted_streamflow_data')
         print(f' COMPLETED! csv files available at {out_folder}')
