@@ -13,6 +13,7 @@ import glob
 import pickle
 import pandas as pd
 import geopandas as gpd
+from datetime import datetime
 from leafmap.foliumap import Map
 
 #========================================================================================================================  
@@ -71,7 +72,7 @@ class BakaanoHydro:
 
 #=========================================================================================================================================
     def train_streamflow_model(self, train_start, train_end, grdc_netcdf,  
-                               batch_size, num_epochs, routing_method='mfd', catchment_size_threshold=1):
+                               batch_size, num_epochs, learning_rate=0.001, routing_method='mfd', catchment_size_threshold=1):
         """Train the deep learning streamflow prediction model."
         """
 
@@ -91,12 +92,107 @@ class BakaanoHydro:
         else:
             self.rawdata = sdp.get_data()
         sn = str(len(sdp.sim_station_names))
+
+        # Normalize station_ids to a set (supports single int or iterable)
+        if isinstance(sdp.station_ids, (list, tuple, set)):
+            target_ids = set(sdp.station_ids)
+        else:
+            target_ids = {sdp.station_ids}
+        
+        filtered = [
+            item for item in self.rawdata
+            if len(item) >= 4
+            and isinstance(item[3], tuple)
+            and len(item[3]) == 1
+            and item[3][0] in target_ids
+        ]
+        
+        if not filtered:
+            raise SystemExit(f"""
+        ERROR: Station ID not found in raw data
+        
+        Requested station ID(s):
+          {sorted(target_ids)}
+        
+        No matching station entries were found.
+        
+        Please verify that the station ID(s) exist in the dataset.
+        """.strip())
+        
+        self.rawdata = filtered
+
+        try:
+            # --- Parse dates ---
+            start_dt = datetime.strptime(train_start, "%Y-%m-%d")
+            end_dt   = datetime.strptime(train_end, "%Y-%m-%d")
+        
+            # --- Sanity check on runoff data ---
+            if not self.rawdata:
+                raise SystemExit(
+                    "No runoff data loaded. "
+                    "Check the runoff_output directory and pickle files."
+                )
+        
+            # Use the runoff dataframe of the first entry as reference
+            df_runoff = self.rawdata[0][0]   # first element of tuple
+        
+            # --- Ensure datetime index ---
+            if not isinstance(df_runoff.index, pd.DatetimeIndex):
+                df_runoff.index = pd.to_datetime(df_runoff.index)
+        
+            # --- Available date range ---
+            available_start = df_runoff.index.min()
+            available_end   = df_runoff.index.max()
+        
+            # --- Explicit presence check ---
+            missing = []
+            if start_dt not in df_runoff.index:
+                missing.append(f"start date ({start_dt.date()})")
+            if end_dt not in df_runoff.index:
+                missing.append(f"end date ({end_dt.date()})")
+        
+            if missing:
+                raise SystemExit(f"""
+                    ERROR: Invalid simulation period
+                    
+                    Requested period:
+                      start: {start_dt.date()}
+                      end:   {end_dt.date()}
+                    
+                    Available routed runoff data:
+                      from:  {available_start.date()}
+                      to:    {available_end.date()}
+                    
+                    Please re-run the runoff and routing modules and ensure the simulation
+                    period covers the intended training, validation, and inference periods.
+                    """.strip())
+        except ValueError:
+            # Re-raise ValueErrors unchanged (user-facing, informative)
+            raise
+        
+        except Exception as e:
+            # Catch-all for unexpected issues
+            raise SystemExit(f"""
+                ERROR: Simulation period validation failed
+                
+                The model failed while validating the simulation period against the
+                available routed runoff data.
+                
+                This may indicate one of the following:
+                  - corrupted or incomplete runoff files
+                  - an unexpected runoff data format
+                  - inconsistent or non-datetime time indexing
+                
+                Please verify the runoff outputs and ensure they were generated
+                correctly before running training or evaluation again.
+                """.strip()
+            ) from e
         
         print(f'     Training deepstrmm model based on {sn} stations in the GRDC database')
         print(sdp.sim_station_names)
         
         print(' 3. Building neural network model')
-        smodel = StreamflowModel(self.working_dir, batch_size, num_epochs, train_start, train_end)
+        smodel = StreamflowModel(self.working_dir, batch_size, num_epochs, learning_rate, train_start, train_end)
         smodel.prepare_data(self.rawdata)
         smodel.build_model()
         print(' 4. Training neural network model')
@@ -130,6 +226,7 @@ class BakaanoHydro:
         vdp.station_ids = np.unique([full_ids[station_index]])
         
         rawdata = vdp.get_data()
+        
         observed_streamflow = list(map(lambda xy: xy[1], rawdata))
 
         self.vmodel = PredictStreamflow(self.working_dir)
