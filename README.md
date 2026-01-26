@@ -297,8 +297,9 @@ bk.train_streamflow_model(
     train_start='1991-01-01', 
     train_end='2020-12-31', 
     grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
-    batch_size=1024, 
-    num_epochs=100
+    batch_size=32, 
+    num_epochs=300,
+    learning_rate=0.001
 )
 ```
 ### Step 5 – Evaluate and apply the model
