@@ -17,6 +17,7 @@ from keras.models import load_model # type: ignore
 import pickle
 import warnings
 import geopandas as gpd
+from shapely.geometry import Point
 from scipy.spatial.distance import cdist
 from datetime import datetime
 warnings.filterwarnings("ignore", category=RuntimeWarning)
@@ -129,38 +130,195 @@ class PredictDataPreprocessor:
             snap_point = river_coords[nearest_index]
             return snap_point[1], snap_point[0]
         
+    def _check_point_in_region(self, olat, olon):
+        """
+        Check whether a single (olat, olon) point lies within a study-area shapefile.
+    
+        - If NOT inside: raise SystemExit with a formatted, user-facing message
+        - If inside: print confirmation and do nothing
+        """
+    
+        # Load study-area shapefile
+        try:
+            region_gdf = gpd.read_file(self.study_area)
+        except Exception as e:
+            raise SystemExit(f"""
+    ERROR: Failed to load study-area shapefile
+    
+    The study-area shapefile could not be read.
+    
+    File:
+      {self.study_area}
+    
+    Original error:
+      {str(e)}
+    
+    Please verify that the shapefile exists and is readable.
+    """.strip())
+    
+        # Create point geometry
+        point = gpd.GeoSeries(
+            [Point(olon, olat)],
+            crs="EPSG:4326"
+        )
+    
+        # Ensure CRS match
+        if region_gdf.crs != point.crs:
+            region_gdf = region_gdf.to_crs(point.crs)
+    
+        # Spatial check
+        inside = region_gdf.contains(point.iloc[0]).any()
+    
+        if not inside:
+            raise SystemExit(f"""
+    ERROR: Point outside study area
+    
+    The provided coordinates do not intersect the study area.
+    
+    Point location:
+      latitude:  {olat}
+      longitude: {olon}
+    
+    Study-area shapefile:
+      {self.study_area}
+    
+    Please verify:
+      - the input coordinates (EPSG:4326)
+      - the spatial extent of the study area
+      - that the point is not outside or on the boundary
+    """.strip())
+    
+        # Confirmation message
+        print(f"""
+    INFO: Point accepted
+    
+    The point at:
+      latitude:  {olat}
+      longitude: {olon}
+    
+    lies within the study area.
+    """.strip())
+
         
-    def load_observed_streamflow(self,  grdc_streamflow_nc_file):
-        grdc = xr.open_dataset(grdc_streamflow_nc_file)
-        stations_df = pd.DataFrame({
-            'station_name': grdc['station_name'].values,
-            'geo_x': grdc['geo_x'].values,
-            'geo_y': grdc['geo_y'].values
-        })
-        stations_gdf = gpd.GeoDataFrame(
-            stations_df, 
-            geometry=gpd.points_from_xy(stations_df['geo_x'], stations_df['geo_y']),
-            crs="EPSG:4326"  # Assuming WGS84 latitude/longitude; adjust if needed
-        )
+    
+    def load_observed_streamflow(self, grdc_streamflow_nc_file):
+        """
+        Load and filter observed GRDC streamflow data in a schema-robust way.
+        Works for single- and multi-station NetCDFs.
+        """
+    
+        try:
+            grdc = xr.open_dataset(grdc_streamflow_nc_file)
+    
+            # ---- 1. Sanity checks ----
+            required_vars = ['runoff_mean', 'geo_x', 'geo_y', 'station_name']
+            missing_vars = [v for v in required_vars if v not in grdc]
+    
+            if missing_vars:
+                raise SystemExit(f"""
+                    ERROR: Invalid GRDC NetCDF file
+                    
+                    The GRDC file is missing one or more required variables:
+                    {", ".join(missing_vars)}
+                    
+                    Required variables are:
+                    - runoff_mean
+                    - geo_x
+                    - geo_y
+                    - station_name
+                    
+                    Please verify that the provided NetCDF file is a valid
+                    GRDC daily discharge dataset.
+                    """.strip())
+    
+            if 'id' not in grdc.dims:
+                raise SystemExit(f"""
+                    ERROR: Unsupported GRDC NetCDF format
+                    
+                    The GRDC dataset does not contain an 'id' dimension.
+                    
+                    This usually indicates a single-station GRDC file or a
+                    non-standard export format.
+                    
+                    Please ensure the GRDC file is formatted with dimensions:
+                    - time
+                    - id
+                    or preprocess the file to include an explicit station dimension.
+                    """.strip())
+    
+            # ---- 2. Build station GeoDataFrame ----
+            stations_df = pd.DataFrame({
+                'id': grdc['id'].values,
+                'station_name': grdc['station_name'].values,
+                'geo_x': grdc['geo_x'].values,
+                'geo_y': grdc['geo_y'].values,
+            })
+    
+            stations_gdf = gpd.GeoDataFrame(
+                stations_df,
+                geometry=gpd.points_from_xy(stations_df['geo_x'], stations_df['geo_y']),
+                crs="EPSG:4326"
+            )
+    
+            # ---- 3. Spatial filtering ----
+            region_shape = gpd.read_file(self.study_area)
+    
+            stations_in_region = gpd.sjoin(
+                stations_gdf,
+                region_shape,
+                how='inner',
+                predicate='intersects'
+            )
+    
+            if stations_in_region.empty:
+                raise SystemExit(f"""
+                    ERROR: No GRDC stations found in study area
+                    
+                    None of the GRDC stations intersect the provided study area.
+                    
+                    Please check:
+                    - the spatial extent of the study area shapefile
+                    - the coordinate reference system (CRS)
+                    - whether the GRDC stations fall within the selected region
+                    """.strip())
+    
+            overlapping_ids = stations_in_region['id'].unique()
+    
+            # ---- 4. Dataset filtering ----
+            filtered_grdc = grdc.sel(
+                id=overlapping_ids,
+                time=slice(self.sim_start, self.sim_end)
+            )
+    
+            # ---- 5. Store metadata ----
+            self.sim_station_names = filtered_grdc['station_name'].values.tolist()
+            self.station_ids = filtered_grdc['id'].values.tolist()
+    
+            return filtered_grdc
+    
+        except SystemExit:
+            # User-facing errors: re-raise cleanly
+            raise
+    
+        except Exception as e:
+            # Unexpected failure: add context, suppress traceback
+            raise SystemExit(f"""
+                ERROR: Failed to load GRDC streamflow data
+                
+                An unexpected error occurred while loading or filtering
+                the GRDC streamflow dataset.
+                
+                This may indicate:
+                - corrupted or unreadable NetCDF files
+                - inconsistent dimensions or indexing
+                - unexpected CRS or geometry issues
+                
+                Original error:
+                {str(e)}
+                
+                Please verify the input data and try again.
+                """.strip())
 
-        # Load the shapefile to check overlap (assuming it has a geometry column)
-        region_shape = gpd.read_file(self.study_area)
-
-        # Perform spatial join to find stations within the region shape
-        stations_in_region = gpd.sjoin(stations_gdf, region_shape, how='inner', predicate='intersects')
-
-        # Extract the station names that overlap
-        overlapping_station_names = stations_in_region['station_name'].unique()
-
-        # Filter the GRDC dataset based on time and station names
-        filtered_grdc = grdc.where(
-            (grdc['time'] >= pd.to_datetime(self.sim_start)) &
-            (grdc['time'] <= pd.to_datetime(self.sim_end)) &
-            (grdc['station_name'].isin(overlapping_station_names)),
-            drop=True
-        )
-        self.sim_station_names = np.unique(filtered_grdc['station_name'].values)
-        return filtered_grdc
                           
     def get_data(self):
         """
@@ -222,6 +380,81 @@ class PredictDataPreprocessor:
             with open(year, 'rb') as f:
                 this_arr = pickle.load(f)
             wfa_list = wfa_list + this_arr
+
+        try:
+            # --- Safety checks ---
+            if not wfa_list:
+                raise SystemExit(f"""
+        ERROR: No routed runoff data found
+        
+        The routed runoff list is empty.
+        
+        This usually indicates that the runoff and routing modules
+        have not been run yet, or that the expected output files
+        could not be found.
+        
+        Please check the runoff_output directory and ensure that
+        the runoff and routing steps completed successfully.
+        """.strip())
+        
+            # --- Parse available times ---
+            try:
+                wfa_times = [
+                    datetime.strptime(entry["time"], "%Y-%m-%d")
+                    for entry in wfa_list
+                ]
+            except Exception:
+                raise SystemExit(f"""
+        ERROR: Invalid routed runoff metadata
+        
+        The routed runoff entries do not contain valid time information.
+        
+        Each entry is expected to include a 'time' field formatted as:
+          YYYY-MM-DD
+        
+        Please verify the routed runoff output files and metadata.
+        """.strip())
+        
+            available_start = min(wfa_times)
+            available_end   = max(wfa_times)
+        
+            # --- Coverage check ---
+            if start_dt < available_start or end_dt > available_end:
+                raise SystemExit(f"""
+        ERROR: Requested simulation period outside routed runoff coverage
+        
+        Requested simulation period:
+          start: {start_dt.date()}
+          end:   {end_dt.date()}
+        
+        Available routed runoff data:
+          from:  {available_start.date()}
+          to:    {available_end.date()}
+        
+        Please re-run the runoff and routing modules and ensure that
+        the simulation period covers the intended training, validation,
+        and other simulation periods.
+        """.strip())
+        
+        except SystemExit:
+            # User-facing errors: re-raise cleanly
+            raise
+        
+        except Exception as e:
+            # Unexpected failure
+            raise SystemExit(f"""
+        ERROR: Failed during routed runoff availability checks
+        
+        An unexpected error occurred while validating the routed
+        runoff data against the requested simulation period.
+        
+        Original error:
+          {str(e)}
+        
+        Please verify the runoff outputs and try again.
+        """.strip())
+
+        
 
         # Filter based on time range
         wfa_list = [
@@ -337,6 +570,79 @@ class PredictDataPreprocessor:
                 this_arr = pickle.load(f)
             wfa_list = wfa_list + this_arr
 
+        try:
+            # --- Safety checks ---
+            if not wfa_list:
+                raise SystemExit(f"""
+        ERROR: No routed runoff data found
+        
+        The routed runoff list is empty.
+        
+        This usually indicates that the runoff and routing modules
+        have not been run yet, or that the expected output files
+        could not be found.
+        
+        Please check the runoff_output directory and ensure that
+        the runoff and routing steps completed successfully.
+        """.strip())
+        
+            # --- Parse available times ---
+            try:
+                wfa_times = [
+                    datetime.strptime(entry["time"], "%Y-%m-%d")
+                    for entry in wfa_list
+                ]
+            except Exception:
+                raise SystemExit(f"""
+        ERROR: Invalid routed runoff metadata
+        
+        The routed runoff entries do not contain valid time information.
+        
+        Each entry is expected to include a 'time' field formatted as:
+          YYYY-MM-DD
+        
+        Please verify the routed runoff output files and metadata.
+        """.strip())
+        
+            available_start = min(wfa_times)
+            available_end   = max(wfa_times)
+        
+            # --- Coverage check ---
+            if start_dt < available_start or end_dt > available_end:
+                raise SystemExit(f"""
+        ERROR: Requested simulation period outside routed runoff coverage
+        
+        Requested simulation period:
+          start: {start_dt.date()}
+          end:   {end_dt.date()}
+        
+        Available routed runoff data:
+          from:  {available_start.date()}
+          to:    {available_end.date()}
+        
+        Please re-run the runoff and routing modules and ensure that
+        the simulation period covers the intended training, validation,
+        and other simulation periods.
+        """.strip())
+        
+        except SystemExit:
+            # User-facing errors: re-raise cleanly
+            raise
+        
+        except Exception as e:
+            # Unexpected failure
+            raise SystemExit(f"""
+        ERROR: Failed during routed runoff availability checks
+        
+        An unexpected error occurred while validating the routed
+        runoff data against the requested simulation period.
+        
+        Original error:
+          {str(e)}
+        
+        Please verify the runoff outputs and try again.
+        """.strip()) 
+
         # Filter based on time range
         wfa_list = [
             entry for entry in wfa_list
@@ -344,6 +650,7 @@ class PredictDataPreprocessor:
         ]
         
         for olat, olon in zip(latlist, lonlist):
+            self._check_point_in_region(olat, olon)
             snapped_y, snapped_x = self._snap_coordinates(olat, olon)
             acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
             alpha_earth_stations = []
