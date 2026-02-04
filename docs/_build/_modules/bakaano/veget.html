@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>bakaano.veget</title>
+    
+          <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../../_static/theme-vendors.js"></script> -->
+      <script src="../../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../../genindex.html" />
+  <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../index.html">Module code</a> &raquo;</li>
+    
+    <li>bakaano.veget</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <h1>Source code for bakaano.veget</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Runoff generation and routing using the VegET formulation.</span>
+
+<span class="sd">Role: Compute daily runoff and route flow to river network.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.pet</span><span class="w"> </span><span class="kn">import</span> <span class="n">PotentialEvapotranspiration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.router</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunoffRouter</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">scipy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">sp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.meteo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Meteo</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tqdm</span><span class="w"> </span><span class="kn">import</span> <span class="n">tqdm</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">numba</span><span class="w"> </span><span class="kn">import</span> <span class="n">njit</span><span class="p">,</span> <span class="n">prange</span>
+
+
+<span class="nd">@njit</span><span class="p">(</span><span class="n">parallel</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">fastmath</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">update_soil_and_runoff</span><span class="p">(</span><span class="n">soil_moisture</span><span class="p">,</span> <span class="n">eff_rain</span><span class="p">,</span> <span class="n">ETa</span><span class="p">,</span> <span class="n">max_allowable_depletion</span><span class="p">,</span> <span class="n">whc</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Corrected Numba-optimized soil moisture and runoff update.</span>
+<span class="sd">    All inputs must be float32 NumPy arrays (2D).</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        soil_moisture (np.ndarray): Current soil moisture grid (ny, nx).</span>
+<span class="sd">        eff_rain (np.ndarray): Effective rainfall grid (ny, nx).</span>
+<span class="sd">        ETa (np.ndarray): Actual evapotranspiration grid (ny, nx).</span>
+<span class="sd">        max_allowable_depletion (np.ndarray): Max allowable depletion grid.</span>
+<span class="sd">        whc (np.ndarray): Water holding capacity grid.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        tuple[np.ndarray, np.ndarray]: (updated soil_moisture, surface runoff).</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">ny</span><span class="p">,</span> <span class="n">nx</span> <span class="o">=</span> <span class="n">soil_moisture</span><span class="o">.</span><span class="n">shape</span>
+    <span class="n">q_surf</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">empty</span><span class="p">((</span><span class="n">ny</span><span class="p">,</span> <span class="n">nx</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">prange</span><span class="p">(</span><span class="n">ny</span><span class="p">):</span>
+        <span class="k">for</span> <span class="n">j</span> <span class="ow">in</span> <span class="n">prange</span><span class="p">(</span><span class="n">nx</span><span class="p">):</span>
+
+            <span class="c1"># soil update</span>
+            <span class="n">sm</span> <span class="o">=</span> <span class="n">soil_moisture</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">+</span> <span class="n">eff_rain</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">-</span> <span class="n">ETa</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+            <span class="c1"># no negative soil moisture</span>
+            <span class="k">if</span> <span class="n">sm</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">sm</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+            <span class="c1"># compute runoff (excess water)</span>
+            <span class="n">excess</span> <span class="o">=</span> <span class="n">sm</span> <span class="o">-</span> <span class="n">whc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>
+
+            <span class="k">if</span> <span class="n">excess</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">:</span>
+                <span class="n">q_surf</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">excess</span>        <span class="c1"># runoff is excess</span>
+                <span class="n">sm</span> <span class="o">=</span> <span class="n">whc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span>               <span class="c1"># enforce WHC cap (critical!)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">q_surf</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+
+            <span class="c1"># save updated soil moisture</span>
+            <span class="n">soil_moisture</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">j</span><span class="p">]</span> <span class="o">=</span> <span class="n">sm</span>
+
+    <span class="k">return</span> <span class="n">soil_moisture</span><span class="p">,</span> <span class="n">q_surf</span>
+
+<div class="viewcode-block" id="VegET">
+<a class="viewcode-back" href="../../api/bakaano.veget.html#bakaano.veget.VegET">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">VegET</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Role: Orchestrate VegET runoff generation and routing.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">study_area</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">climate_data_source</span><span class="p">,</span> <span class="n">routing_method</span><span class="o">=</span><span class="s1">&#39;mfd&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize a VegET object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            working_dir (str): The parent working directory where files and outputs will be stored.</span>
+<span class="sd">            study_area_path (str): The path to the shapefile of the river basin or watershed.</span>
+<span class="sd">            start_date (str): The start date of the simulation period in YYYY-MM-DD format</span>
+<span class="sd">            end_date (str): The end date of the simulation period in YYYY-MM-DD format</span>
+<span class="sd">            climate_data_source (str): The source of climate data. Options are &#39;CHELSA&#39;, &#39;ERA5&#39;, or &#39;CHIRPS&#39;.</span>
+<span class="sd">            routing_method (str): The method used for routing runoff. Options are &#39;mfd&#39;, &#39;d8&#39; or &#39;dinf&#39;. Default is &#39;mfd&#39;.</span>
+
+<span class="sd">        Methods</span>
+<span class="sd">        -------</span>
+<span class="sd">        __init__(working_dir, study_area_path, start_date, end_date, climate_data_source):</span>
+<span class="sd">            Initializes the VegET object with project details.</span>
+<span class="sd">        compute_veget_runoff_route_flow(prep_nc, tasmax_nc, tasmin_nc, tmean_nc):</span>
+<span class="sd">            Computes the vegetation evapotranspiration and runoff routing flow.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+         <span class="c1"># Initialize the project name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+        
+        <span class="c1"># Initialize the study area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span> <span class="o">=</span> <span class="n">study_area</span>
+        
+        <span class="c1"># Initialize utility class with project name and study area.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span> <span class="o">=</span> <span class="n">Utils</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">times</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">)</span>
+        
+        <span class="c1"># Set the start and end dates for the project</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">=</span> <span class="n">start_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span> <span class="o">=</span> <span class="n">end_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span> <span class="o">=</span> <span class="n">routing_method</span>
+
+        <span class="c1"># Create necessary directories for the project structure   </span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/scratch&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/shapes&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/catchment&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">clipped_dem</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span> <span class="o">=</span> <span class="n">climate_data_source</span>
+
+<div class="viewcode-block" id="VegET.compute_veget_runoff_route_flow">
+<a class="viewcode-back" href="../../api/bakaano.veget.html#bakaano.veget.VegET.compute_veget_runoff_route_flow">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_veget_runoff_route_flow</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute VegET runoff and route flow to the river network.</span>
+
+<span class="sd">        This routine loads climate inputs, computes PET, simulates soil moisture</span>
+<span class="sd">        and runoff, and performs routing to produce daily routed runoff outputs.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Writes routed runoff outputs to ``{working_dir}/runoff_output``.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/wacc_sparse_arrays.pkl&#39;</span><span class="p">):</span>
+            <span class="c1"># Initialize potential evapotranspiration and data preprocessor</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;Computing VegET runoff and routing flow to river network&#39;</span><span class="p">)</span>
+            <span class="c1"># Initialize potential evapotranspiration and data preprocessor</span>
+            <span class="n">eto</span> <span class="o">=</span> <span class="n">PotentialEvapotranspiration</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">)</span>
+
+            <span class="n">cd</span> <span class="o">=</span> <span class="n">Meteo</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span> <span class="n">start_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">,</span> 
+                       <span class="n">local_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">data_source</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span><span class="p">,</span> <span class="n">local_prep_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">local_tasmax_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                       <span class="n">local_tasmin_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">local_tmean_path</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+            <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span> <span class="o">=</span> <span class="n">cd</span><span class="o">.</span><span class="n">get_meteo_data</span><span class="p">()</span>
+
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span> <span class="o">==</span> <span class="s1">&#39;CHELSA&#39;</span><span class="p">:</span>
+
+                <span class="n">tasmax_period</span> <span class="o">=</span> <span class="n">tasmax_nc</span><span class="o">.</span><span class="n">tasmax</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tasmin_period</span> <span class="o">=</span> <span class="n">tasmin_nc</span><span class="o">.</span><span class="n">tasmin</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tmean_period</span> <span class="o">=</span> <span class="n">tmean_nc</span><span class="o">.</span><span class="n">tas</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">prep_nc</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">*</span> <span class="mi">86400</span>  <span class="c1"># Conversion from kg/m2/s to mm/day</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">lon</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span>
+
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span> <span class="o">==</span> <span class="s1">&#39;ERA5&#39;</span><span class="p">:</span>
+
+                <span class="n">tasmax_period</span> <span class="o">=</span> <span class="n">tasmax_nc</span><span class="o">.</span><span class="n">tasmax</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tasmin_period</span> <span class="o">=</span> <span class="n">tasmin_nc</span><span class="o">.</span><span class="n">tasmin</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tmean_period</span> <span class="o">=</span> <span class="n">tmean_nc</span><span class="o">.</span><span class="n">tas</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">prep_nc</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">*</span> <span class="mi">1000</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">lon</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span>
+                <span class="c1">#rf = rf.astype(np.float32).assign_coords(lat=rf[&#39;lat&#39;].astype(np.float32), lon=rf[&#39;lon&#39;].astype(np.float32))</span>
+            <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span> <span class="o">==</span> <span class="s1">&#39;CHIRPS&#39;</span><span class="p">:</span>
+                
+                <span class="n">tasmax_period</span> <span class="o">=</span> <span class="n">tasmax_nc</span><span class="o">.</span><span class="n">tasmax</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tasmin_period</span> <span class="o">=</span> <span class="n">tasmin_nc</span><span class="o">.</span><span class="n">tasmin</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">tmean_period</span> <span class="o">=</span> <span class="n">tmean_nc</span><span class="o">.</span><span class="n">tas</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span> <span class="o">-</span> <span class="mf">273.15</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">prep_nc</span><span class="o">.</span><span class="n">pr</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">))</span>
+                <span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">lon</span><span class="o">=</span><span class="n">rf</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rf</span> <span class="o">=</span> <span class="n">rf</span>
+            
+            <span class="n">td</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tasmax_period</span> <span class="o">-</span> <span class="n">tasmin_period</span><span class="p">)</span>
+            <span class="n">pet_params</span> <span class="o">=</span> <span class="mf">0.408</span> <span class="o">*</span> <span class="mf">0.0023</span> <span class="o">*</span> <span class="p">(</span><span class="n">tmean_period</span> <span class="o">+</span> <span class="mf">17.8</span><span class="p">)</span> <span class="o">*</span> <span class="n">td</span>
+            <span class="n">pet_params</span> <span class="o">=</span> <span class="n">pet_params</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">pet_params</span> <span class="o">=</span> <span class="n">pet_params</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span>
+                <span class="n">lat</span><span class="o">=</span><span class="n">pet_params</span><span class="p">[</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span>
+                <span class="n">lon</span><span class="o">=</span><span class="n">pet_params</span><span class="p">[</span><span class="s1">&#39;lon&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="p">)</span>
+
+            <span class="c1"># Extract latitude and expand dimensions to match the lon dimension</span>
+            <span class="n">latsg</span> <span class="o">=</span> <span class="n">tmean_period</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lat&#39;</span><span class="p">]</span>
+            <span class="n">latsg</span> <span class="o">=</span> <span class="n">latsg</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">latgrids</span> <span class="o">=</span> <span class="n">latsg</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">lon</span><span class="o">=</span><span class="n">tmean_period</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;lon&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">lat_rad</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">radians</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">latgrids</span><span class="p">)</span>
+            <span class="n">sin_lat</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span>
+            <span class="n">cos_lat</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span>
+            <span class="n">tan_lat</span>   <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">lat_rad</span><span class="p">)</span>
+            <span class="n">doys</span> <span class="o">=</span> <span class="n">tmean_period</span><span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">dt</span><span class="o">.</span><span class="n">dayofyear</span><span class="o">.</span><span class="n">values</span>
+
+            
+            
+            <span class="c1"># Initial soil moisture condition</span>
+            <span class="n">soil_moisture</span> <span class="o">=</span> <span class="n">rf</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="mi">0</span>   <span class="c1">#initialize soil moisture</span>
+            <span class="n">soil_moisture</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">align_rasters</span><span class="p">(</span><span class="n">soil_moisture</span><span class="p">,</span> <span class="n">israster</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+            <span class="n">soil_moisture</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">soil_moisture</span><span class="p">)</span>
+
+            <span class="n">pickle_file_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/ndvi/daily_ndvi_climatology.pkl&#39;</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_file_path</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">ndvi_array</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            
+            <span class="n">water_holding_capacity</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">align_rasters</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/soil/clipped_AWCh3_M_sl6_1km_ll.tif&#39;</span><span class="p">,</span> <span class="n">israster</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span> <span class="o">*</span> <span class="mi">10</span>
+            <span class="n">water_holding_capacity</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">water_holding_capacity</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">max_allowable_depletion</span> <span class="o">=</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="n">water_holding_capacity</span>
+            <span class="c1">#max_allowable_depletion = np.asarray(max_allowable_depletion)</span>
+
+            <span class="n">tree_cover_tiff</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/vcf/mean_tree_cover.tif&#39;</span>
+            <span class="n">herb_cover_tiff</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/vcf/mean_herb_cover.tif&#39;</span>
+            <span class="n">tree_cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">align_rasters</span><span class="p">(</span><span class="n">tree_cover_tiff</span><span class="p">,</span> <span class="n">israster</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">herb_cover</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">align_rasters</span><span class="p">(</span><span class="n">herb_cover_tiff</span><span class="p">,</span> <span class="n">israster</span><span class="o">=</span><span class="kc">True</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+            <span class="n">tree_cover</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">tree_cover</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">tree_cover</span><span class="p">)</span>
+            <span class="n">herb_cover</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">herb_cover</span> <span class="o">&gt;</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">herb_cover</span><span class="p">)</span>
+
+            <span class="n">interception</span> <span class="o">=</span> <span class="p">((</span><span class="mf">0.15</span> <span class="o">*</span> <span class="n">tree_cover</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mf">0.1</span> <span class="o">*</span> <span class="n">herb_cover</span><span class="p">))</span><span class="o">/</span><span class="mi">100</span>
+            <span class="n">interception</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">interception</span><span class="p">)</span>
+            <span class="n">one_minus_interception</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">-</span> <span class="n">interception</span>
+            <span class="n">total_ETa</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">total_ETc</span> <span class="o">=</span> <span class="mi">0</span>
+
+            <span class="c1"># Initialize runoff router and compute flow direction</span>
+            <span class="n">rout</span> <span class="o">=</span> <span class="n">RunoffRouter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">clipped_dem</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+            <span class="n">fdir</span><span class="p">,</span> <span class="n">acc</span> <span class="o">=</span> <span class="n">rout</span><span class="o">.</span><span class="n">compute_flow_dir</span><span class="p">()</span>
+            
+            <span class="n">facc_thresh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0001</span>
+            <span class="n">facc_mask</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">acc</span> <span class="o">&lt;</span> <span class="n">facc_thresh</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+            <span class="c1"># Lists for storing results</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">wacc_list</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mam_ro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jja_ro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">son_ro</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">djf_ro</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">mam_wfa</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">jja_wfa</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">son_wfa</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">djf_wfa</span> <span class="o">=</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span>
+            <span class="n">this_date</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="s1">&#39;%Y-%m-</span><span class="si">%d</span><span class="s1">&#39;</span><span class="p">)</span>
+
+            <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">date_list</span> <span class="o">=</span> <span class="p">[(</span><span class="n">start</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+            
+            <span class="n">ref_shape</span> <span class="o">=</span> <span class="n">soil_moisture</span><span class="o">.</span><span class="n">shape</span>
+
+            <span class="k">def</span><span class="w"> </span><span class="nf">_align_or_values</span><span class="p">(</span><span class="n">arr</span><span class="p">):</span>
+<span class="w">                </span><span class="sd">&quot;&quot;&quot;Align arrays to DEM grid or return values if already aligned.&quot;&quot;&quot;</span>
+                <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="s2">&quot;shape&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="n">arr</span><span class="o">.</span><span class="n">shape</span> <span class="o">==</span> <span class="n">ref_shape</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+                <span class="n">aligned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">align_rasters</span><span class="p">(</span><span class="n">arr</span><span class="p">,</span> <span class="n">israster</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">(</span><span class="n">aligned</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">)</span>
+
+            <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">count</span><span class="p">,</span> <span class="n">date</span> <span class="ow">in</span> <span class="n">tqdm</span><span class="p">(</span><span class="nb">enumerate</span><span class="p">(</span><span class="n">date_list</span><span class="p">),</span> <span class="n">desc</span><span class="o">=</span><span class="s2">&quot;     Simulating and routing runoff&quot;</span><span class="p">,</span> <span class="n">unit</span><span class="o">=</span><span class="s2">&quot;day&quot;</span><span class="p">,</span> <span class="n">total</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">date_list</span><span class="p">)):</span>
+                <span class="k">if</span> <span class="n">count</span> <span class="o">%</span> <span class="mi">365</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                    <span class="n">year_num</span> <span class="o">=</span> <span class="p">(</span><span class="n">count</span> <span class="o">//</span> <span class="mi">365</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;    Computing surface runoff and routing flow to river channels in year </span><span class="si">{</span><span class="n">year_num</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+                <span class="n">count2</span> <span class="o">=</span> <span class="n">count</span><span class="o">+</span><span class="mi">1</span>
+                <span class="n">this_rf</span> <span class="o">=</span> <span class="n">_align_or_values</span><span class="p">(</span><span class="n">rf</span><span class="p">[</span><span class="n">count</span><span class="p">])</span>
+                <span class="n">eff_rain</span> <span class="o">=</span> <span class="n">this_rf</span> <span class="o">*</span> <span class="n">one_minus_interception</span>
+                <span class="n">eff_rain</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">eff_rain</span><span class="o">&lt;</span><span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">eff_rain</span><span class="p">)</span>
+
+                <span class="n">doy</span> <span class="o">=</span> <span class="n">doys</span><span class="p">[</span><span class="n">count</span><span class="p">]</span>
+                <span class="n">this_et</span> <span class="o">=</span> <span class="n">eto</span><span class="o">.</span><span class="n">compute_PET</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">pet_params</span><span class="p">[</span><span class="n">count</span><span class="p">],</span> <span class="n">tan_lat</span><span class="p">,</span> <span class="n">cos_lat</span><span class="p">,</span> <span class="n">sin_lat</span><span class="p">,</span> <span class="n">doy</span><span class="p">)</span>
+                <span class="n">this_et</span> <span class="o">=</span> <span class="n">_align_or_values</span><span class="p">(</span><span class="n">this_et</span><span class="p">)</span>
+
+                <span class="n">day_num</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">doys</span><span class="p">[</span><span class="n">count</span><span class="p">])</span>
+                <span class="n">ndvi_day</span> <span class="o">=</span> <span class="n">_align_or_values</span><span class="p">(</span><span class="n">ndvi_array</span><span class="p">[</span><span class="n">day_num</span><span class="p">]</span> <span class="o">*</span> <span class="mf">0.0001</span><span class="p">)</span>
+
+                <span class="c1">#this_kcp = np.where(ndvi_day&gt;0.4, (1.25*ndvi_day+0.2), (1.25*ndvi_day))</span>
+                <span class="n">this_kcp</span> <span class="o">=</span> <span class="mf">1.25</span> <span class="o">*</span> <span class="n">ndvi_day</span>
+                <span class="n">this_kcp</span> <span class="o">+=</span> <span class="mf">0.2</span> <span class="o">*</span> <span class="p">(</span><span class="n">ndvi_day</span> <span class="o">&gt;</span> <span class="mf">0.4</span><span class="p">)</span>
+
+                <span class="c1">#ks = np.where(pks &lt;0, (soil_moisture/max_allowable_depletion), 1)</span>
+                <span class="n">ks</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">soil_moisture</span> <span class="o">/</span> <span class="n">max_allowable_depletion</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">)</span>
+
+                <span class="n">ETa</span> <span class="o">=</span> <span class="n">this_et</span> <span class="o">*</span> <span class="n">ks</span> <span class="o">*</span> <span class="n">this_kcp</span>
+                <span class="n">soil_moisture</span> <span class="o">=</span> <span class="n">soil_moisture</span> <span class="o">+</span> <span class="n">eff_rain</span> <span class="o">-</span> <span class="n">ETa</span>
+                <span class="c1">#soil_moisture = soil_moisture.values</span>
+                <span class="c1"># soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0</span>
+                
+                
+                
+
+                <span class="c1"># pp = soil_moisture - water_holding_capacity</span>
+                <span class="c1"># q_surf = np.where(pp&gt;0, pp, 0)</span>
+
+                <span class="n">soil_moisture</span><span class="p">,</span> <span class="n">q_surf</span> <span class="o">=</span> <span class="n">update_soil_and_runoff</span><span class="p">(</span>
+                    <span class="n">soil_moisture</span><span class="p">,</span>
+                    <span class="n">eff_rain</span><span class="p">,</span>
+                    <span class="n">ETa</span><span class="p">,</span>
+                    <span class="n">max_allowable_depletion</span><span class="p">,</span>
+                    <span class="n">water_holding_capacity</span>
+                <span class="p">)</span>
+                
+                <span class="c1">#q_surf[np.isinf(q_surf) | np.isnan(q_surf)] = 0</span>
+                <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">soil_moisture</span><span class="p">)</span>
+                <span class="n">soil_moisture</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                <span class="n">mask</span> <span class="o">=</span> <span class="o">~</span><span class="n">np</span><span class="o">.</span><span class="n">isfinite</span><span class="p">(</span><span class="n">q_surf</span><span class="p">)</span>
+                <span class="n">q_surf</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+
+                
+                
+                <span class="c1"># ETc = this_kcp * this_et</span>
+                <span class="c1"># total_ETa = total_ETa + ETa</span>
+                <span class="c1"># total_ETc = total_ETc + ETc</span>
+
+                <span class="c1"># Use Pysheds for weighted flow accumulation            </span>
+                <span class="n">ro_tiff</span> <span class="o">=</span> <span class="n">rout</span><span class="o">.</span><span class="n">convert_runoff_layers</span><span class="p">(</span><span class="n">q_surf</span><span class="p">)</span>
+                <span class="n">wacc</span> <span class="o">=</span> <span class="n">rout</span><span class="o">.</span><span class="n">compute_weighted_flow_accumulation</span><span class="p">(</span><span class="n">ro_tiff</span><span class="p">)</span>                  
+                
+            
+                <span class="n">wacc</span> <span class="o">=</span> <span class="n">wacc</span> <span class="o">*</span> <span class="n">facc_mask</span>            
+                <span class="n">wacc</span> <span class="o">=</span> <span class="n">sp</span><span class="o">.</span><span class="n">sparse</span><span class="o">.</span><span class="n">coo_array</span><span class="p">(</span><span class="n">wacc</span><span class="p">)</span>
+                <span class="c1">#sparse_series.append({&quot;time&quot;: date, &quot;matrix&quot;: sparse_matrix})</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">wacc_list</span><span class="o">.</span><span class="n">append</span><span class="p">({</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="n">date</span><span class="p">,</span> <span class="s2">&quot;matrix&quot;</span><span class="p">:</span> <span class="n">wacc</span><span class="p">})</span>            
+                
+            <span class="c1"># Save station weighted flow accumulation data</span>
+            <span class="n">filename</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/wacc_sparse_arrays.pkl&#39;</span>
+            
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="s1">&#39;wb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">wacc_list</span><span class="p">,</span> <span class="n">f</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Completed. Routed runoff data saved to </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/wacc_sparse_arrays.pkl&#39;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Routed runoff data exists in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/wacc_sparse_arrays.pkl. Skipping processing&#39;</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

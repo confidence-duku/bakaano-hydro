@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>bakaano.utils</title>
+    
+          <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../_static/theme-vendors.js"></script> -->
+      <script src="../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../genindex.html" />
+  <link rel="search" title="Search" href="../search.html" />
+  <link rel="prev" title="bakaano.router" href="bakaano.router.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../api.html">API Reference</a> &raquo;</li>
+    
+    <li>bakaano.utils</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.router.html"
+       title="previous chapter">← bakaano.router</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="module-bakaano.utils">
+<span id="bakaano-utils"></span><h1>bakaano.utils<a class="headerlink" href="#module-bakaano.utils" title="Link to this heading">¶</a></h1>
+<p>Shared spatial utilities for preprocessing and raster alignment.</p>
+<p>Role: Provide common geospatial helpers (clip, reproject, align, etc.).</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="bakaano.utils.Utils">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bakaano.utils.</span></span><span class="sig-name descname"><span class="pre">Utils</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">working_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_area</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.align_rasters">
+<span class="sig-name descname"><span class="pre">align_rasters</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ras</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">israster</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.align_rasters"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.align_rasters" title="Link to this definition">¶</a></dt>
+<dd><p>Reproject/align rasters or xarray grids to the DEM reference grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_ras</strong> – Raster path (if <code class="docutils literal notranslate"><span class="pre">israster=True</span></code>) or xarray/DataArray.</p></li>
+<li><p><strong>israster</strong> (<em>bool</em>) – Whether <code class="docutils literal notranslate"><span class="pre">input_ras</span></code> is a file path.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Reprojected data aligned to the DEM grid.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.DataArray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.clip">
+<span class="sig-name descname"><span class="pre">clip</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">raster_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dst_crs</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'EPSG:4326'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">save_output</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">crop_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.clip"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.clip" title="Link to this definition">¶</a></dt>
+<dd><p>Clips the source raster (src_path) using the extent of the clip raster (clip_path)
+and saves the clipped data to a new file (dst_path).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>raster_path</strong> (<em>str</em>) – Path to the raster file.</p></li>
+<li><p><strong>dst_crs</strong> (<em>str</em>) – Target CRS for clipping.</p></li>
+<li><p><strong>out_path</strong> (<em>str</em><em>, </em><em>optional</em>) – Output path for the clipped raster.</p></li>
+<li><p><strong>save_output</strong> (<em>bool</em>) – Whether to write the clipped raster to disk.</p></li>
+<li><p><strong>crop_type</strong> (<em>bool</em>) – If True, crop strictly to shape; else to bounds.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Clipped raster array (bands, y, x).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.concat_nc">
+<span class="sig-name descname"><span class="pre">concat_nc</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">clim_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">dataset_str</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.concat_nc"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.concat_nc" title="Link to this definition">¶</a></dt>
+<dd><p>Concatenate NetCDF files and clip to the study area.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>clim_dir</strong> (<em>pathlib.Path</em>) – Directory containing NetCDF files.</p></li>
+<li><p><strong>dataset_str</strong> (<em>str</em>) – Glob pattern to match files.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Concatenated and clipped dataset.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.get_bbox">
+<span class="sig-name descname"><span class="pre">get_bbox</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">dst_crs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.get_bbox"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.get_bbox" title="Link to this definition">¶</a></dt>
+<dd><p>Compute and store the study area bounding box.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>dst_crs</strong> (<em>str</em>) – Target CRS (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;EPSG:4326&quot;</span></code>).</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.process_existing_file">
+<span class="sig-name descname"><span class="pre">process_existing_file</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.process_existing_file"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.process_existing_file" title="Link to this definition">¶</a></dt>
+<dd><p>Check whether a file already exists.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>file_path</strong> (<em>str</em>) – File path to check.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True if file exists, else False.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.reproject_raster">
+<span class="sig-name descname"><span class="pre">reproject_raster</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">input_ras</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">out_ras</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.reproject_raster"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.reproject_raster" title="Link to this definition">¶</a></dt>
+<dd><p>Reproject a raster to EPSG:4326.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>input_ras</strong> (<em>str</em>) – Path to input raster.</p></li>
+<li><p><strong>out_ras</strong> (<em>str</em>) – Path to output raster.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.utils.Utils.save_to_scratch">
+<span class="sig-name descname"><span class="pre">save_to_scratch</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">output_file_path</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">array_to_save</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/utils.html#Utils.save_to_scratch"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.utils.Utils.save_to_scratch" title="Link to this definition">¶</a></dt>
+<dd><p>Save an array as a GeoTIFF aligned to the DEM profile.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>output_file_path</strong> (<em>str</em>) – Destination GeoTIFF path.</p></li>
+<li><p><strong>array_to_save</strong> (<em>np.ndarray</em>) – 2D array to write.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.router.html"
+       title="previous chapter">← bakaano.router</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

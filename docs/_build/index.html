@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>Bakaano-Hydro Documentation</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="Installation" href="installation.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="#" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="#">Docs</a> &raquo;</li>
+    
+    <li>Bakaano-Hydro Documentation</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="next">
+    <a href="installation.html"
+       title="next chapter">Installation →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="bakaano-hydro-documentation">
+<h1>Bakaano-Hydro Documentation<a class="headerlink" href="#bakaano-hydro-documentation" title="Link to this heading">¶</a></h1>
+<section id="introduction">
+<h2>Introduction<a class="headerlink" href="#introduction" title="Link to this heading">¶</a></h2>
+<p>Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction.
+It uniquely integrates physically based hydrological principles with the generalization capacity
+of machine learning in a spatially explicit and physically meaningful way. This makes it
+particularly valuable in data-scarce regions, where traditional hydrological models often
+struggle due to sparse observations and calibration limitations, and where current
+state-of-the-art data-driven models are constrained by lumped modeling approaches that overlook
+spatial heterogeneity and the inability to capture hydrological connectivity.</p>
+<p>By learning spatially distributed, physically meaningful runoff and routing dynamics,
+Bakaano-Hydro is able to generalize across diverse catchments and hydro-climatic regimes. This
+hybrid design enables the model to simulate streamflow more accurately and reliably—even in
+ungauged or poorly monitored basins—while retaining interpretability grounded in hydrological
+processes.</p>
+<p>The name Bakaano comes from Fante, a language spoken along the southern coast of Ghana. Loosely
+translated as “by the river side” or “stream-side”, it reflects the lived reality of many
+vulnerable riverine communities across the Global South - those most exposed to flood risk and
+often least equipped to adapt.</p>
+<p>Bakaano-Hydro consists of three tightly coupled components:</p>
+<ol class="arabic simple">
+<li><p>Distributed runoff generation
+Vegetation, soil, and meteorological drivers are used to compute grid-cell runoff using a
+VegET-based approach.</p></li>
+<li><p>Physically informed routing
+Runoff is routed through the river network using flow-direction-based routing (e.g. MFD/WFA),
+preserving spatial connectivity.</p></li>
+<li><p>Neural network
+A Temporal Convolutional Network (TCN), conditioned on static catchment descriptors, learns
+hydrological dynamics from physically routed runoff, enabling robust generalization across
+diverse basins.</p></li>
+</ol>
+<p>The neural network augments hydrology, it does not replace it.</p>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf"><img alt="Bakaano-Hydro conceptual model diagram" src="https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf" style="width: 85%;" /></a>
+<figcaption>
+<p><span class="caption-text">Conceptual overview of the Bakaano-Hydro pipeline.</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="contents">
+<h2>Contents<a class="headerlink" href="#contents" title="Link to this heading">¶</a></h2>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#requirements">Requirements</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#create-a-new-environment">Create a new environment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-gpu">Install (GPU)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#install-cpu">Install (CPU)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#data-requirements">Data requirements</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="quickstart.html">Quick Start</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#setup-working-directory-and-study-area">1) Setup working directory and study area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#download-and-preprocess-input-data">2) Download and preprocess input data</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#computing-runoff-and-routing-to-river-network">3) Computing runoff and routing to river network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#explore-input-data-river-networks-and-stations-interactively">4) Explore input data, river networks and stations interactively</a></li>
+<li class="toctree-l2"><a class="reference internal" href="quickstart.html#training-evaluating-and-applying-bakaano-hydro">5) Training, evaluating and applying Bakaano-Hydro</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="inputs_outputs.html">Inputs and Outputs</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="inputs_outputs.html#global-assumptions">Global assumptions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputs_outputs.html#observed-streamflow-csv-schema">Observed streamflow CSV schema</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputs_outputs.html#predicted-streamflow-units">Predicted streamflow units</a></li>
+<li class="toctree-l2"><a class="reference internal" href="inputs_outputs.html#module-reference">Module reference</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="model_configuration.html">Model Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#loss-functions">Loss functions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#transforms-and-scaling">Transforms and scaling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#spatial-resolution">Spatial resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#learning-rate-schedule">Learning rate schedule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#batch-size-and-generalization">Batch size and generalization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#bootstrapping">Bootstrapping</a></li>
+<li class="toctree-l2"><a class="reference internal" href="model_configuration.html#asymmetric-laplace-outputs">Asymmetric Laplace outputs</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#google-earth-engine-authentication">Google Earth Engine authentication</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#no-stations-found-inside-the-basin">No stations found inside the basin</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#missing-columns-in-csvs">Missing columns in CSVs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#predictions-are-all-zeros-or-flatlines">Predictions are all zeros or flatlines</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#missing-or-empty-raster-inputs">Missing or empty raster inputs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#observed-streamflow-dates-out-of-range">Observed streamflow dates out of range</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#mismatched-routing-method">Mismatched routing method</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#alphaearth-scaling-or-missing-scaler">AlphaEarth scaling or missing scaler</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#runoff-response-scaler-missing">Runoff/response scaler missing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#model-outputs-in-unexpected-units">Model outputs in unexpected units</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api_structure.html">API Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api_structure.html#high-level-entry-points">High-level entry points</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structure.html#data-preparation-modules">Data preparation modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structure.html#hydrology-modules">Hydrology modules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="api_structure.html#plotting-helpers">Plotting helpers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api.html#core-modules">Core modules</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="py-modindex.html"><span class="std std-ref">Module Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="next">
+    <a href="installation.html"
+       title="next chapter">Installation →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>API Structure</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="API Reference" href="api.html" />
+  <link rel="prev" title="Troubleshooting" href="troubleshooting.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Reference</a></span>
+      </p>
+      <ul class="current">
+        
+          <li class="toctree-l1 current">
+            
+              <a href="#" class="reference internal current">API Structure</a>
+            
+
+            
+              <ul>
+                
+                  <li class="toctree-l2"><a href="#high-level-entry-points" class="reference internal">High-level entry points</a></li>
+                
+                  <li class="toctree-l2"><a href="#data-preparation-modules" class="reference internal">Data preparation modules</a></li>
+                
+                  <li class="toctree-l2"><a href="#hydrology-modules" class="reference internal">Hydrology modules</a></li>
+                
+                  <li class="toctree-l2"><a href="#plotting-helpers" class="reference internal">Plotting helpers</a></li>
+                
+              </ul>
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+    
+    <li>API Structure</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="troubleshooting.html"
+       title="previous chapter">← Troubleshooting</a>
+  </li>
+  <li class="next">
+    <a href="api.html"
+       title="next chapter">API Reference →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="api-structure">
+<h1>API Structure<a class="headerlink" href="#api-structure" title="Link to this heading">¶</a></h1>
+<p>This page summarizes the high-level structure of the package and where to start.</p>
+<section id="high-level-entry-points">
+<h2>High-level entry points<a class="headerlink" href="#high-level-entry-points" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.runner.BakaanoHydro</span></code>: main orchestration class for training/evaluation</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.streamflow_trainer.DataPreprocessor</span></code>: builds training datasets</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.streamflow_trainer.StreamflowModel</span></code>: model definition and training</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.streamflow_simulator.PredictDataPreprocessor</span></code>: builds simulation inputs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.streamflow_simulator.PredictStreamflow</span></code>: loads model and runs inference</p></li>
+</ul>
+</section>
+<section id="data-preparation-modules">
+<h2>Data preparation modules<a class="headerlink" href="#data-preparation-modules" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.dem.DEM</span></code>: DEM download/clip</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.soil.Soil</span></code>: soil properties</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.ndvi.NDVI</span></code>: NDVI climatology</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.tree_cover.TreeCover</span></code>: vegetation cover fractions</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.alpha_earth.AlphaEarth</span></code>: AlphaEarth embeddings</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.meteo.Meteo</span></code>: meteorological forcing</p></li>
+</ul>
+</section>
+<section id="hydrology-modules">
+<h2>Hydrology modules<a class="headerlink" href="#hydrology-modules" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.veget.VegET</span></code>: runoff generation + routing</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.router.RunoffRouter</span></code>: flow direction and routing utilities</p></li>
+</ul>
+</section>
+<section id="plotting-helpers">
+<h2>Plotting helpers<a class="headerlink" href="#plotting-helpers" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">bakaano.plot_runoff.RoutedRunoff</span></code>: routed runoff maps and time series</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="troubleshooting.html"
+       title="previous chapter">← Troubleshooting</a>
+  </li>
+  <li class="next">
+    <a href="api.html"
+       title="next chapter">API Reference →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

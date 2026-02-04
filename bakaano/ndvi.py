@@ -1,3 +1,8 @@
+"""NDVI climatology preparation from MODIS.
+
+Role: Download and preprocess NDVI time series for the study area.
+"""
+
 import ee
 import geemap
 import os
@@ -17,6 +22,8 @@ from datetime import datetime, timedelta
 class NDVI:
     def __init__(self, working_dir, study_area, start_date, end_date):
         """Initialize a NDVI (Normalized Difference Vegetation Index) object.
+        
+        Role: Build NDVI climatology for VegET inputs.
 
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
@@ -45,6 +52,9 @@ class NDVI:
 
     def _download_ndvi(self):
         """Download NDVI data from Google Earth Engine.
+
+        Returns:
+            None. Downloads GeoTIFFs to ``{working_dir}/ndvi``.
         """
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         if not os.path.exists(ndvi_check):
@@ -68,8 +78,11 @@ class NDVI:
         """
         Generate 16-day intervals for a given year.
         
-        :param year: Year to generate intervals for.
-        :return: List of 16-day interval start dates.
+        Args:
+            year (int): Year to generate intervals for.
+
+        Returns:
+            list[datetime]: List of 16-day interval start dates.
         """
         intervals = []
         start_date = datetime(year, 1, 1)
@@ -82,7 +95,8 @@ class NDVI:
         """
         Group NDVI files by their 16-day intervals.
         
-        :return: Dictionary of interval start dates and associated file lists.
+        Returns:
+            dict[str, list[str]]: Mapping of interval key to file paths.
         """
         ndvi_files = glob.glob(os.path.join(self.ndvi_folder, '*NDVI.tif'))
         base_year = int(self.start_date[:4])  # A leap year to handle February 29
@@ -110,8 +124,12 @@ class NDVI:
         """
         Calculate the median raster from a list of NDVI files and save as a TIF.
         
-        :param file_list: List of file paths to NDVI rasters.
-        :param output_path: Path to save the output TIF.
+        Args:
+            file_list (list[str]): NDVI raster paths.
+            output_path (str): Output GeoTIFF path.
+
+        Returns:
+            None. Writes median raster to disk.
         """
         # Open the first file to get metadata
         with rasterio.open(file_list[0]) as src:
@@ -136,6 +154,13 @@ class NDVI:
         """
         Interpolate NDVI rasters from 16-day intervals to daily using row-wise interpolation.
         Returns a dictionary of daily NDVI arrays.
+
+        Args:
+            medians (list[np.ndarray]): Median NDVI rasters.
+            interval_dates (list[int]): Day-of-year for each interval.
+
+        Returns:
+            dict[int, np.ndarray]: Daily NDVI arrays keyed by day-of-year.
         """
         # Get shape
         num_intervals = len(medians)
@@ -171,8 +196,13 @@ class NDVI:
     def _save_daily_ndvi(self, daily_ndvi, template_file):
         """
         Save daily NDVI arrays as GeoTIFF files.
-        :param daily_ndvi: Dictionary of daily NDVI arrays.
-        :param template_file: A template file to copy spatial metadata from.
+
+        Args:
+            daily_ndvi (dict[int, np.ndarray]): Daily NDVI arrays.
+            template_file (str): Raster template for metadata.
+
+        Returns:
+            None. Writes daily NDVI GeoTIFFs.
         """
         with rasterio.open(template_file) as src:
             meta = src.meta.copy()
@@ -186,6 +216,9 @@ class NDVI:
     def _preprocess_ndvi(self):
         """
         Main process to compute the daily NDVI climatology.
+
+        Returns:
+            None. Writes ``daily_ndvi_climatology.pkl`` to disk.
         """
 
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
@@ -236,6 +269,14 @@ class NDVI:
 
     
     def plot_ndvi(self, interval_num):
+        """Plot a 16-day median NDVI raster by interval index.
+
+        Args:
+            interval_num (int): Index of the 16-day interval (0-22).
+
+        Returns:
+            None. Displays a matplotlib plot.
+        """
         if interval_num <= 22:
             nlist = sorted(glob.glob(f'{self.working_dir}/ndvi/*median*.tif'))
             this_ndvi = self.uw.clip(raster_path=nlist[interval_num], out_path=None, save_output=False, crop_type=True)[0] * 0.0001
@@ -249,6 +290,11 @@ class NDVI:
             raise ValueError("Invalid number. Choose number less than 22")
         
     def get_ndvi_data(self):
+        """Download and preprocess NDVI to a daily climatology.
+
+        Returns:
+            None. Writes ``daily_ndvi_climatology.pkl`` to ``{working_dir}/ndvi``.
+        """
         self._download_ndvi()
         self._preprocess_ndvi()
 

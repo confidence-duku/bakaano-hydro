@@ -1,3 +1,8 @@
+"""AlphaEarth embedding download and preprocessing.
+
+Role: Provide static catchment descriptors from AlphaEarth bands.
+"""
+
 import ee
 import numpy as np
 import geemap
@@ -13,6 +18,8 @@ class AlphaEarth:
     """
     AlphaEarth Class:
     -----------------
+    Role: Download and manage AlphaEarth embedding bands for the basin.
+
     This class facilitates the downloading and preprocessing of Alpha Earth satellite embedding datasets. It includes methods for checking existing data, downloading missing bands, and ensuring data integrity.
 
     Key Methods:
@@ -23,16 +30,15 @@ class AlphaEarth:
     - Geopandas for shapefile handling.
     - Geemap for GEE integration.
 
-    Usage:
-    ```python
-    alpha_earth = AlphaEarth(
-        working_dir="/path/to/working_dir",
-        study_area="/path/to/shapefile.shp",
-        start_date="YYYY-MM-DD",
-        end_date="YYYY-MM-DD"
-    )
-    alpha_earth.get_alpha_earth()
-    ```
+    Usage::
+
+        alpha_earth = AlphaEarth(
+            working_dir="/path/to/working_dir",
+            study_area="/path/to/shapefile.shp",
+            start_date="YYYY-MM-DD",
+            end_date="YYYY-MM-DD",
+        )
+        alpha_earth.get_alpha_earth()
     """
 
     def __init__(self, working_dir, study_area, start_date, end_date):
@@ -68,7 +74,11 @@ class AlphaEarth:
 
 
     def get_alpha_earth(self):
-        """Download alpha earth satellite embeddings data."""
+        """Download AlphaEarth embedding bands for the study area.
+
+        Downloads only missing bands and writes them to
+        ``{working_dir}/alpha_earth`` as GeoTIFFs.
+        """
         
         # List of required AlphaEarth band names
         bandlist = [
@@ -136,7 +146,13 @@ class AlphaEarth:
         print("✓ Missing AlphaEarth bands downloaded successfully.")
     
     def plot_alpha_earth(self, variable='A00'):
-        """Plot alpha earth data
+        """Plot a single AlphaEarth band.
+
+        Args:
+            variable (str): Band name, e.g. ``"A00"`` through ``"A63"``.
+
+        Returns:
+            None. Displays a matplotlib plot.
         """
 
         this_tc = self.uw.clip(raster_path=f'{self.working_dir}/alpha_earth/band_{variable}.tif', 
@@ -147,4 +163,3 @@ class AlphaEarth:
         plt.imshow(this_tc, cmap='viridis')
         plt.colorbar()
         plt.show()
-

@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>bakaano.meteo</title>
+    
+          <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../../_static/theme-vendors.js"></script> -->
+      <script src="../../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../../genindex.html" />
+  <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../index.html">Module code</a> &raquo;</li>
+    
+    <li>bakaano.meteo</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <h1>Source code for bakaano.meteo</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Meteorological forcing download and preprocessing.</span>
+
+<span class="sd">Role: Retrieve and prepare precipitation and temperature forcings.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">ee</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">geemap</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rioxarray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">isimip_client.client</span><span class="w"> </span><span class="kn">import</span> <span class="n">ISIMIPClient</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Utils</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">concurrent.futures</span><span class="w"> </span><span class="kn">import</span> <span class="n">ThreadPoolExecutor</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+
+
+<div class="viewcode-block" id="Meteo">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">Meteo</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">study_area</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">local_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">data_source</span><span class="o">=</span><span class="s1">&#39;CHELSA&#39;</span><span class="p">,</span> <span class="n">local_prep_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> 
+                 <span class="n">local_tasmax_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">local_tasmin_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">local_tmean_path</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Role: Download/prepare meteorological forcing for VegET.</span>
+
+<span class="sd">        Initialize a Meteo object.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            working_dir (str): The working directory where files and outputs will be stored.</span>
+<span class="sd">            study_area (str): The path to the shapefile of the river basin or watershed.</span>
+<span class="sd">            start_date (str): The start date for the data in &#39;YYYY-MM-DD&#39; format.</span>
+<span class="sd">            end_date (str): The end date for the data in &#39;YYYY-MM-DD&#39; format.</span>
+<span class="sd">            local_data (bool, optional): Flag indicating whether to use local data instead of downloading new data. Defaults to False.</span>
+<span class="sd">            data_source (str, optional): The source of the data. Options are &#39;CHELSA&#39;, &#39;ERA5&#39;, or &#39;CHIRPS&#39;. Defaults to &#39;CHELSA&#39;.</span>
+<span class="sd">            local_prep_path (str, optional): Path to the local NetCDF file containing daily rainfall data. Required if `local_data` is True.</span>
+<span class="sd">            local_tasmax_path (str, optional): Path to the local NetCDF file containing daily maximum temperature data (in Kelvin). Required if `local_data` is True.</span>
+<span class="sd">            local_tasmin_path (str, optional): Path to the local NetCDF file containing daily minimum temperature data (in Kelvin). Required if `local_data` is True.</span>
+<span class="sd">            local_tmean_path (str, optional): Path to the local NetCDF file containing daily mean temperature data (in Kelvin). Required if `local_data` is True.</span>
+<span class="sd">        Methods</span>
+<span class="sd">        -------</span>
+<span class="sd">        __init__(working_dir, study_area, start_date, end_date, local_data=False, data_source=&#39;CHELSA&#39;, local_prep_path=None,</span>
+<span class="sd">                    local_tasmax_path=None, local_tasmin_path=None, local_tmean_path=None):</span>
+<span class="sd">                Initializes the Meteo object with project details.</span>
+<span class="sd">        get_meteo_data():</span>
+<span class="sd">                Downloads and processes meteorological data from the specified source.</span>
+<span class="sd">        get_era5_land_meteo_data():</span>
+<span class="sd">                Downloads and processes ERA5 Land meteorological data.</span>
+<span class="sd">        get_chirps_prep_meteo_data():</span>
+<span class="sd">                Downloads and processes CHIRPS precipitation data.</span>
+<span class="sd">        get_chelsa_meteo_data():</span>
+<span class="sd">                Downloads and processes CHELSA meteorological data.</span>
+<span class="sd">        export_urls_for_download_manager():</span>
+<span class="sd">                Exports URLs for downloading CHELSA meteorological data.</span>
+<span class="sd">        _download_chelsa_data():</span>
+<span class="sd">                Downloads CHELSA meteorological data.</span>
+<span class="sd">        _download_era5_land_data():</span>
+<span class="sd">                Downloads ERA5 Land meteorological data.</span>
+<span class="sd">        _download_chirps_prep_data():</span>
+<span class="sd">                Downloads CHIRPS precipitation data.</span>
+<span class="sd">        _download_chelsa_data():</span>
+<span class="sd">                Downloads CHELSA meteorological data.</span>
+<span class="sd">        _download_era5_land_data():</span>
+<span class="sd">                Downloads ERA5 Land meteorological data.</span>
+<span class="sd">        </span>
+<span class="sd">        Returns:</span>
+<span class="sd">            Dataarrays clipped to the study area extent, reprojected to the correct CRS, resampled to match DEM resolution</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span> <span class="o">=</span> <span class="n">study_area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmax&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmin&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/prep&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tmean&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span> <span class="o">=</span> <span class="n">Utils</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">get_bbox</span><span class="p">(</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">client</span> <span class="o">=</span> <span class="n">ISIMIPClient</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">local_data</span> <span class="o">=</span> <span class="n">local_data</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_source</span> <span class="o">=</span> <span class="n">data_source</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">=</span> <span class="n">start_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span> <span class="o">=</span> <span class="n">end_date</span>
+
+        <span class="k">if</span> <span class="n">local_data</span> <span class="ow">is</span> <span class="kc">True</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span> <span class="o">=</span> <span class="n">local_prep_path</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span> <span class="o">=</span> <span class="n">local_tasmax_path</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span> <span class="o">=</span> <span class="n">local_tasmin_path</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span> <span class="o">=</span> <span class="n">local_tmean_path</span>
+
+            <span class="k">for</span> <span class="n">path</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">isfile</span><span class="p">(</span><span class="n">path</span><span class="p">)</span> <span class="ow">or</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.nc&quot;</span><span class="p">):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File not found or not a NetCDF (.nc) file: </span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_source</span> <span class="o">==</span> <span class="s1">&#39;CHIRPS&#39;</span><span class="p">:</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmax/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmin/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tmean/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/prep/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/era5_scratch/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">chirps_scratch</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/chirps_scratch/&#39;</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmax/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tasmin/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/tmean/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">data_source</span><span class="si">}</span><span class="s1">/prep/&#39;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/era5_scratch/&#39;</span><span class="p">)</span>
+
+    
+<div class="viewcode-block" id="Meteo.check_missing_dates">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.check_missing_dates">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_missing_dates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variables</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check for missing daily ERA5-Land GeoTIFFs in scratch folder.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            variables (list[str], optional): Variable names to check.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list[str]: Missing dates in YYYY-MM-DD format.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">defaultdict</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span><span class="p">,</span> <span class="n">timedelta</span>
+    
+        <span class="c1"># variables = [</span>
+        <span class="c1">#     &#39;total_precipitation_sum&#39;,</span>
+        <span class="c1">#     &#39;temperature_2m_min&#39;,</span>
+        <span class="c1">#     &#39;temperature_2m_max&#39;,</span>
+        <span class="c1">#     &#39;temperature_2m&#39;</span>
+        <span class="c1"># ]</span>
+    
+        <span class="c1"># Generate list of all expected dates</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">expected_dates</span> <span class="o">=</span> <span class="p">[(</span><span class="n">start</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                          <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    
+        <span class="n">files</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">listdir</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">)</span>
+        <span class="n">var_dates</span> <span class="o">=</span> <span class="n">defaultdict</span><span class="p">(</span><span class="nb">set</span><span class="p">)</span>
+    
+        <span class="k">for</span> <span class="n">fname</span> <span class="ow">in</span> <span class="n">files</span><span class="p">:</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">fname</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s2">&quot;.tif&quot;</span><span class="p">):</span>
+                <span class="k">continue</span>
+            <span class="n">parts</span> <span class="o">=</span> <span class="n">fname</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">parts</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">:</span>
+                <span class="n">date_part</span><span class="p">,</span> <span class="n">var_part</span> <span class="o">=</span> <span class="n">parts</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">parts</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="n">var_part</span> <span class="ow">in</span> <span class="n">variables</span><span class="p">:</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="c1"># Convert YYYYMMDD → YYYY-MM-DD</span>
+                        <span class="n">date_obj</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_part</span><span class="p">,</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">date_str</span> <span class="o">=</span> <span class="n">date_obj</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                        <span class="n">var_dates</span><span class="p">[</span><span class="n">var_part</span><span class="p">]</span><span class="o">.</span><span class="n">add</span><span class="p">(</span><span class="n">date_str</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️ Skipping malformed filename: </span><span class="si">{</span><span class="n">fname</span><span class="si">}</span><span class="s2"> — </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">var_dates</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;❌ No valid ERA5-Land files detected — check filenames and variable matching.&quot;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="p">[]</span>
+    
+        <span class="c1"># Choose variable with fewest valid days</span>
+        <span class="n">min_var</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">var_dates</span><span class="p">,</span> <span class="n">key</span><span class="o">=</span><span class="k">lambda</span> <span class="n">v</span><span class="p">:</span> <span class="nb">len</span><span class="p">(</span><span class="n">var_dates</span><span class="p">[</span><span class="n">v</span><span class="p">]))</span>
+        <span class="n">observed_dates</span> <span class="o">=</span> <span class="n">var_dates</span><span class="p">[</span><span class="n">min_var</span><span class="p">]</span>
+    
+        <span class="c1"># Identify missing dates</span>
+        <span class="n">missing</span> <span class="o">=</span> <span class="p">[</span><span class="n">d</span> <span class="k">for</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">expected_dates</span> <span class="k">if</span> <span class="n">d</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">observed_dates</span><span class="p">]</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;🔍 Checked using variable with shortest record: **</span><span class="si">{</span><span class="n">min_var</span><span class="si">}</span><span class="s2">**&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;📊 </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">observed_dates</span><span class="p">)</span><span class="si">}</span><span class="s2"> out of </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">expected_dates</span><span class="p">)</span><span class="si">}</span><span class="s2"> dates present for </span><span class="si">{</span><span class="n">min_var</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️ </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing dates (e.g.): </span><span class="si">{</span><span class="n">missing</span><span class="p">[:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;✅ All expected dates are present.&quot;</span><span class="p">)</span>
+    
+        <span class="k">return</span> <span class="n">missing</span></div>
+
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_download_chelsa_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">climate_variable</span><span class="p">,</span> <span class="n">output_folder</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download CHELSA daily climate data using ISIMIP client.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            climate_variable (str): Variable id for ISIMIP (e.g., &quot;tasmax&quot;, &quot;pr&quot;).</span>
+<span class="sd">            output_folder (str): Output folder name under working_dir.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Downloads and extracts NetCDF files to disk.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="nb">any</span><span class="p">(</span><span class="n">folder</span><span class="o">.</span><span class="n">exists</span><span class="p">()</span> <span class="ow">and</span> <span class="nb">any</span><span class="p">(</span><span class="n">folder</span><span class="o">.</span><span class="n">iterdir</span><span class="p">())</span> <span class="k">for</span> <span class="n">folder</span> <span class="ow">in</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">]):</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">datasets</span><span class="p">(</span>
+                <span class="n">simulation_round</span><span class="o">=</span><span class="s1">&#39;ISIMIP3a&#39;</span><span class="p">,</span>
+                <span class="n">product</span><span class="o">=</span><span class="s1">&#39;InputData&#39;</span><span class="p">,</span>
+                <span class="n">climate_forcing</span><span class="o">=</span><span class="s1">&#39;chelsa-w5e5&#39;</span><span class="p">,</span>
+                <span class="n">climate_scenario</span><span class="o">=</span><span class="s1">&#39;obsclim&#39;</span><span class="p">,</span>
+                <span class="n">resolution</span><span class="o">=</span><span class="s1">&#39;30arcsec&#39;</span><span class="p">,</span>
+                <span class="n">time_step</span><span class="o">=</span><span class="s1">&#39;daily&#39;</span><span class="p">,</span>
+                <span class="n">climate_variable</span><span class="o">=</span><span class="n">climate_variable</span>
+            <span class="p">)</span>
+            
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">paths</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="p">[</span><span class="s1">&#39;path&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;files&#39;</span><span class="p">]]</span>
+            <span class="n">ds</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">cutout</span><span class="p">(</span>
+                <span class="n">paths</span><span class="p">,</span>
+                <span class="n">bbox</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxy</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">minx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxx</span><span class="p">],</span>
+                <span class="n">poll</span><span class="o">=</span><span class="mi">10</span>
+            <span class="p">)</span>
+            
+            <span class="n">download_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/</span><span class="si">{</span><span class="n">output_folder</span><span class="si">}</span><span class="s1">&#39;</span>
+            <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">download_path</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">download</span><span class="p">(</span><span class="n">ds</span><span class="p">[</span><span class="s1">&#39;file_url&#39;</span><span class="p">],</span> <span class="n">path</span><span class="o">=</span><span class="n">download_path</span><span class="p">,</span> <span class="n">validate</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="n">extract</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     - Climate data already exists in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="si">}</span><span class="s2"> and </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="si">}</span><span class="s2">; skipping download.&quot;</span><span class="p">)</span>
+    
+    <span class="k">def</span><span class="w"> </span><span class="nf">_download_era5_land_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download ERA5-Land daily data via Earth Engine and store as GeoTIFFs.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Writes GeoTIFFs to the scratch folder.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ee</span><span class="o">.</span><span class="n">Authenticate</span><span class="p">()</span>
+        <span class="n">ee</span><span class="o">.</span><span class="n">Initialize</span><span class="p">()</span>
+       
+        <span class="c1"># Parse start and end dates</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">area</span> <span class="o">=</span> <span class="n">ee</span><span class="o">.</span><span class="n">Geometry</span><span class="o">.</span><span class="n">BBox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">minx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxy</span><span class="p">)</span>
+    
+        <span class="c1"># Step 1: Attempt bulk download by year using image collection</span>
+        <span class="n">start_year</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">year</span>
+        <span class="n">end_year</span> <span class="o">=</span> <span class="n">end</span><span class="o">.</span><span class="n">year</span>
+    
+        <span class="n">era5</span> <span class="o">=</span> <span class="n">ee</span><span class="o">.</span><span class="n">ImageCollection</span><span class="p">(</span><span class="s2">&quot;ECMWF/ERA5_LAND/DAILY_AGGR&quot;</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span> <span class="n">end_year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">i_date</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="s2">-01-01&quot;</span>
+            <span class="n">f_date</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">-01-01&quot;</span> <span class="k">if</span> <span class="n">year</span> <span class="o">&lt;</span> <span class="n">end_year</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span>
+    
+            <span class="n">df</span> <span class="o">=</span> <span class="n">era5</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                <span class="s1">&#39;total_precipitation_sum&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;temperature_2m&#39;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">i_date</span><span class="p">,</span> <span class="n">f_date</span><span class="p">)</span>
+    
+            <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image_collection</span><span class="p">(</span>
+                <span class="n">ee_object</span><span class="o">=</span><span class="n">df</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span>
+                <span class="n">file_per_band</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bulk download attempt completed. Verifying files...&quot;</span><span class="p">)</span>
+    
+
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;total_precipitation_sum&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;temperature_2m&#39;</span>
+        <span class="p">]</span>
+        <span class="n">missing_dates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_missing_dates</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing_dates</span><span class="p">)</span><span class="si">}</span><span class="s2"> missing dates detected. Re-downloading...&quot;</span><span class="p">)</span>
+    
+        <span class="c1"># Step 3: Re-download only missing dates individually</span>
+        <span class="k">for</span> <span class="n">date_str</span> <span class="ow">in</span> <span class="n">missing_dates</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">next_day</span> <span class="o">=</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">era5</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="n">next_day</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                    <span class="p">[</span><span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m&#39;</span><span class="p">,</span> <span class="s1">&#39;total_precipitation_sum&#39;</span><span class="p">]</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        
+                <span class="k">if</span> <span class="n">img</span><span class="p">:</span>
+                    <span class="n">date_raw</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+                    <span class="c1"># Loop over each band and export separately</span>
+                    <span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m&#39;</span><span class="p">,</span> <span class="s1">&#39;total_precipitation_sum&#39;</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">band_names</span><span class="p">:</span>
+                        <span class="n">single_band_img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">band</span><span class="p">)</span>
+                        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">date_raw</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">band</span><span class="si">}</span><span class="s2">.tif&quot;</span><span class="p">)</span>
+        
+                        <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image</span><span class="p">(</span>
+                            <span class="n">ee_object</span><span class="o">=</span><span class="n">single_band_img</span><span class="p">,</span>
+                            <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                            <span class="n">scale</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                            <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span>
+                        <span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded </span><span class="si">{</span><span class="n">band</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed to download </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;ERA5 download process completed.&quot;</span><span class="p">)</span>
+
+    
+
+    <span class="k">def</span><span class="w"> </span><span class="nf">_download_chirps_prep_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download CHIRPS precipitation + ERA5 temperatures via Earth Engine.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Writes GeoTIFFs to scratch folders.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">ee</span><span class="o">.</span><span class="n">Authenticate</span><span class="p">()</span>
+        <span class="n">ee</span><span class="o">.</span><span class="n">Initialize</span><span class="p">()</span>
+    
+        <span class="n">chirps</span> <span class="o">=</span> <span class="n">ee</span><span class="o">.</span><span class="n">ImageCollection</span><span class="p">(</span><span class="s2">&quot;UCSB-CHG/CHIRPS/DAILY&quot;</span><span class="p">)</span>
+        <span class="n">era5</span> <span class="o">=</span> <span class="n">ee</span><span class="o">.</span><span class="n">ImageCollection</span><span class="p">(</span><span class="s2">&quot;ECMWF/ERA5_LAND/DAILY_AGGR&quot;</span><span class="p">)</span>
+        <span class="n">area</span> <span class="o">=</span> <span class="n">ee</span><span class="o">.</span><span class="n">Geometry</span><span class="o">.</span><span class="n">BBox</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">minx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">miny</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxx</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">maxy</span><span class="p">)</span>
+    
+        <span class="n">start</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">start_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">end_date</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">expected_dates</span> <span class="o">=</span> <span class="p">[(</span><span class="n">start</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="n">i</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">((</span><span class="n">end</span> <span class="o">-</span> <span class="n">start</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)]</span>
+    
+        <span class="c1"># Step 1: Bulk download CHIRPS and ERA5 (temperature)</span>
+        <span class="n">start_year</span> <span class="o">=</span> <span class="n">start</span><span class="o">.</span><span class="n">year</span>
+        <span class="n">end_year</span> <span class="o">=</span> <span class="n">end</span><span class="o">.</span><span class="n">year</span>
+    
+        <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start_year</span><span class="p">,</span> <span class="n">end_year</span> <span class="o">+</span> <span class="mi">1</span><span class="p">):</span>
+            <span class="n">i_date</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="si">}</span><span class="s2">-01-01&quot;</span>
+            <span class="n">f_date</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">year</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="mi">1</span><span class="si">}</span><span class="s2">-01-01&quot;</span> <span class="k">if</span> <span class="n">year</span> <span class="o">&lt;</span> <span class="n">end_year</span> <span class="k">else</span> <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span>
+    
+            <span class="c1"># CHIRPS precipitation</span>
+            <span class="n">df_chirps</span> <span class="o">=</span> <span class="n">chirps</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s1">&#39;precipitation&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">i_date</span><span class="p">,</span> <span class="n">f_date</span><span class="p">)</span>
+            <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image_collection</span><span class="p">(</span>
+                <span class="n">ee_object</span><span class="o">=</span><span class="n">df_chirps</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">chirps_scratch</span><span class="p">,</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+                <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span>
+                <span class="n">file_per_band</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+    
+            <span class="c1"># ERA5 temperature</span>
+            <span class="n">df_era5</span> <span class="o">=</span> <span class="n">era5</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                <span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;temperature_2m&#39;</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">i_date</span><span class="p">,</span> <span class="n">f_date</span><span class="p">)</span>
+            <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image_collection</span><span class="p">(</span>
+                <span class="n">ee_object</span><span class="o">=</span><span class="n">df_era5</span><span class="p">,</span>
+                <span class="n">out_dir</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span>
+                <span class="n">scale</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">,</span>
+                <span class="n">file_per_band</span><span class="o">=</span><span class="kc">True</span>
+            <span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Bulk CHIRPS and ERA5 download complete. Checking for missing files...&quot;</span><span class="p">)</span>
+    
+        
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;precipitation&#39;</span>
+        <span class="p">]</span>
+        <span class="n">missing_chirps</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_missing_dates</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing CHIRPS dates: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing_chirps</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="k">for</span> <span class="n">date_str</span> <span class="ow">in</span> <span class="n">missing_chirps</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">next_day</span> <span class="o">=</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">chirps</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="n">next_day</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="s1">&#39;precipitation&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+                <span class="k">if</span> <span class="n">img</span><span class="p">:</span>
+                    <span class="n">date_raw</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chirps_scratch</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">date_raw</span><span class="si">}</span><span class="s2">.precipitation.tif&quot;</span><span class="p">)</span>
+                    <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image</span><span class="p">(</span>
+                        <span class="n">ee_object</span><span class="o">=</span><span class="n">img</span><span class="p">,</span>
+                        <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                        <span class="n">scale</span><span class="o">=</span><span class="mi">5000</span><span class="p">,</span>
+                        <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                        <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span>
+                    <span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded CHIRPS for </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed CHIRPS download for </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="n">variables</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;temperature_2m&#39;</span>
+        <span class="p">]</span>
+        <span class="n">missing_era5</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">check_missing_dates</span><span class="p">(</span><span class="n">variables</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Missing ERA5 dates: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">missing_era5</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="k">for</span> <span class="n">date_str</span> <span class="ow">in</span> <span class="n">missing_era5</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">next_day</span> <span class="o">=</span> <span class="p">(</span><span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">+</span> <span class="n">timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">img</span> <span class="o">=</span> <span class="n">era5</span><span class="o">.</span><span class="n">filterDate</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="n">next_day</span><span class="p">)</span><span class="o">.</span><span class="n">select</span><span class="p">(</span>
+                    <span class="p">[</span><span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m&#39;</span><span class="p">]</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">first</span><span class="p">()</span>
+        
+                <span class="k">if</span> <span class="n">img</span><span class="p">:</span>
+                    <span class="n">date_raw</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">date_str</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span><span class="o">.</span><span class="n">strftime</span><span class="p">(</span><span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+                    <span class="c1"># Loop over each band and export separately</span>
+                    <span class="n">band_names</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;temperature_2m_min&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m_max&#39;</span><span class="p">,</span> <span class="s1">&#39;temperature_2m&#39;</span><span class="p">]</span>
+                    <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">band_names</span><span class="p">:</span>
+                        <span class="n">single_band_img</span> <span class="o">=</span> <span class="n">img</span><span class="o">.</span><span class="n">select</span><span class="p">(</span><span class="n">band</span><span class="p">)</span>
+                        <span class="n">filename</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">date_raw</span><span class="si">}</span><span class="s2">.</span><span class="si">{</span><span class="n">band</span><span class="si">}</span><span class="s2">.tif&quot;</span><span class="p">)</span>
+        
+                        <span class="n">geemap</span><span class="o">.</span><span class="n">ee_export_image</span><span class="p">(</span>
+                            <span class="n">ee_object</span><span class="o">=</span><span class="n">single_band_img</span><span class="p">,</span>
+                            <span class="n">filename</span><span class="o">=</span><span class="n">filename</span><span class="p">,</span>
+                            <span class="n">scale</span><span class="o">=</span><span class="mi">10000</span><span class="p">,</span>
+                            <span class="n">region</span><span class="o">=</span><span class="n">area</span><span class="p">,</span>
+                            <span class="n">crs</span><span class="o">=</span><span class="s1">&#39;EPSG:4326&#39;</span>
+                        <span class="p">)</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Downloaded </span><span class="si">{</span><span class="n">band</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Failed ERA5 download for </span><span class="si">{</span><span class="n">date_str</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;CHIRPS and ERA5 download (with checks) completed.&quot;</span><span class="p">)</span>
+        
+<div class="viewcode-block" id="Meteo.get_era5_land_meteo_data">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.get_era5_land_meteo_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_era5_land_meteo_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download/process ERA5-Land daily data and return datasets.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:</span>
+<span class="sd">                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_data</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">data_check</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/ERA5/prep/pr.nc&#39;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">data_check</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_download_era5_land_data</span><span class="p">()</span>
+                <span class="n">variable_dirs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*total_precipitation_sum*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tasmax&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m_max*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tasmin&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m_min*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tas&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m.tif&#39;</span><span class="p">)</span>
+                <span class="p">}</span>
+
+                <span class="n">output_dir_map</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tasmax&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tasmin&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tas&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span>
+                <span class="p">}</span>
+
+                <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">tif_pattern</span> <span class="ow">in</span> <span class="n">variable_dirs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="o">=</span> <span class="n">tif_pattern</span>
+                    <span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir_map</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span>
+                    <span class="n">tif_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">tif_pattern</span><span class="p">))</span>
+
+                    <span class="c1"># 🕒 Extract timestamps from filenames (e.g., &#39;20210101.tif&#39;)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tif_files</span>
+                        <span class="p">]</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not parse timestamps from filenames in: </span><span class="si">{</span><span class="n">tif_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span> <span class="o">=</span> <span class="n">timestamps</span>
+                    <span class="c1"># 📚 Load and stack GeoTIFFs</span>
+                    <span class="n">data_list</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tif_files</span><span class="p">):</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">rioxarray</span><span class="o">.</span><span class="n">open_rasterio</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">masked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>  <span class="c1"># Remove band dim if present</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">timestamps</span><span class="p">[</span><span class="n">i</span><span class="p">]]})</span>         <span class="c1"># ⬅️ Make time a proper dim</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">timestamps</span><span class="p">[</span><span class="n">i</span><span class="p">]]))</span>      <span class="c1"># ⬅️ Make it a coordinate too</span>
+                        <span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">da</span><span class="p">)</span>
+
+                    <span class="c1"># 📈 Combine into a single xarray DataArray</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">data_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">var_name</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">})</span>
+
+                    <span class="c1"># 💾 Save to NetCDF</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">nc_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">.nc&quot;</span><span class="p">)</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ Saved NetCDF for &#39;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">nc_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     - ERA5 Land daily data already exists in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s2">/era5_land; skipping download.&quot;</span><span class="p">)</span>
+
+
+            <span class="c1"># 🔄 Load datasets for return</span>
+            <span class="n">prep_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="s2">&quot;pr.nc&quot;</span><span class="p">))</span>
+            <span class="n">tasmax_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="s2">&quot;tasmax.nc&quot;</span><span class="p">))</span>
+            <span class="n">tasmin_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="s2">&quot;tasmin.nc&quot;</span><span class="p">))</span>
+            <span class="n">tmean_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">,</span> <span class="s2">&quot;tas.nc&quot;</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span></div>
+
+
+            
+
+<div class="viewcode-block" id="Meteo.get_chirps_prep_meteo_data">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.get_chirps_prep_meteo_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_chirps_prep_meteo_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download/process CHIRPS precipitation and ERA5 temperatures.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:</span>
+<span class="sd">                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_data</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">data_check</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/CHIRPS/prep/pr.nc&#39;</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">data_check</span><span class="p">):</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_download_chirps_prep_data</span><span class="p">()</span>
+                <span class="n">variable_dirs</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">chirps_scratch</span><span class="p">,</span> <span class="s1">&#39;*precipitation*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tasmax&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m_max*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tasmin&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m_min*.tif&#39;</span><span class="p">),</span>
+                    <span class="s1">&#39;tas&#39;</span><span class="p">:</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">era5_scratch</span><span class="p">,</span> <span class="s1">&#39;*temperature_2m.tif&#39;</span><span class="p">)</span>
+                <span class="p">}</span>
+
+                <span class="n">output_dir_map</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tasmax&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tasmin&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span>
+                    <span class="s1">&#39;tas&#39;</span><span class="p">:</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span>
+                <span class="p">}</span>
+
+                <span class="k">for</span> <span class="n">var_name</span><span class="p">,</span> <span class="n">tif_pattern</span> <span class="ow">in</span> <span class="n">variable_dirs</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">pattern</span> <span class="o">=</span> <span class="n">tif_pattern</span>
+                    <span class="n">output_dir</span> <span class="o">=</span> <span class="n">output_dir_map</span><span class="p">[</span><span class="n">var_name</span><span class="p">]</span>
+                    <span class="n">tif_files</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">tif_pattern</span><span class="p">))</span>
+
+                    <span class="c1"># 🕒 Extract timestamps from filenames (e.g., &#39;20210101.tif&#39;)</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">timestamps</span> <span class="o">=</span> <span class="p">[</span>
+                            <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">basename</span><span class="p">(</span><span class="n">f</span><span class="p">)</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s1">&#39;.&#39;</span><span class="p">)[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;%Y%m</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                            <span class="k">for</span> <span class="n">f</span> <span class="ow">in</span> <span class="n">tif_files</span>
+                        <span class="p">]</span>
+                    <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Could not parse timestamps from filenames in: </span><span class="si">{</span><span class="n">tif_pattern</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                    <span class="c1"># 📚 Load and stack GeoTIFFs</span>
+                    <span class="n">data_list</span> <span class="o">=</span> <span class="p">[]</span>
+                    <span class="k">for</span> <span class="n">i</span><span class="p">,</span> <span class="n">file</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="n">tif_files</span><span class="p">):</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">rioxarray</span><span class="o">.</span><span class="n">open_rasterio</span><span class="p">(</span><span class="n">file</span><span class="p">,</span> <span class="n">masked</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">squeeze</span><span class="p">()</span>  <span class="c1"># Remove band dim if present</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">expand_dims</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;time&quot;</span><span class="p">:</span> <span class="p">[</span><span class="n">timestamps</span><span class="p">[</span><span class="n">i</span><span class="p">]]})</span>         <span class="c1"># ⬅️ Make time a proper dim</span>
+                        <span class="n">da</span> <span class="o">=</span> <span class="n">da</span><span class="o">.</span><span class="n">assign_coords</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="p">(</span><span class="s2">&quot;time&quot;</span><span class="p">,</span> <span class="p">[</span><span class="n">timestamps</span><span class="p">[</span><span class="n">i</span><span class="p">]]))</span>      <span class="c1"># ⬅️ Make it a coordinate too</span>
+                        <span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">da</span><span class="p">)</span>
+
+                    <span class="c1"># 📈 Combine into a single xarray DataArray</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span><span class="n">data_list</span><span class="p">,</span> <span class="n">dim</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="n">var_name</span>
+                    <span class="n">data</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">rename</span><span class="p">({</span><span class="s2">&quot;y&quot;</span><span class="p">:</span> <span class="s2">&quot;lat&quot;</span><span class="p">,</span> <span class="s2">&quot;x&quot;</span><span class="p">:</span> <span class="s2">&quot;lon&quot;</span><span class="p">})</span>
+
+                    <span class="c1"># 💾 Save to NetCDF</span>
+                    <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                    <span class="n">nc_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">output_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">.nc&quot;</span><span class="p">)</span>
+                    <span class="n">data</span><span class="o">.</span><span class="n">to_netcdf</span><span class="p">(</span><span class="n">nc_path</span><span class="p">)</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;✅ Saved NetCDF for &#39;</span><span class="si">{</span><span class="n">var_name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">nc_path</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="k">else</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;     - CHIRPS daily data already exists in </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s2">/CHIRPS; skipping download.&quot;</span><span class="p">)</span>
+
+            <span class="c1"># 🔄 Load datasets for return</span>
+            <span class="n">prep_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="s2">&quot;pr.nc&quot;</span><span class="p">))</span>
+            <span class="n">tasmax_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="s2">&quot;tasmax.nc&quot;</span><span class="p">))</span>
+            <span class="n">tasmin_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="s2">&quot;tasmin.nc&quot;</span><span class="p">))</span>
+            <span class="n">tmean_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">,</span> <span class="s2">&quot;tas.nc&quot;</span><span class="p">))</span>
+
+        <span class="k">return</span> <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span></div>
+
+
+<div class="viewcode-block" id="Meteo.get_chelsa_meteo_data">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.get_chelsa_meteo_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_chelsa_meteo_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Download/process CHELSA daily data (or load local NetCDFs).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:</span>
+<span class="sd">                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">local_data</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">climate_variables</span> <span class="o">=</span> <span class="p">{</span>
+                <span class="s1">&#39;tasmax&#39;</span><span class="p">:</span> <span class="s1">&#39;CHELSA/tasmax&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;tasmin&#39;</span><span class="p">:</span> <span class="s1">&#39;CHELSA/tasmin&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;tas&#39;</span><span class="p">:</span> <span class="s1">&#39;CHELSA/tmean&#39;</span><span class="p">,</span>
+                <span class="s1">&#39;pr&#39;</span><span class="p">:</span> <span class="s1">&#39;CHELSA/prep&#39;</span>
+            <span class="p">}</span>
+            
+            <span class="k">with</span> <span class="n">ThreadPoolExecutor</span><span class="p">(</span><span class="n">max_workers</span><span class="o">=</span><span class="mi">4</span><span class="p">)</span> <span class="k">as</span> <span class="n">executor</span><span class="p">:</span>
+                <span class="n">futures</span> <span class="o">=</span> <span class="p">{</span>
+                    <span class="n">executor</span><span class="o">.</span><span class="n">submit</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_download_chelsa_data</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">folder</span><span class="p">):</span> <span class="n">variable</span>
+                    <span class="k">for</span> <span class="n">variable</span><span class="p">,</span> <span class="n">folder</span> <span class="ow">in</span> <span class="n">climate_variables</span><span class="o">.</span><span class="n">items</span><span class="p">()</span>
+                <span class="p">}</span>
+                
+                <span class="k">for</span> <span class="n">future</span> <span class="ow">in</span> <span class="n">futures</span><span class="p">:</span>
+                    <span class="n">variable</span> <span class="o">=</span> <span class="n">futures</span><span class="p">[</span><span class="n">future</span><span class="p">]</span>
+                    <span class="k">try</span><span class="p">:</span>
+                        <span class="n">future</span><span class="o">.</span><span class="n">result</span><span class="p">()</span>  <span class="c1"># Raises exception if download fails</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Download completed for </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;An error occurred while downloading </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2">: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">tasmax_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">concat_nc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="s1">&#39;*tasmax*.nc&#39;</span><span class="p">)</span>
+            <span class="n">tasmin_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">concat_nc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="s1">&#39;*tasmin*.nc&#39;</span><span class="p">)</span>   
+            <span class="n">tmean_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">concat_nc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">,</span> <span class="s1">&#39;*tas_*.nc&#39;</span><span class="p">)</span>
+            <span class="n">prep_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">concat_nc</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="s1">&#39;*pr_*.nc&#39;</span><span class="p">)</span>
+
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="k">if</span> <span class="ow">not</span> <span class="nb">all</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">]):</span>
+                    <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;All paths to local NetCDF files must be provided if &#39;local_data&#39; is True.&quot;</span><span class="p">)</span>
+
+                <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">variable</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span>
+                    <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">],</span>
+                    <span class="p">[</span><span class="s1">&#39;local_prep_path&#39;</span><span class="p">,</span> <span class="s1">&#39;local_tasmax_path&#39;</span><span class="p">,</span> <span class="s1">&#39;local_tasmin_path&#39;</span><span class="p">,</span> <span class="s1">&#39;local_tmean_path&#39;</span><span class="p">]</span>
+                <span class="p">):</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">path</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">FileNotFoundError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The specified local data file for </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2"> at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39; does not exist.&quot;</span><span class="p">)</span>
+                    <span class="k">if</span> <span class="ow">not</span> <span class="n">path</span><span class="o">.</span><span class="n">endswith</span><span class="p">(</span><span class="s1">&#39;.nc&#39;</span><span class="p">):</span>
+                        <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;The file for </span><span class="si">{</span><span class="n">variable</span><span class="si">}</span><span class="s2"> at &#39;</span><span class="si">{</span><span class="n">path</span><span class="si">}</span><span class="s2">&#39; is not a NetCDF file (.nc).&quot;</span><span class="p">)</span>
+                
+                <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Local data paths validated. Proceeding with processing.&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Configuration error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">FileNotFoundError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;File error: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;An unexpected error occurred while processing local data: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># tasmax_nc = self.uw.align_rasters(self.tasmax_path, israster=False)</span>
+            <span class="c1"># tasmin_nc = self.uw.align_rasters(self.tasmin_path, israster=False)</span>
+            <span class="c1"># tmean_nc = self.uw.align_rasters(self.tmean_path, israster=False)</span>
+            <span class="c1"># prep_nc = self.uw.align_rasters(self.prep_path, israster=False)</span>
+            
+            <span class="n">tasmax_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmax_path</span><span class="p">)</span>
+            <span class="n">tasmin_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tasmin_path</span><span class="p">)</span>
+            <span class="n">tmean_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">tmean_path</span><span class="p">)</span>
+            <span class="n">prep_nc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">prep_path</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span></div>
+
+    
+<div class="viewcode-block" id="Meteo.export_urls_for_download_manager">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.export_urls_for_download_manager">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">export_urls_for_download_manager</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Export CHELSA download URLs to text files in the working directory.&quot;&quot;&quot;</span>
+        <span class="n">climate_variables</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;tasmax&#39;</span><span class="p">,</span> <span class="s1">&#39;tasmin&#39;</span><span class="p">,</span> <span class="s1">&#39;tas&#39;</span><span class="p">,</span> <span class="s1">&#39;pr&#39;</span><span class="p">]</span>
+        <span class="n">all_urls</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">climate_variable</span> <span class="ow">in</span> <span class="n">climate_variables</span><span class="p">:</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">client</span><span class="o">.</span><span class="n">datasets</span><span class="p">(</span>
+                <span class="n">simulation_round</span><span class="o">=</span><span class="s1">&#39;ISIMIP3a&#39;</span><span class="p">,</span>
+                <span class="n">product</span><span class="o">=</span><span class="s1">&#39;InputData&#39;</span><span class="p">,</span>
+                <span class="n">climate_forcing</span><span class="o">=</span><span class="s1">&#39;chelsa-w5e5&#39;</span><span class="p">,</span>
+                <span class="n">climate_scenario</span><span class="o">=</span><span class="s1">&#39;obsclim&#39;</span><span class="p">,</span>
+                <span class="n">resolution</span><span class="o">=</span><span class="s1">&#39;30arcsec&#39;</span><span class="p">,</span>
+                <span class="n">time_step</span><span class="o">=</span><span class="s1">&#39;daily&#39;</span><span class="p">,</span>
+                <span class="n">climate_variable</span><span class="o">=</span><span class="n">climate_variable</span>
+            <span class="p">)</span>
+
+            <span class="n">dataset</span> <span class="o">=</span> <span class="n">response</span><span class="p">[</span><span class="s2">&quot;results&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">urls</span> <span class="o">=</span> <span class="p">[</span><span class="n">file</span><span class="p">[</span><span class="s1">&#39;file_url&#39;</span><span class="p">]</span> <span class="k">for</span> <span class="n">file</span> <span class="ow">in</span> <span class="n">dataset</span><span class="p">[</span><span class="s1">&#39;files&#39;</span><span class="p">]]</span>
+            <span class="c1">#all_urls.extend(urls)</span>
+
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/&#39;</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">climate_variable</span><span class="si">}</span><span class="s2">_download_urls.txt&quot;</span><span class="p">),</span> <span class="s2">&quot;w&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">f</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2">&quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">urls</span><span class="p">))</span></div>
+
+    
+<div class="viewcode-block" id="Meteo.get_meteo_data">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.get_meteo_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_meteo_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get meteo data for the selected source.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:</span>
+<span class="sd">                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_source</span> <span class="o">==</span> <span class="s1">&#39;CHELSA&#39;</span><span class="p">:</span>
+            <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chelsa_meteo_data</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_source</span> <span class="o">==</span> <span class="s1">&#39;ERA5&#39;</span><span class="p">:</span>
+            <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_era5_land_meteo_data</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_source</span> <span class="o">==</span> <span class="s1">&#39;CHIRPS&#39;</span><span class="p">:</span>
+            <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span><span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_chirps_prep_meteo_data</span><span class="p">()</span>
+        <span class="k">return</span> <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span></div>
+
+    
+<div class="viewcode-block" id="Meteo.plot_meteo">
+<a class="viewcode-back" href="../../api/bakaano.meteo.html#bakaano.meteo.Meteo.plot_meteo">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">plot_meteo</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">variable</span><span class="p">,</span> <span class="n">date</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot a meteorological field for a given date.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            variable (str): One of ``&quot;precip&quot;``, ``&quot;tasmax&quot;``, ``&quot;tasmin&quot;``, ``&quot;tmean&quot;``.</span>
+<span class="sd">            date (str or datetime): Date to plot (nearest available).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Displays a matplotlib plot.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">prep_nc</span><span class="p">,</span> <span class="n">tasmax_nc</span><span class="p">,</span> <span class="n">tasmin_nc</span><span class="p">,</span> <span class="n">tmean_nc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_meteo_data</span><span class="p">()</span>
+        
+        <span class="k">if</span> <span class="n">variable</span><span class="o">==</span><span class="s1">&#39;precip&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">prep_nc</span><span class="p">[</span><span class="s1">&#39;pr&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Precipitation on </span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">variable</span><span class="o">==</span><span class="s1">&#39;tasmax&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">tasmax_nc</span><span class="p">[</span><span class="s1">&#39;tasmax&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mf">273.15</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Maximum temperature on </span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">variable</span><span class="o">==</span><span class="s1">&#39;tasmin&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">tasmin_nc</span><span class="p">[</span><span class="s1">&#39;tasmin&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mf">273.15</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Minimum temperature on </span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">elif</span> <span class="n">variable</span><span class="o">==</span><span class="s1">&#39;tmean&#39;</span><span class="p">:</span>
+            <span class="n">data</span> <span class="o">=</span> <span class="n">tmean_nc</span><span class="p">[</span><span class="s1">&#39;tas&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="n">date</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span> <span class="o">-</span> <span class="mf">273.15</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Mean temperature on </span><span class="si">{</span><span class="n">date</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">interpolation</span><span class="o">=</span><span class="s1">&#39;gaussian&#39;</span><span class="p">,</span> <span class="n">vmin</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+            <span class="n">plt</span><span class="o">.</span><span class="n">colorbar</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Invalid variable. Select valid variable&quot;</span><span class="p">)</span></div>
+</div>
+
+
+
+        
+        
+                    
+
+
+        
+
+        
+        
+                    
+</pre></div>
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

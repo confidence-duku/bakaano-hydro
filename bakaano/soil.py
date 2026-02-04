@@ -1,3 +1,7 @@
+"""Soil property download and preprocessing.
+
+Role: Provide soil rasters for water holding capacity and related properties.
+"""
 
 import requests as r
 import os
@@ -8,6 +12,8 @@ import matplotlib.pyplot as plt
 class Soil:
     def __init__(self, working_dir, study_area):
         """
+        Role: Download/prepare soil property rasters.
+
         Initialize a Soil object.
 
         Args:
@@ -32,6 +38,9 @@ class Soil:
         
     def get_soil_data(self):
         """Download soil data.
+
+        Returns:
+            None. Writes clipped soil rasters to ``{working_dir}/soil``.
         """
         soil_check = f'{self.working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif'
         if not os.path.exists(soil_check):
@@ -64,11 +73,24 @@ class Soil:
 
     def _preprocess(self, raster_dir, out_path):  
         """Preprocess downloaded data.
+
+        Args:
+            raster_dir (str): Input raster path.
+            out_path (str): Output clipped raster path.
+
+        Returns:
+            None. Writes clipped raster to disk.
         """
         self.uw.clip(raster_path=raster_dir, out_path=out_path, save_output=True, crop_type=False)
     
     def plot_soil(self, variable):
         """Plot soil data.
+
+        Args:
+            variable (str): One of ``'available_water_content'``, ``'wilting_point'``, ``'saturation_point'``.
+
+        Returns:
+            None. Displays a matplotlib plot.
         """
         if variable=='available_water_content':
             soil_data = self.uw.clip(raster_path=f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', 

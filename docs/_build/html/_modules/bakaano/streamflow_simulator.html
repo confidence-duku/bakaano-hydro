@@ -1,0 +1,1340 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>bakaano.streamflow_simulator</title>
+    
+          <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../../_static/theme-vendors.js"></script> -->
+      <script src="../../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../../genindex.html" />
+  <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../index.html">Module code</a> &raquo;</li>
+    
+    <li>bakaano.streamflow_simulator</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <h1>Source code for bakaano.streamflow_simulator</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Simulation and inference utilities for streamflow prediction.</span>
+
+<span class="sd">Role: Prepare simulation inputs and run trained model inference.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="n">os</span><span class="o">.</span><span class="n">environ</span><span class="p">[</span><span class="s1">&#39;TF_CPP_MIN_LOG_LEVEL&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;3&#39;</span> 
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow_probability</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tfp</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">keras.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">register_keras_serializable</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">tcn</span><span class="w"> </span><span class="kn">import</span> <span class="n">TCN</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pysheds.grid</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rasterio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rioxarray</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">rasterio.transform</span><span class="w"> </span><span class="kn">import</span> <span class="n">rowcol</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">keras.models</span><span class="w"> </span><span class="kn">import</span> <span class="n">load_model</span> <span class="c1"># type: ignore</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Point</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.spatial.distance</span><span class="w"> </span><span class="kn">import</span> <span class="n">cdist</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">RuntimeWarning</span><span class="p">)</span>
+<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">FutureWarning</span><span class="p">)</span>
+
+<span class="n">tfd</span> <span class="o">=</span> <span class="n">tfp</span><span class="o">.</span><span class="n">distributions</span>  <span class="c1"># TensorFlow Probability distributions</span>
+<span class="c1">#=====================================================================================================================================</span>
+
+
+<div class="viewcode-block" id="PredictDataPreprocessor">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PredictDataPreprocessor</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span>  <span class="n">study_area</span><span class="p">,</span>  <span class="n">sim_start</span><span class="p">,</span> <span class="n">sim_end</span><span class="p">,</span> <span class="n">routing_method</span><span class="p">,</span> 
+                 <span class="n">grdc_streamflow_nc_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Role: Build predictors for simulation/inference.</span>
+
+<span class="sd">        Initialize the PredictDataPreprocessor object.</span>
+<span class="sd">        </span>
+<span class="sd">        Args:</span>
+<span class="sd">            working_dir (str): The parent working directory where files and outputs will be stored.</span>
+<span class="sd">            study_area (str): The path to the shapefile of the river basin or watershed.</span>
+<span class="sd">            sim_start (str): Simulation start date (YYYY-MM-DD).</span>
+<span class="sd">            sim_end (str): Simulation end date (YYYY-MM-DD).</span>
+<span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">            grdc_streamflow_nc_file (str, optional): GRDC NetCDF path.</span>
+<span class="sd">            catchment_size_threshold (float, optional): Minimum catchment size for stations.</span>
+
+<span class="sd">        Methods</span>
+<span class="sd">        -------</span>
+<span class="sd">        _extract_station_rowcol(lat, lon): Extract the row and column indices for a given latitude and longitude from given raster file.</span>
+<span class="sd">        _snap_coordinates(lat, lon): Snap the given latitude and longitude to the nearest river segment based on a river grid.</span>
+<span class="sd">        load_observed_streamflow(grdc_streamflow_nc_file): Load observed streamflow data from GRDC NetCDF file.</span>
+<span class="sd">        encode_lat_lon(latitude, longitude): Encode latitude and longitude into sine and cosine components.</span>
+<span class="sd">        get_data(): Extract and process data for each station in the GRDC dataset.</span>
+<span class="sd">        get_data_latlng(latlist, lonlist): Extract and process data for specified latitude and longitude coordinates.</span>
+<span class="sd">    </span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span> <span class="o">=</span> <span class="n">study_area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span> <span class="o">=</span> <span class="n">routing_method</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">data_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">catchment</span> <span class="o">=</span> <span class="p">[]</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span> <span class="o">=</span> <span class="n">sim_start</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span> <span class="o">=</span> <span class="n">sim_end</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_station_names</span><span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">catchment_size_threshold</span> <span class="o">=</span> <span class="n">catchment_size_threshold</span>
+        <span class="k">if</span> <span class="n">grdc_streamflow_nc_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">load_observed_streamflow</span><span class="p">(</span><span class="n">grdc_streamflow_nc_file</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">station_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_level_values</span><span class="p">(</span><span class="s1">&#39;id&#39;</span><span class="p">))</span>
+        
+<div class="viewcode-block" id="PredictDataPreprocessor._extract_station_rowcol">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor._extract_station_rowcol">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_extract_station_rowcol</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract the row and column indices for a given latitude and longitude</span>
+<span class="sd">        from given raster file.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lat : float</span>
+<span class="sd">            The latitude of the station.</span>
+<span class="sd">        lon : float</span>
+<span class="sd">            The longitude of the station.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        row : int</span>
+<span class="sd">            The row index corresponding to the given latitude and longitude.</span>
+<span class="sd">        col : int</span>
+<span class="sd">            The column index corresponding to the given latitude and longitude.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">transform</span>
+            <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="n">rowcol</span><span class="p">(</span><span class="n">transform</span><span class="p">,</span> <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">row</span><span class="p">,</span> <span class="n">col</span></div>
+
+        
+<div class="viewcode-block" id="PredictDataPreprocessor._snap_coordinates">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor._snap_coordinates">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_snap_coordinates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Snap the given latitude and longitude to the nearest river segment based on a river grid.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        lat : float</span>
+<span class="sd">            The latitude to be snapped.</span>
+<span class="sd">        lon : float</span>
+<span class="sd">            The longitude to be snapped.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        snapped_lat : float</span>
+<span class="sd">            The latitude of the nearest river segment.</span>
+<span class="sd">        snapped_lon : float</span>
+<span class="sd">            The longitude of the nearest river segment.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">coordinate_to_snap</span><span class="o">=</span><span class="p">(</span><span class="n">lon</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+        <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+            <span class="n">transform</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">transform</span>
+
+            <span class="n">river_coords</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">py</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]):</span>
+                <span class="k">for</span> <span class="n">px</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span><span class="p">[</span><span class="n">py</span><span class="p">,</span> <span class="n">px</span><span class="p">]</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                        <span class="n">river_coords</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">transform</span> <span class="o">*</span> <span class="p">(</span><span class="n">px</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">,</span> <span class="n">py</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">))</span>  <span class="c1"># Center of the grid cell with river segment</span>
+
+            <span class="c1"># Convert river_coords to numpy array for distance calculation</span>
+            <span class="n">river_coords</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">river_coords</span><span class="p">)</span>
+
+            <span class="c1"># Compute distances from coordinate_to_snap to each river cell</span>
+            <span class="n">distances</span> <span class="o">=</span> <span class="n">cdist</span><span class="p">([</span><span class="n">coordinate_to_snap</span><span class="p">],</span> <span class="n">river_coords</span><span class="p">)</span>
+
+            <span class="c1"># Find the index of the nearest river cell</span>
+            <span class="n">nearest_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmin</span><span class="p">(</span><span class="n">distances</span><span class="p">)</span>
+
+            <span class="c1"># Get the coordinates of the nearest river cell</span>
+            <span class="n">snap_point</span> <span class="o">=</span> <span class="n">river_coords</span><span class="p">[</span><span class="n">nearest_index</span><span class="p">]</span>
+            <span class="k">return</span> <span class="n">snap_point</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">snap_point</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span></div>
+
+        
+<div class="viewcode-block" id="PredictDataPreprocessor._check_point_in_region">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor._check_point_in_region">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_check_point_in_region</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">olat</span><span class="p">,</span> <span class="n">olon</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Check whether a single (olat, olon) point lies within a study-area shapefile.</span>
+<span class="sd">    </span>
+<span class="sd">        - If NOT inside: raise SystemExit with a formatted, user-facing message</span>
+<span class="sd">        - If inside: print confirmation and do nothing</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    
+        <span class="c1"># Load study-area shapefile</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">region_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    ERROR: Failed to load study-area shapefile</span>
+<span class="s2">    </span>
+<span class="s2">    The study-area shapefile could not be read.</span>
+<span class="s2">    </span>
+<span class="s2">    File:</span>
+<span class="s2">      </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="si">}</span>
+<span class="s2">    </span>
+<span class="s2">    Original error:</span>
+<span class="s2">      </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">    </span>
+<span class="s2">    Please verify that the shapefile exists and is readable.</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    
+        <span class="c1"># Create point geometry</span>
+        <span class="n">point</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoSeries</span><span class="p">(</span>
+            <span class="p">[</span><span class="n">Point</span><span class="p">(</span><span class="n">olon</span><span class="p">,</span> <span class="n">olat</span><span class="p">)],</span>
+            <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+        <span class="p">)</span>
+    
+        <span class="c1"># Ensure CRS match</span>
+        <span class="k">if</span> <span class="n">region_gdf</span><span class="o">.</span><span class="n">crs</span> <span class="o">!=</span> <span class="n">point</span><span class="o">.</span><span class="n">crs</span><span class="p">:</span>
+            <span class="n">region_gdf</span> <span class="o">=</span> <span class="n">region_gdf</span><span class="o">.</span><span class="n">to_crs</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">crs</span><span class="p">)</span>
+    
+        <span class="c1"># Spatial check</span>
+        <span class="n">inside</span> <span class="o">=</span> <span class="n">region_gdf</span><span class="o">.</span><span class="n">contains</span><span class="p">(</span><span class="n">point</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+    
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">inside</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    ERROR: Point outside study area</span>
+<span class="s2">    </span>
+<span class="s2">    The provided coordinates do not intersect the study area.</span>
+<span class="s2">    </span>
+<span class="s2">    Point location:</span>
+<span class="s2">      latitude:  </span><span class="si">{</span><span class="n">olat</span><span class="si">}</span>
+<span class="s2">      longitude: </span><span class="si">{</span><span class="n">olon</span><span class="si">}</span>
+<span class="s2">    </span>
+<span class="s2">    Study-area shapefile:</span>
+<span class="s2">      </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="si">}</span>
+<span class="s2">    </span>
+<span class="s2">    Please verify:</span>
+<span class="s2">      - the input coordinates (EPSG:4326)</span>
+<span class="s2">      - the spatial extent of the study area</span>
+<span class="s2">      - that the point is not outside or on the boundary</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    
+        <span class="c1"># Confirmation message</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">    INFO: Point accepted</span>
+<span class="s2">    </span>
+<span class="s2">    The point at:</span>
+<span class="s2">      latitude:  </span><span class="si">{</span><span class="n">olat</span><span class="si">}</span>
+<span class="s2">      longitude: </span><span class="si">{</span><span class="n">olon</span><span class="si">}</span>
+<span class="s2">    </span>
+<span class="s2">    lies within the study area.</span>
+<span class="s2">    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
+
+
+        
+    
+<div class="viewcode-block" id="PredictDataPreprocessor.load_observed_streamflow">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor.load_observed_streamflow">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_observed_streamflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">grdc_streamflow_nc_file</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load and filter observed GRDC streamflow data in a schema-robust way.</span>
+<span class="sd">        Works for single- and multi-station NetCDFs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            grdc_streamflow_nc_file (str): Path to GRDC NetCDF file.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            xarray.Dataset: Filtered GRDC subset for the study area.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+    
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">grdc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">grdc_streamflow_nc_file</span><span class="p">)</span>
+    
+            <span class="c1"># ---- 1. Sanity checks ----</span>
+            <span class="n">required_vars</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;runoff_mean&#39;</span><span class="p">,</span> <span class="s1">&#39;geo_x&#39;</span><span class="p">,</span> <span class="s1">&#39;geo_y&#39;</span><span class="p">,</span> <span class="s1">&#39;station_name&#39;</span><span class="p">]</span>
+            <span class="n">missing_vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">v</span> <span class="k">for</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">required_vars</span> <span class="k">if</span> <span class="n">v</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">grdc</span><span class="p">]</span>
+    
+            <span class="k">if</span> <span class="n">missing_vars</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    ERROR: Invalid GRDC NetCDF file</span>
+<span class="s2">                    </span>
+<span class="s2">                    The GRDC file is missing one or more required variables:</span>
+<span class="s2">                    </span><span class="si">{</span><span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_vars</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">                    </span>
+<span class="s2">                    Required variables are:</span>
+<span class="s2">                    - runoff_mean</span>
+<span class="s2">                    - geo_x</span>
+<span class="s2">                    - geo_y</span>
+<span class="s2">                    - station_name</span>
+<span class="s2">                    </span>
+<span class="s2">                    Please verify that the provided NetCDF file is a valid</span>
+<span class="s2">                    GRDC daily discharge dataset.</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    
+            <span class="k">if</span> <span class="s1">&#39;id&#39;</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">grdc</span><span class="o">.</span><span class="n">dims</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    ERROR: Unsupported GRDC NetCDF format</span>
+<span class="s2">                    </span>
+<span class="s2">                    The GRDC dataset does not contain an &#39;id&#39; dimension.</span>
+<span class="s2">                    </span>
+<span class="s2">                    This usually indicates a single-station GRDC file or a</span>
+<span class="s2">                    non-standard export format.</span>
+<span class="s2">                    </span>
+<span class="s2">                    Please ensure the GRDC file is formatted with dimensions:</span>
+<span class="s2">                    - time</span>
+<span class="s2">                    - id</span>
+<span class="s2">                    or preprocess the file to include an explicit station dimension.</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    
+            <span class="c1"># ---- 2. Build station GeoDataFrame ----</span>
+            <span class="n">stations_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                <span class="s1">&#39;id&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                <span class="s1">&#39;station_name&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                <span class="s1">&#39;geo_x&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;geo_x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                <span class="s1">&#39;geo_y&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;geo_y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+            <span class="p">})</span>
+    
+            <span class="n">stations_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+                <span class="n">stations_df</span><span class="p">,</span>
+                <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">stations_df</span><span class="p">[</span><span class="s1">&#39;geo_x&#39;</span><span class="p">],</span> <span class="n">stations_df</span><span class="p">[</span><span class="s1">&#39;geo_y&#39;</span><span class="p">]),</span>
+                <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+            <span class="p">)</span>
+    
+            <span class="c1"># ---- 3. Spatial filtering ----</span>
+            <span class="n">region_shape</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+    
+            <span class="n">stations_in_region</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">sjoin</span><span class="p">(</span>
+                <span class="n">stations_gdf</span><span class="p">,</span>
+                <span class="n">region_shape</span><span class="p">,</span>
+                <span class="n">how</span><span class="o">=</span><span class="s1">&#39;inner&#39;</span><span class="p">,</span>
+                <span class="n">predicate</span><span class="o">=</span><span class="s1">&#39;intersects&#39;</span>
+            <span class="p">)</span>
+    
+            <span class="k">if</span> <span class="n">stations_in_region</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    ERROR: No GRDC stations found in study area</span>
+<span class="s2">                    </span>
+<span class="s2">                    None of the GRDC stations intersect the provided study area.</span>
+<span class="s2">                    </span>
+<span class="s2">                    Please check:</span>
+<span class="s2">                    - the spatial extent of the study area shapefile</span>
+<span class="s2">                    - the coordinate reference system (CRS)</span>
+<span class="s2">                    - whether the GRDC stations fall within the selected region</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+    
+            <span class="n">overlapping_ids</span> <span class="o">=</span> <span class="n">stations_in_region</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+    
+            <span class="c1"># ---- 4. Dataset filtering ----</span>
+            <span class="n">filtered_grdc</span> <span class="o">=</span> <span class="n">grdc</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span>
+                <span class="nb">id</span><span class="o">=</span><span class="n">overlapping_ids</span><span class="p">,</span>
+                <span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">)</span>
+            <span class="p">)</span>
+    
+            <span class="c1"># ---- 5. Store metadata ----</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">sim_station_names</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">station_ids</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    
+            <span class="k">return</span> <span class="n">filtered_grdc</span>
+    
+        <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+            <span class="c1"># User-facing errors: re-raise cleanly</span>
+            <span class="k">raise</span>
+    
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Unexpected failure: add context, suppress traceback</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                ERROR: Failed to load GRDC streamflow data</span>
+<span class="s2">                </span>
+<span class="s2">                An unexpected error occurred while loading or filtering</span>
+<span class="s2">                the GRDC streamflow dataset.</span>
+<span class="s2">                </span>
+<span class="s2">                This may indicate:</span>
+<span class="s2">                - corrupted or unreadable NetCDF files</span>
+<span class="s2">                - inconsistent dimensions or indexing</span>
+<span class="s2">                - unexpected CRS or geometry issues</span>
+<span class="s2">                </span>
+<span class="s2">                Original error:</span>
+<span class="s2">                </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">                </span>
+<span class="s2">                Please verify the input data and try again.</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span></div>
+
+
+                          
+<div class="viewcode-block" id="PredictDataPreprocessor.load_observed_streamflow_from_csv_dir">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor.load_observed_streamflow_from_csv_dir">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_observed_streamflow_from_csv_dir</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">csv_dir</span><span class="p">,</span>
+        <span class="n">lookup_csv</span><span class="p">,</span>
+        <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+        <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+        <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+        <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+        <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load observed streamflow from per-station CSV files using a lookup table.</span>
+
+<span class="sd">        The lookup table must include station identifiers and coordinates. The method</span>
+<span class="sd">        filters stations to the study area, then loads per-station CSVs by ID.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            csv_dir (str): Directory containing per-station CSV files.</span>
+<span class="sd">            lookup_csv (str): CSV file with station ids and coordinates.</span>
+<span class="sd">            id_col (str): Station id column in lookup CSV.</span>
+<span class="sd">            lat_col (str): Latitude column in lookup CSV.</span>
+<span class="sd">            lon_col (str): Longitude column in lookup CSV.</span>
+<span class="sd">            date_col (str): Date column in station CSVs.</span>
+<span class="sd">            discharge_col (str): Discharge column in station CSVs.</span>
+<span class="sd">            file_pattern (str): Pattern for station CSV filenames (e.g., ``&quot;{id}.csv&quot;``).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            dict: Mapping of station_id to observed discharge DataFrame.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">lookup</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">lookup_csv</span><span class="p">)</span>
+        <span class="n">required_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">id_col</span><span class="p">,</span> <span class="n">lat_col</span><span class="p">,</span> <span class="n">lon_col</span><span class="p">]</span>
+        <span class="n">missing_cols</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="n">required_cols</span> <span class="k">if</span> <span class="n">c</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">lookup</span><span class="o">.</span><span class="n">columns</span><span class="p">]</span>
+        <span class="k">if</span> <span class="n">missing_cols</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+                <span class="s2">&quot;Lookup CSV is missing required columns: &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_cols</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="n">stations_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+            <span class="n">lookup</span><span class="p">,</span>
+            <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">lookup</span><span class="p">[</span><span class="n">lon_col</span><span class="p">],</span> <span class="n">lookup</span><span class="p">[</span><span class="n">lat_col</span><span class="p">]),</span>
+            <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">region_shape</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        <span class="n">stations_in_region</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">sjoin</span><span class="p">(</span>
+            <span class="n">stations_gdf</span><span class="p">,</span>
+            <span class="n">region_shape</span><span class="p">,</span>
+            <span class="n">how</span><span class="o">=</span><span class="s2">&quot;inner&quot;</span><span class="p">,</span>
+            <span class="n">predicate</span><span class="o">=</span><span class="s2">&quot;intersects&quot;</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">stations_in_region</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+                <span class="s2">&quot;No stations from the lookup table intersect the study area.&quot;</span>
+            <span class="p">)</span>
+
+        <span class="n">station_ids</span> <span class="o">=</span> <span class="n">stations_in_region</span><span class="p">[</span><span class="n">id_col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">station_ids</span> <span class="o">=</span> <span class="n">station_ids</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">station_meta</span> <span class="o">=</span> <span class="n">stations_in_region</span><span class="p">[[</span><span class="n">id_col</span><span class="p">,</span> <span class="n">lat_col</span><span class="p">,</span> <span class="n">lon_col</span><span class="p">]]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">station_meta_cols</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;id&quot;</span><span class="p">:</span> <span class="n">id_col</span><span class="p">,</span> <span class="s2">&quot;lat&quot;</span><span class="p">:</span> <span class="n">lat_col</span><span class="p">,</span> <span class="s2">&quot;lon&quot;</span><span class="p">:</span> <span class="n">lon_col</span><span class="p">}</span>
+
+        <span class="n">observed</span> <span class="o">=</span> <span class="p">{}</span>
+        <span class="n">missing_files</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">station_id</span> <span class="ow">in</span> <span class="n">station_ids</span><span class="p">:</span>
+            <span class="n">pattern</span> <span class="o">=</span> <span class="n">file_pattern</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">station_id</span><span class="p">)</span>
+            <span class="n">matches</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">csv_dir</span><span class="p">,</span> <span class="n">pattern</span><span class="p">)))</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">matches</span><span class="p">:</span>
+                <span class="n">missing_files</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">station_id</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">matches</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">date_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span> <span class="ow">or</span> <span class="n">discharge_col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+                    <span class="sa">f</span><span class="s2">&quot;Missing columns in station CSV for id=</span><span class="si">{</span><span class="n">station_id</span><span class="si">}</span><span class="s2">. &quot;</span>
+                    <span class="sa">f</span><span class="s2">&quot;Required: </span><span class="si">{</span><span class="n">date_col</span><span class="si">}</span><span class="s2">, </span><span class="si">{</span><span class="n">discharge_col</span><span class="si">}</span><span class="s2">&quot;</span>
+                <span class="p">)</span>
+            <span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">]</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df</span><span class="p">[</span><span class="n">date_col</span><span class="p">])</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">date_col</span><span class="p">)</span><span class="o">.</span><span class="n">sort_index</span><span class="p">()</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">:</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">]</span>
+            <span class="n">observed</span><span class="p">[</span><span class="n">station_id</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[[</span><span class="n">discharge_col</span><span class="p">]]</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span>
+                <span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="n">discharge_col</span><span class="p">:</span> <span class="s2">&quot;station_discharge&quot;</span><span class="p">}</span>
+            <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">missing_files</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+                <span class="s2">&quot;Missing observed CSV files for station ids: &quot;</span>
+                <span class="o">+</span> <span class="s2">&quot;, &quot;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">missing_files</span><span class="p">)</span>
+            <span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">observed_streamflow_csv</span> <span class="o">=</span> <span class="n">observed</span>
+        <span class="k">return</span> <span class="n">observed</span></div>
+
+
+<div class="viewcode-block" id="PredictDataPreprocessor.get_data">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor.get_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_data</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Extract and preprocess predictor and response variables for each station based on its coordinates.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        list</span>
+<span class="sd">            A list containing two elements:</span>
+<span class="sd">            - self.data_list: A list of tuples, each containing predictors (DataFrame) and response (DataFrame).</span>
+<span class="sd">            - self.catchment: A list of tuples, each containing catchment data (accumulation and slope values).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="n">use_csv_obs</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;observed_streamflow_csv&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">observed_streamflow_csv</span>
+        <span class="n">use_grdc</span> <span class="o">=</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s2">&quot;grdc_subset&quot;</span><span class="p">)</span> <span class="ow">and</span> <span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+        
+        <span class="n">dem_filepath</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span>
+        
+        <span class="n">latlng_ras</span> <span class="o">=</span> <span class="n">rioxarray</span><span class="o">.</span><span class="n">open_rasterio</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        <span class="n">latlng_ras</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">write_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">pysheds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">Grid</span><span class="o">.</span><span class="n">from_raster</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        <span class="n">dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_raster</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        
+        <span class="n">flooded_dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_depressions</span><span class="p">(</span><span class="n">dem</span><span class="p">)</span>
+        <span class="n">inflated_dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">resolve_flats</span><span class="p">(</span><span class="n">flooded_dem</span><span class="p">)</span>
+        <span class="n">fdir</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">flowdir</span><span class="p">(</span><span class="n">inflated_dem</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+        <span class="n">acc</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">accumulation</span><span class="p">(</span><span class="n">fdir</span><span class="o">=</span><span class="n">fdir</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+        
+        <span class="n">river_grid_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/catchment/river_grid.tif&#39;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">facc_thresh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0001</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">acc</span> <span class="o">&lt;</span> <span class="n">facc_thresh</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">river_ras</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+                <span class="n">ref_meta</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Copy the metadata exactly as is</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">ref_meta</span><span class="p">)</span> <span class="k">as</span> <span class="n">dst</span><span class="p">:</span>
+                <span class="n">dst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">river_ras</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Write data to the first band</span>
+
+        <span class="n">alpha_earth_bands</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/alpha_earth/band*.tif&#39;</span><span class="p">))</span>
+        <span class="n">alpha_earth_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">alpha_earth_bands</span><span class="p">:</span>
+            <span class="n">weight2</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_raster</span><span class="p">(</span><span class="n">band</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">cum_band</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">accumulation</span><span class="p">(</span><span class="n">fdir</span><span class="o">=</span><span class="n">fdir</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weight2</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+            <span class="n">cum_band</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">cum_band</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+            <span class="n">alpha_earth_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cum_band</span><span class="p">)</span>
+        
+        <span class="n">acc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">acc</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+        
+        
+        <span class="c1">#combine or all yearly output from the runoff and routing module into a single list</span>
+        <span class="n">start_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">end_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">all_years_wfa</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/*.pkl&#39;</span><span class="p">))</span>
+        <span class="n">wfa_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="n">all_years_wfa</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">this_arr</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">wfa_list</span> <span class="o">=</span> <span class="n">wfa_list</span> <span class="o">+</span> <span class="n">this_arr</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># --- Safety checks ---</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">wfa_list</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: No routed runoff data found</span>
+<span class="s2">        </span>
+<span class="s2">        The routed runoff list is empty.</span>
+<span class="s2">        </span>
+<span class="s2">        This usually indicates that the runoff and routing modules</span>
+<span class="s2">        have not been run yet, or that the expected output files</span>
+<span class="s2">        could not be found.</span>
+<span class="s2">        </span>
+<span class="s2">        Please check the runoff_output directory and ensure that</span>
+<span class="s2">        the runoff and routing steps completed successfully.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+            <span class="c1"># --- Parse available times ---</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">wfa_times</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">wfa_list</span>
+                <span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Invalid routed runoff metadata</span>
+<span class="s2">        </span>
+<span class="s2">        The routed runoff entries do not contain valid time information.</span>
+<span class="s2">        </span>
+<span class="s2">        Each entry is expected to include a &#39;time&#39; field formatted as:</span>
+<span class="s2">          YYYY-MM-DD</span>
+<span class="s2">        </span>
+<span class="s2">        Please verify the routed runoff output files and metadata.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+            <span class="n">available_start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">wfa_times</span><span class="p">)</span>
+            <span class="n">available_end</span>   <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">wfa_times</span><span class="p">)</span>
+        
+            <span class="c1"># --- Coverage check ---</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="o">&lt;</span> <span class="n">available_start</span> <span class="ow">or</span> <span class="n">end_dt</span> <span class="o">&gt;</span> <span class="n">available_end</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Requested simulation period outside routed runoff coverage</span>
+<span class="s2">        </span>
+<span class="s2">        Requested simulation period:</span>
+<span class="s2">          start: </span><span class="si">{</span><span class="n">start_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">          end:   </span><span class="si">{</span><span class="n">end_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Available routed runoff data:</span>
+<span class="s2">          from:  </span><span class="si">{</span><span class="n">available_start</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">          to:    </span><span class="si">{</span><span class="n">available_end</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Please re-run the runoff and routing modules and ensure that</span>
+<span class="s2">        the simulation period covers the intended training, validation,</span>
+<span class="s2">        and other simulation periods.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+        <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+            <span class="c1"># User-facing errors: re-raise cleanly</span>
+            <span class="k">raise</span>
+        
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Unexpected failure</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Failed during routed runoff availability checks</span>
+<span class="s2">        </span>
+<span class="s2">        An unexpected error occurred while validating the routed</span>
+<span class="s2">        runoff data against the requested simulation period.</span>
+<span class="s2">        </span>
+<span class="s2">        Original error:</span>
+<span class="s2">          </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Please verify the runoff outputs and try again.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+
+        
+
+        <span class="c1"># Filter based on time range</span>
+        <span class="n">wfa_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">wfa_list</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="o">&lt;=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">end_dt</span>
+        <span class="p">]</span>
+        <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">)</span>
+        <span class="c1">#extract station predictor and response variables based on station coordinates</span>
+        <span class="k">for</span> <span class="n">k</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">station_ids</span><span class="p">:</span>
+            <span class="n">station_discharge</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">catchment_size</span> <span class="o">=</span> <span class="kc">None</span>
+
+            <span class="k">if</span> <span class="n">use_csv_obs</span><span class="p">:</span>
+                <span class="n">station_discharge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observed_streamflow_csv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">))</span>
+            <span class="k">elif</span> <span class="n">use_grdc</span><span class="p">:</span>
+                <span class="n">station_discharge</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span><span class="p">[</span><span class="s1">&#39;runoff_mean&#39;</span><span class="p">]</span>
+                    <span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">k</span><span class="p">)</span>
+                    <span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;station_discharge&#39;</span><span class="p">)</span>
+                <span class="p">)</span>
+
+            <span class="k">if</span> <span class="n">station_discharge</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">continue</span>
+
+            <span class="c1"># if catchment_size &lt; self.catchment_size_threshold:</span>
+            <span class="c1">#     continue</span>
+            
+            <span class="c1"># if station_discharge[&#39;station_discharge&#39;].notna().sum() &lt; 1095:</span>
+            <span class="c1">#     continue</span>
+                          
+            <span class="k">if</span> <span class="n">use_csv_obs</span><span class="p">:</span>
+                <span class="n">meta</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">station_meta</span>
+                <span class="n">cols</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">station_meta_cols</span>
+                <span class="n">row</span> <span class="o">=</span> <span class="n">meta</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">meta</span><span class="p">[</span><span class="n">cols</span><span class="p">[</span><span class="s2">&quot;id&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">==</span> <span class="nb">str</span><span class="p">(</span><span class="n">k</span><span class="p">)]</span>
+                <span class="k">if</span> <span class="n">row</span><span class="o">.</span><span class="n">empty</span><span class="p">:</span>
+                    <span class="k">continue</span>
+                <span class="n">station_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">cols</span><span class="p">[</span><span class="s2">&quot;lat&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">station_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">row</span><span class="p">[</span><span class="n">cols</span><span class="p">[</span><span class="s2">&quot;lon&quot;</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">station_x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span><span class="p">[</span><span class="s1">&#39;geo_x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+                <span class="n">station_y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">grdc_subset</span><span class="p">[</span><span class="s1">&#39;geo_y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="nb">id</span><span class="o">=</span><span class="n">k</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            <span class="n">snapped_y</span><span class="p">,</span> <span class="n">snapped_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_snap_coordinates</span><span class="p">(</span><span class="n">station_y</span><span class="p">,</span> <span class="n">station_x</span><span class="p">)</span>
+            
+            <span class="n">acc_data</span> <span class="o">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">snapped_x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+
+            <span class="n">alpha_earth_stations</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">alpha_earth_list</span><span class="p">:</span>
+                <span class="n">pixel_data</span> <span class="o">=</span> <span class="n">band</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">snapped_x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+                <span class="n">alpha_earth_stations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pixel_data</span><span class="o">/</span><span class="n">acc_data</span><span class="p">)</span>
+        
+            <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_station_rowcol</span><span class="p">(</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">snapped_x</span><span class="p">)</span>
+            
+            <span class="n">station_wfa</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">wfa_list</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="s1">&#39;matrix&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+                <span class="n">station_wfa</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">col</span><span class="p">)])</span>
+            <span class="n">full_wfa_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">station_wfa</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mfd_wfa&#39;</span><span class="p">])</span>
+            <span class="n">full_wfa_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">time_index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">full_wfa_data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;time&#39;</span>  <span class="c1"># Rename the index to &#39;time&#39;</span>
+    
+            <span class="n">wfa_data</span> <span class="o">=</span> <span class="n">full_wfa_data</span>
+            
+            <span class="n">predictors</span> <span class="o">=</span> <span class="n">wfa_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">predictors</span><span class="o">.</span><span class="n">replace</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">response</span> <span class="o">=</span> <span class="n">station_discharge</span>
+            <span class="k">if</span> <span class="n">use_grdc</span> <span class="ow">and</span> <span class="s1">&#39;id&#39;</span> <span class="ow">in</span> <span class="n">response</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">response</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">drop</span><span class="p">([</span><span class="s1">&#39;id&#39;</span><span class="p">],</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">log_acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">acc_data</span><span class="p">)</span>
+            <span class="n">catch_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">log_acc</span><span class="p">]</span> <span class="o">+</span> <span class="n">alpha_earth_stations</span>
+            <span class="n">catch_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">catch_list</span><span class="p">]</span>
+            <span class="n">predictors2</span> <span class="o">=</span> <span class="n">predictors</span>
+            <span class="n">catch_tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">catch_list</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">catchment</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">catch_tup</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">predictors2</span><span class="p">,</span> <span class="n">response</span><span class="p">,</span> <span class="n">catch_tup</span><span class="p">))</span>
+            
+            <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+
+        <span class="c1"># basin_name = os.path.split(self.study_area)[1][:-4]</span>
+        <span class="c1"># with open(f&#39;{self.working_dir}/models/{basin_name}_predictor_response_data.pkl&#39;, &#39;wb&#39;) as file:</span>
+        <span class="c1">#         pickle.dump(self.data_list, file)</span>
+            
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">data_list</span></div>
+
+    
+<div class="viewcode-block" id="PredictDataPreprocessor.get_data_latlng">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictDataPreprocessor.get_data_latlng">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_data_latlng</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Prepare predictors for arbitrary latitude/longitude points.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            latlist (list[float]): Latitudes to simulate.</span>
+<span class="sd">            lonlist (list[float]): Longitudes to simulate.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            list: [data_list, catchment, latlist, lonlist].</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">count</span> <span class="o">=</span> <span class="mi">1</span>
+        
+        <span class="n">dem_filepath</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span>
+        
+        <span class="n">latlng_ras</span> <span class="o">=</span> <span class="n">rioxarray</span><span class="o">.</span><span class="n">open_rasterio</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        <span class="n">latlng_ras</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="o">.</span><span class="n">rio</span><span class="o">.</span><span class="n">write_crs</span><span class="p">(</span><span class="mi">4326</span><span class="p">)</span>
+        <span class="n">lat</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="p">[</span><span class="s1">&#39;y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">lon</span> <span class="o">=</span> <span class="n">latlng_ras</span><span class="p">[</span><span class="s1">&#39;x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        
+        <span class="n">grid</span> <span class="o">=</span> <span class="n">pysheds</span><span class="o">.</span><span class="n">grid</span><span class="o">.</span><span class="n">Grid</span><span class="o">.</span><span class="n">from_raster</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        <span class="n">dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_raster</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span>
+        
+        <span class="n">flooded_dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">fill_depressions</span><span class="p">(</span><span class="n">dem</span><span class="p">)</span>
+        <span class="n">inflated_dem</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">resolve_flats</span><span class="p">(</span><span class="n">flooded_dem</span><span class="p">)</span>
+        <span class="n">fdir</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">flowdir</span><span class="p">(</span><span class="n">inflated_dem</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+        <span class="n">acc</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">accumulation</span><span class="p">(</span><span class="n">fdir</span><span class="o">=</span><span class="n">fdir</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+        
+        <span class="n">river_grid_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/catchment/river_grid.tif&#39;</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">facc_thresh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">acc</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0001</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">acc</span> <span class="o">&lt;</span> <span class="n">facc_thresh</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">river_ras</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">river_grid</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">dem_filepath</span><span class="p">)</span> <span class="k">as</span> <span class="n">src</span><span class="p">:</span>
+                <span class="n">ref_meta</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">meta</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>  <span class="c1"># Copy the metadata exactly as is</span>
+            <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">river_grid_path</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">ref_meta</span><span class="p">)</span> <span class="k">as</span> <span class="n">dst</span><span class="p">:</span>
+                <span class="n">dst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">river_ras</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>  <span class="c1"># Write data to the first band</span>
+
+        <span class="n">alpha_earth_bands</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/alpha_earth/band*.tif&#39;</span><span class="p">))</span>
+        <span class="n">alpha_earth_list</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">alpha_earth_bands</span><span class="p">:</span>
+            <span class="n">weight2</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">read_raster</span><span class="p">(</span><span class="n">band</span><span class="p">)</span> <span class="o">+</span> <span class="mi">1</span>
+            <span class="n">cum_band</span> <span class="o">=</span> <span class="n">grid</span><span class="o">.</span><span class="n">accumulation</span><span class="p">(</span><span class="n">fdir</span><span class="o">=</span><span class="n">fdir</span><span class="p">,</span> <span class="n">weights</span><span class="o">=</span><span class="n">weight2</span><span class="p">,</span> <span class="n">routing</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">routing_method</span><span class="p">)</span>
+            <span class="n">cum_band</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">cum_band</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+            <span class="n">alpha_earth_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cum_band</span><span class="p">)</span>
+        
+        <span class="n">acc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">DataArray</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">acc</span><span class="p">,</span> <span class="n">coords</span><span class="o">=</span><span class="p">[(</span><span class="s1">&#39;lat&#39;</span><span class="p">,</span> <span class="n">lat</span><span class="p">),</span> <span class="p">(</span><span class="s1">&#39;lon&#39;</span><span class="p">,</span> <span class="n">lon</span><span class="p">)])</span>
+        <span class="n">time_index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">,</span> <span class="n">end</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">)</span>
+        
+        <span class="c1">#combine or all yearly output from the runoff and routing module into a single list</span>
+        <span class="n">start_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_start</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">end_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">sim_end</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="n">all_years_wfa</span> <span class="o">=</span> <span class="nb">sorted</span><span class="p">(</span><span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output/*.pkl&#39;</span><span class="p">))</span>
+        <span class="n">wfa_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">year</span> <span class="ow">in</span> <span class="n">all_years_wfa</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">year</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="n">this_arr</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+            <span class="n">wfa_list</span> <span class="o">=</span> <span class="n">wfa_list</span> <span class="o">+</span> <span class="n">this_arr</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># --- Safety checks ---</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="n">wfa_list</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: No routed runoff data found</span>
+<span class="s2">        </span>
+<span class="s2">        The routed runoff list is empty.</span>
+<span class="s2">        </span>
+<span class="s2">        This usually indicates that the runoff and routing modules</span>
+<span class="s2">        have not been run yet, or that the expected output files</span>
+<span class="s2">        could not be found.</span>
+<span class="s2">        </span>
+<span class="s2">        Please check the runoff_output directory and ensure that</span>
+<span class="s2">        the runoff and routing steps completed successfully.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+            <span class="c1"># --- Parse available times ---</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">wfa_times</span> <span class="o">=</span> <span class="p">[</span>
+                    <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">wfa_list</span>
+                <span class="p">]</span>
+            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Invalid routed runoff metadata</span>
+<span class="s2">        </span>
+<span class="s2">        The routed runoff entries do not contain valid time information.</span>
+<span class="s2">        </span>
+<span class="s2">        Each entry is expected to include a &#39;time&#39; field formatted as:</span>
+<span class="s2">          YYYY-MM-DD</span>
+<span class="s2">        </span>
+<span class="s2">        Please verify the routed runoff output files and metadata.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+            <span class="n">available_start</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">wfa_times</span><span class="p">)</span>
+            <span class="n">available_end</span>   <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">wfa_times</span><span class="p">)</span>
+        
+            <span class="c1"># --- Coverage check ---</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="o">&lt;</span> <span class="n">available_start</span> <span class="ow">or</span> <span class="n">end_dt</span> <span class="o">&gt;</span> <span class="n">available_end</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Requested simulation period outside routed runoff coverage</span>
+<span class="s2">        </span>
+<span class="s2">        Requested simulation period:</span>
+<span class="s2">          start: </span><span class="si">{</span><span class="n">start_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">          end:   </span><span class="si">{</span><span class="n">end_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Available routed runoff data:</span>
+<span class="s2">          from:  </span><span class="si">{</span><span class="n">available_start</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">          to:    </span><span class="si">{</span><span class="n">available_end</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Please re-run the runoff and routing modules and ensure that</span>
+<span class="s2">        the simulation period covers the intended training, validation,</span>
+<span class="s2">        and other simulation periods.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+        <span class="k">except</span> <span class="ne">SystemExit</span><span class="p">:</span>
+            <span class="c1"># User-facing errors: re-raise cleanly</span>
+            <span class="k">raise</span>
+        
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Unexpected failure</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Failed during routed runoff availability checks</span>
+<span class="s2">        </span>
+<span class="s2">        An unexpected error occurred while validating the routed</span>
+<span class="s2">        runoff data against the requested simulation period.</span>
+<span class="s2">        </span>
+<span class="s2">        Original error:</span>
+<span class="s2">          </span><span class="si">{</span><span class="nb">str</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        Please verify the runoff outputs and try again.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span> 
+
+        <span class="c1"># Filter based on time range</span>
+        <span class="n">wfa_list</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">entry</span> <span class="k">for</span> <span class="n">entry</span> <span class="ow">in</span> <span class="n">wfa_list</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="o">&lt;=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">entry</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">],</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="n">end_dt</span>
+        <span class="p">]</span>
+        
+        <span class="k">for</span> <span class="n">olat</span><span class="p">,</span> <span class="n">olon</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_check_point_in_region</span><span class="p">(</span><span class="n">olat</span><span class="p">,</span> <span class="n">olon</span><span class="p">)</span>
+            <span class="n">snapped_y</span><span class="p">,</span> <span class="n">snapped_x</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_snap_coordinates</span><span class="p">(</span><span class="n">olat</span><span class="p">,</span> <span class="n">olon</span><span class="p">)</span>
+            <span class="n">acc_data</span> <span class="o">=</span> <span class="n">acc</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">snapped_x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">alpha_earth_stations</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">band</span> <span class="ow">in</span> <span class="n">alpha_earth_list</span><span class="p">:</span>
+                <span class="n">pixel_data</span> <span class="o">=</span> <span class="n">band</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">lat</span><span class="o">=</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">lon</span><span class="o">=</span><span class="n">snapped_x</span><span class="p">,</span> <span class="n">method</span><span class="o">=</span><span class="s1">&#39;nearest&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">values</span>
+                <span class="n">alpha_earth_stations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">pixel_data</span><span class="o">/</span><span class="n">acc_data</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">acc_data</span> <span class="o">=</span> <span class="n">acc_data</span>
+            
+    
+            <span class="n">row</span><span class="p">,</span> <span class="n">col</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_extract_station_rowcol</span><span class="p">(</span><span class="n">snapped_y</span><span class="p">,</span> <span class="n">snapped_x</span><span class="p">)</span>
+
+            <span class="n">station_wfa</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">arr</span> <span class="ow">in</span> <span class="n">wfa_list</span><span class="p">:</span>
+                <span class="n">arr</span> <span class="o">=</span> <span class="n">arr</span><span class="p">[</span><span class="s1">&#39;matrix&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">tocsr</span><span class="p">()</span>
+                <span class="n">station_wfa</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">arr</span><span class="p">[</span><span class="nb">int</span><span class="p">(</span><span class="n">row</span><span class="p">),</span> <span class="nb">int</span><span class="p">(</span><span class="n">col</span><span class="p">)])</span>
+            <span class="n">full_wfa_data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">station_wfa</span><span class="p">,</span> <span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s1">&#39;mfd_wfa&#39;</span><span class="p">])</span>
+            <span class="n">full_wfa_data</span><span class="o">.</span><span class="n">set_index</span><span class="p">(</span><span class="n">time_index</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">full_wfa_data</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s1">&#39;time&#39;</span>  <span class="c1"># Rename the index to &#39;time&#39;</span>
+
+            <span class="c1">#extract wfa data based on defined training period</span>
+            <span class="n">wfa_data</span> <span class="o">=</span> <span class="n">full_wfa_data</span>
+
+            <span class="n">predictors</span> <span class="o">=</span> <span class="n">wfa_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">predictors</span><span class="o">.</span><span class="n">replace</span><span class="p">([</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">,</span> <span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">inf</span><span class="p">],</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">log_acc</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">acc_data</span><span class="p">)</span>
+            <span class="n">catch_list</span> <span class="o">=</span> <span class="p">[</span><span class="n">log_acc</span><span class="p">]</span> <span class="o">+</span> <span class="n">alpha_earth_stations</span>
+            <span class="n">catch_list</span> <span class="o">=</span> <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">x</span><span class="p">)</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="n">catch_list</span><span class="p">]</span>
+            
+            <span class="n">predictors2</span> <span class="o">=</span> <span class="n">predictors</span>
+            <span class="n">catch_tup</span> <span class="o">=</span> <span class="nb">tuple</span><span class="p">(</span><span class="n">catch_list</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">catchment</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">catch_tup</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">data_list</span><span class="o">.</span><span class="n">append</span><span class="p">((</span><span class="n">predictors2</span><span class="p">,</span> <span class="n">catch_tup</span><span class="p">))</span>
+
+            <span class="n">count</span> <span class="o">=</span> <span class="n">count</span> <span class="o">+</span> <span class="mi">1</span>
+            
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">data_list</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">catchment</span><span class="p">,</span> <span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">]</span></div>
+</div>
+
+
+    
+<span class="c1">#=====================================================================================================================================</span>
+
+
+<div class="viewcode-block" id="PredictStreamflow">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PredictStreamflow</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Role: Prepare model inputs and run inference.</span>
+
+<span class="sd">        Initializes the PredictStreamflow class for streamflow prediction using a temporal convolutional network (TCN).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            working_dir (str): The working directory where the model and data are stored.</span>
+
+<span class="sd">        Methods</span>
+<span class="sd">        -------</span>
+<span class="sd">        load_global_cdfs_pkl(): Load the saved empirical CDFs for multiple variables from a pickle file.</span>
+<span class="sd">        compute_global_cdfs_pkl(df, variables): Compute and save the empirical CDF for each variable separately as a pickle file.</span>
+<span class="sd">        quantile_transform(df, variables, global_cdfs): Apply quantile scaling to multiple variables using precomputed global CDFs.</span>
+<span class="sd">        compute_local_cdf(df, variables): Compute and save the empirical CDF for each variable separately as a pickle file.</span>
+<span class="sd">        prepare_data(data_list): Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model.</span>
+<span class="sd">        prepare_data_latlng(data_list): Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model.</span>
+<span class="sd">        load_model(): Load the trained regional model from a file.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">regional_model</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">train_data_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">scaled_trained_catchment</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+
+<div class="viewcode-block" id="PredictStreamflow.prepare_data">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow.prepare_data">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model. Preparation involves dividing time-series data into desired short sequences based on specified timesteps and reshaping into desired tensor shape.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        data_list : Numpy array data </span>
+<span class="sd">            The extracted flow accumulation and observed streamflow data i.e. the output of get_grdc_data() functions.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Populates model input arrays on the instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">predictors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data_list</span><span class="p">))</span>
+        <span class="n">catchment</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">2</span><span class="p">],</span> <span class="n">data_list</span><span class="p">))</span>
+        <span class="n">catchment_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">catchment</span><span class="p">)</span>
+
+        <span class="n">area</span> <span class="o">=</span> <span class="n">catchment_arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>      <span class="c1"># shape (N, 1)</span>
+        <span class="n">alphaearth</span> <span class="o">=</span> <span class="n">catchment_arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="c1"># shape (N, D)</span>
+     
+        <span class="n">full_train_45d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_90d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_180d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_365d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_alphaearth</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_area</span> <span class="o">=</span> <span class="p">[]</span>
+
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models/alpha_earth_scaler.pkl&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">alphaearth_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">catchment</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+
+        <span class="n">alphaearth</span> <span class="o">=</span> <span class="n">alphaearth</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">64</span><span class="p">)</span>
+        <span class="n">scaled_alphaearth</span> <span class="o">=</span> <span class="n">alphaearth_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">alphaearth</span><span class="p">)</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictors</span><span class="p">,</span> <span class="n">scaled_alphaearth</span><span class="p">,</span> <span class="n">area</span><span class="p">):</span>
+            <span class="n">this_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_area</span><span class="p">)</span>
+            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">if</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_predictor</span><span class="p">)</span>
+
+            <span class="n">num_samples</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">365</span>
+            <span class="n">p45_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p90_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p180_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p365_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">alphaearth_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">area_samples</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="bp">self</span><span class="o">.</span><span class="n">catch_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_samples</span><span class="p">):</span>
+                <span class="n">full_window</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">365</span><span class="p">,</span> <span class="p">:]</span>
+                
+                <span class="n">p45_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">45</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p90_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">90</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p180_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p365_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">)</span>
+        
+                <span class="n">alphaearth_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+                <span class="n">area_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+            
+            <span class="c1"># --- FILER NAANS ---</span>
+            <span class="n">timesteps_to_keep</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_samples</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p45_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p90_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p180_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p365_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                <span class="p">):</span>
+                    <span class="n">timesteps_to_keep</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="n">timesteps_to_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timesteps_to_keep</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">timesteps_to_keep</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">full_train_45d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p45_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_90d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p90_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_180d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p180_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_365d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p365_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_alphaearth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">alphaearth_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_area</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">area_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_45d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_45d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_90d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_90d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_180d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_180d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_365d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_365d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_alphaearth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_alphaearth</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_area</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
+
+    
+<div class="viewcode-block" id="PredictStreamflow.prepare_data_latlng">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow.prepare_data_latlng">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">prepare_data_latlng</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">data_list</span><span class="p">):</span>
+<span class="w">        </span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Prepare model inputs for user-defined latitude/longitude points.</span>
+
+<span class="sd">        This uses routed runoff time series at specified lat/lon points (not GRDC</span>
+<span class="sd">        stations), slices multi-scale windows, and reshapes tensors for inference.</span>
+<span class="sd">        </span>
+<span class="sd">        Parameters:</span>
+<span class="sd">        -----------</span>
+<span class="sd">        data_list : Numpy array data </span>
+<span class="sd">            Output of get_data_latlng(), containing predictors and catchment info.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            None. Populates model input arrays on the instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">predictors</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">catchment</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">data_list</span><span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">catchment_arr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">catchment</span><span class="p">)</span>
+
+        <span class="n">area</span> <span class="o">=</span> <span class="n">catchment_arr</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>      <span class="c1"># shape (N, 1)</span>
+        <span class="n">alphaearth</span> <span class="o">=</span> <span class="n">catchment_arr</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="c1"># shape (N, D)</span>
+     
+        <span class="n">full_train_45d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_90d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_180d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_train_365d</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_alphaearth</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">full_area</span> <span class="o">=</span> <span class="p">[]</span>
+                
+        
+        <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models/alpha_earth_scaler.pkl&#39;</span><span class="p">,</span> <span class="s1">&#39;rb&#39;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+            <span class="n">alphaearth_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">catchment</span><span class="p">)</span> <span class="o">&lt;=</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">return</span>
+        
+        <span class="n">alphaearth</span> <span class="o">=</span> <span class="n">alphaearth</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span><span class="mi">64</span><span class="p">)</span>
+        <span class="n">scaled_alphaearth</span> <span class="o">=</span> <span class="n">alphaearth_scaler</span><span class="o">.</span><span class="n">transform</span><span class="p">(</span><span class="n">alphaearth</span><span class="p">)</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictors</span><span class="p">,</span> <span class="n">scaled_alphaearth</span><span class="p">,</span> <span class="n">area</span><span class="p">):</span>
+            <span class="n">this_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_area</span><span class="p">)</span>
+            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">if</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_predictor</span><span class="p">)</span>
+
+            <span class="n">num_samples</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">365</span>
+            <span class="n">p45_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p90_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p180_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">p365_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">alphaearth_samples</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="n">area_samples</span> <span class="o">=</span> <span class="p">[]</span>
+
+            <span class="c1">#self.catch_area = np.expm1(j)</span>
+            
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_samples</span><span class="p">):</span>
+                <span class="n">full_window</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="p">[</span><span class="n">i</span> <span class="p">:</span> <span class="n">i</span> <span class="o">+</span> <span class="mi">365</span><span class="p">,</span> <span class="p">:]</span>
+                
+                <span class="n">p45_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">45</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p90_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">90</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p180_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">[</span><span class="o">-</span><span class="mi">180</span><span class="p">:,</span> <span class="p">:])</span>
+                <span class="n">p365_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">full_window</span><span class="p">)</span>
+        
+                <span class="n">alphaearth_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+                <span class="n">area_samples</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">j</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">1</span><span class="p">))</span>
+            
+            <span class="c1"># --- FILER NAANS ---</span>
+            <span class="n">timesteps_to_keep</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">num_samples</span><span class="p">):</span>
+                <span class="k">if</span> <span class="p">(</span>
+                    <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p45_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p90_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p180_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                    <span class="ow">and</span> <span class="ow">not</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">p365_samples</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">.</span><span class="n">any</span><span class="p">()</span>
+                <span class="p">):</span>
+                    <span class="n">timesteps_to_keep</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+
+            <span class="n">timesteps_to_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">timesteps_to_keep</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">int64</span><span class="p">)</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">timesteps_to_keep</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">full_train_45d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p45_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_90d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p90_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_180d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p180_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_365d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p365_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_alphaearth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">alphaearth_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_area</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">area_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+            
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_45d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_45d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_90d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_90d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_180d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_180d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_365d</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_train_365d</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_alphaearth</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_alphaearth</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>  
+        <span class="bp">self</span><span class="o">.</span><span class="n">sim_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span><span class="n">full_area</span><span class="p">,</span> <span class="n">axis</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span></div>
+
+    
+            
+<div class="viewcode-block" id="PredictStreamflow.load_model">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow.load_model">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">load_model</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Load a trained regional model from disk.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            path (str): Path to the saved Keras model.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tensorflow.keras.Model: Loaded model instance.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tcn</span><span class="w"> </span><span class="kn">import</span> <span class="n">TCN</span>  <span class="c1"># Make sure to import TCN</span>
+        <span class="kn">from</span><span class="w"> </span><span class="nn">tensorflow.keras.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">custom_object_scope</span>
+
+        <span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.streamflow_trainer</span><span class="w"> </span><span class="kn">import</span> <span class="n">asym_laplace_nll</span>
+        <span class="n">custom_objects</span> <span class="o">=</span> <span class="p">{</span><span class="s2">&quot;TCN&quot;</span><span class="p">:</span> <span class="n">TCN</span><span class="p">,</span> <span class="s2">&quot;asym_laplace_nll&quot;</span><span class="p">:</span> <span class="n">asym_laplace_nll</span><span class="p">}</span>
+        <span class="n">strategy</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">distribute</span><span class="o">.</span><span class="n">MirroredStrategy</span><span class="p">()</span>
+        <span class="k">with</span> <span class="n">strategy</span><span class="o">.</span><span class="n">scope</span><span class="p">():</span>
+            <span class="k">with</span> <span class="n">custom_object_scope</span><span class="p">(</span><span class="n">custom_objects</span><span class="p">):</span>  
+                <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="n">load_model</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">custom_objects</span><span class="o">=</span><span class="n">custom_objects</span><span class="p">)</span></div>
+
+        
+<div class="viewcode-block" id="PredictStreamflow.summary">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow.summary">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">summary</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Print a summary of the loaded model.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">summary</span><span class="p">()</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

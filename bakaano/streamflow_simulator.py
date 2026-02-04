@@ -1,3 +1,7 @@
+"""Simulation and inference utilities for streamflow prediction.
+
+Role: Prepare simulation inputs and run trained model inference.
+"""
 
 import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3' 
@@ -31,14 +35,18 @@ class PredictDataPreprocessor:
     def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, 
                  grdc_streamflow_nc_file=None, catchment_size_threshold=None):
         """
+        Role: Build predictors for simulation/inference.
+
         Initialize the PredictDataPreprocessor object.
         
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile of the river basin or watershed.
-            start_date (str): The start date for the simulation period in 'YYYY-MM-DD' format.
-            end_date (str): The end date for the simulation period in 'YYYY-MM-DD' format.
-            grdc_streamflow_nc_file (str): The path to the GRDC streamflow NetCDF file.
+            sim_start (str): Simulation start date (YYYY-MM-DD).
+            sim_end (str): Simulation end date (YYYY-MM-DD).
+            routing_method (str): Routing method ("mfd", "d8", "dinf").
+            grdc_streamflow_nc_file (str, optional): GRDC NetCDF path.
+            catchment_size_threshold (float, optional): Minimum catchment size for stations.
 
         Methods
         -------
@@ -205,6 +213,12 @@ class PredictDataPreprocessor:
         """
         Load and filter observed GRDC streamflow data in a schema-robust way.
         Works for single- and multi-station NetCDFs.
+
+        Args:
+            grdc_streamflow_nc_file (str): Path to GRDC NetCDF file.
+
+        Returns:
+            xarray.Dataset: Filtered GRDC subset for the study area.
         """
     
         try:
@@ -320,6 +334,97 @@ class PredictDataPreprocessor:
                 """.strip())
 
                           
+    def load_observed_streamflow_from_csv_dir(
+        self,
+        csv_dir,
+        lookup_csv,
+        id_col="id",
+        lat_col="latitude",
+        lon_col="longitude",
+        date_col="date",
+        discharge_col="discharge",
+        file_pattern="{id}.csv",
+    ):
+        """
+        Load observed streamflow from per-station CSV files using a lookup table.
+
+        The lookup table must include station identifiers and coordinates. The method
+        filters stations to the study area, then loads per-station CSVs by ID.
+
+        Args:
+            csv_dir (str): Directory containing per-station CSV files.
+            lookup_csv (str): CSV file with station ids and coordinates.
+            id_col (str): Station id column in lookup CSV.
+            lat_col (str): Latitude column in lookup CSV.
+            lon_col (str): Longitude column in lookup CSV.
+            date_col (str): Date column in station CSVs.
+            discharge_col (str): Discharge column in station CSVs.
+            file_pattern (str): Pattern for station CSV filenames (e.g., ``"{id}.csv"``).
+
+        Returns:
+            dict: Mapping of station_id to observed discharge DataFrame.
+        """
+        lookup = pd.read_csv(lookup_csv)
+        required_cols = [id_col, lat_col, lon_col]
+        missing_cols = [c for c in required_cols if c not in lookup.columns]
+        if missing_cols:
+            raise SystemExit(
+                "Lookup CSV is missing required columns: "
+                + ", ".join(missing_cols)
+            )
+
+        stations_gdf = gpd.GeoDataFrame(
+            lookup,
+            geometry=gpd.points_from_xy(lookup[lon_col], lookup[lat_col]),
+            crs="EPSG:4326",
+        )
+        region_shape = gpd.read_file(self.study_area)
+        stations_in_region = gpd.sjoin(
+            stations_gdf,
+            region_shape,
+            how="inner",
+            predicate="intersects",
+        )
+        if stations_in_region.empty:
+            raise SystemExit(
+                "No stations from the lookup table intersect the study area."
+            )
+
+        station_ids = stations_in_region[id_col].astype(str).unique().tolist()
+        self.station_ids = station_ids
+        self.station_meta = stations_in_region[[id_col, lat_col, lon_col]].copy()
+        self.station_meta_cols = {"id": id_col, "lat": lat_col, "lon": lon_col}
+
+        observed = {}
+        missing_files = []
+        for station_id in station_ids:
+            pattern = file_pattern.format(id=station_id)
+            matches = sorted(glob.glob(os.path.join(csv_dir, pattern)))
+            if not matches:
+                missing_files.append(station_id)
+                continue
+            df = pd.read_csv(matches[0])
+            if date_col not in df.columns or discharge_col not in df.columns:
+                raise SystemExit(
+                    f"Missing columns in station CSV for id={station_id}. "
+                    f"Required: {date_col}, {discharge_col}"
+                )
+            df[date_col] = pd.to_datetime(df[date_col])
+            df = df.set_index(date_col).sort_index()
+            df = df.loc[self.sim_start:self.sim_end]
+            observed[station_id] = df[[discharge_col]].rename(
+                columns={discharge_col: "station_discharge"}
+            )
+
+        if missing_files:
+            raise SystemExit(
+                "Missing observed CSV files for station ids: "
+                + ", ".join(missing_files)
+            )
+
+        self.observed_streamflow_csv = observed
+        return observed
+
     def get_data(self):
         """
         Extract and preprocess predictor and response variables for each station based on its coordinates.
@@ -332,6 +437,8 @@ class PredictDataPreprocessor:
             - self.catchment: A list of tuples, each containing catchment data (accumulation and slope values).
         """
         count = 1
+        use_csv_obs = hasattr(self, "observed_streamflow_csv") and self.observed_streamflow_csv
+        use_grdc = hasattr(self, "grdc_subset") and self.grdc_subset is not None
         
         dem_filepath = f'{self.working_dir}/elevation/dem_clipped.tif'
         
@@ -348,15 +455,18 @@ class PredictDataPreprocessor:
         fdir = grid.flowdir(inflated_dem, routing=self.routing_method)
         acc = grid.accumulation(fdir=fdir, routing=self.routing_method)
         
-        facc_thresh = np.nanmax(acc) * 0.0001
-        self.river_grid = np.where(acc < facc_thresh, 0, 1)
-        river_ras = xr.DataArray(data=self.river_grid, coords=[('lat', lat), ('lon', lon)])
-        
-        with rasterio.open(dem_filepath) as src:
-            ref_meta = src.meta.copy()  # Copy the metadata exactly as is
-
-        with rasterio.open(f'{self.working_dir}/catchment/river_grid.tif', 'w', **ref_meta) as dst:
-            dst.write(river_ras.values, 1)  # Write data to the first band
+        river_grid_path = f'{self.working_dir}/catchment/river_grid.tif'
+        if os.path.exists(river_grid_path):
+            with rasterio.open(river_grid_path) as src:
+                self.river_grid = src.read(1)
+        else:
+            facc_thresh = np.nanmax(acc) * 0.0001
+            self.river_grid = np.where(acc < facc_thresh, 0, 1)
+            river_ras = xr.DataArray(data=self.river_grid, coords=[('lat', lat), ('lon', lon)])
+            with rasterio.open(dem_filepath) as src:
+                ref_meta = src.meta.copy()  # Copy the metadata exactly as is
+            with rasterio.open(river_grid_path, 'w', **ref_meta) as dst:
+                dst.write(river_ras.values, 1)  # Write data to the first band
 
         alpha_earth_bands = sorted(glob.glob(f'{self.working_dir}/alpha_earth/band*.tif'))
         alpha_earth_list = []
@@ -464,8 +574,20 @@ class PredictDataPreprocessor:
         time_index = pd.date_range(start=self.sim_start, end=self.sim_end, freq='D')
         #extract station predictor and response variables based on station coordinates
         for k in self.station_ids:
-            station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
-            catchment_size = self.grdc_subset['area'].sel(id=k, method='nearest').values
+            station_discharge = None
+            catchment_size = None
+
+            if use_csv_obs:
+                station_discharge = self.observed_streamflow_csv.get(str(k))
+            elif use_grdc:
+                station_discharge = (
+                    self.grdc_subset['runoff_mean']
+                    .sel(id=k)
+                    .to_dataframe(name='station_discharge')
+                )
+
+            if station_discharge is None:
+                continue
 
             # if catchment_size < self.catchment_size_threshold:
             #     continue
@@ -473,8 +595,17 @@ class PredictDataPreprocessor:
             # if station_discharge['station_discharge'].notna().sum() < 1095:
             #     continue
                           
-            station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
-            station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
+            if use_csv_obs:
+                meta = self.station_meta
+                cols = self.station_meta_cols
+                row = meta.loc[meta[cols["id"]].astype(str) == str(k)]
+                if row.empty:
+                    continue
+                station_y = np.nanmax(row[cols["lat"]].values)
+                station_x = np.nanmax(row[cols["lon"]].values)
+            else:
+                station_x = np.nanmax(self.grdc_subset['geo_x'].sel(id=k).values)
+                station_y = np.nanmax(self.grdc_subset['geo_y'].sel(id=k).values)
             snapped_y, snapped_x = self._snap_coordinates(station_y, station_x)
             
             acc_data = acc.sel(lat=snapped_y, lon=snapped_x, method='nearest').values
@@ -496,11 +627,11 @@ class PredictDataPreprocessor:
     
             wfa_data = full_wfa_data
             
-            station_discharge = self.grdc_subset['runoff_mean'].sel(id=k).to_dataframe(name='station_discharge')
-
             predictors = wfa_data.copy()
             predictors.replace([np.inf, -np.inf], np.nan, inplace=True)
-            response = station_discharge.drop(['id'], axis=1)
+            response = station_discharge
+            if use_grdc and 'id' in response.columns:
+                response = response.drop(['id'], axis=1)
 
             log_acc = np.log1p(acc_data)
             catch_list = [log_acc] + alpha_earth_stations
@@ -519,6 +650,15 @@ class PredictDataPreprocessor:
         return self.data_list
     
     def get_data_latlng(self, latlist, lonlist):
+        """Prepare predictors for arbitrary latitude/longitude points.
+
+        Args:
+            latlist (list[float]): Latitudes to simulate.
+            lonlist (list[float]): Longitudes to simulate.
+
+        Returns:
+            list: [data_list, catchment, latlist, lonlist].
+        """
 
         count = 1
         
@@ -537,15 +677,18 @@ class PredictDataPreprocessor:
         fdir = grid.flowdir(inflated_dem, routing=self.routing_method)
         acc = grid.accumulation(fdir=fdir, routing=self.routing_method)
         
-        facc_thresh = np.nanmax(acc) * 0.0001
-        self.river_grid = np.where(acc < facc_thresh, 0, 1)
-        river_ras = xr.DataArray(data=self.river_grid, coords=[('lat', lat), ('lon', lon)])
-        
-        with rasterio.open(dem_filepath) as src:
-            ref_meta = src.meta.copy()  # Copy the metadata exactly as is
-
-        with rasterio.open(f'{self.working_dir}/catchment/river_grid.tif', 'w', **ref_meta) as dst:
-            dst.write(river_ras.values, 1)  # Write data to the first band
+        river_grid_path = f'{self.working_dir}/catchment/river_grid.tif'
+        if os.path.exists(river_grid_path):
+            with rasterio.open(river_grid_path) as src:
+                self.river_grid = src.read(1)
+        else:
+            facc_thresh = np.nanmax(acc) * 0.0001
+            self.river_grid = np.where(acc < facc_thresh, 0, 1)
+            river_ras = xr.DataArray(data=self.river_grid, coords=[('lat', lat), ('lon', lon)])
+            with rasterio.open(dem_filepath) as src:
+                ref_meta = src.meta.copy()  # Copy the metadata exactly as is
+            with rasterio.open(river_grid_path, 'w', **ref_meta) as dst:
+                dst.write(river_ras.values, 1)  # Write data to the first band
 
         alpha_earth_bands = sorted(glob.glob(f'{self.working_dir}/alpha_earth/band*.tif'))
         alpha_earth_list = []
@@ -696,11 +839,12 @@ class PredictDataPreprocessor:
 class PredictStreamflow:
     def __init__(self, working_dir):
         """
+        Role: Prepare model inputs and run inference.
+
         Initializes the PredictStreamflow class for streamflow prediction using a temporal convolutional network (TCN).
 
         Args:
             working_dir (str): The working directory where the model and data are stored.
-            lookback (int): The number of timesteps to look back for prediction.
 
         Methods
         -------
@@ -728,6 +872,8 @@ class PredictStreamflow:
         data_list : Numpy array data 
             The extracted flow accumulation and observed streamflow data i.e. the output of get_grdc_data() functions.
 
+        Returns:
+            None. Populates model input arrays on the instance.
         """
 
         predictors = list(map(lambda xy: xy[0], data_list))
@@ -737,10 +883,12 @@ class PredictStreamflow:
         area = catchment_arr[:, 0:1]      # shape (N, 1)
         alphaearth = catchment_arr[:, 1:] # shape (N, D)
      
-        full_train_30d, full_train_90d = [], []
-        full_train_180d, full_train_365d = [], []
+        full_train_45d = []
+        full_train_90d = []
+        full_train_180d = []
+        full_train_365d = []
         full_alphaearth = []
-        full_catchsize = []
+        full_area = []
 
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
             alphaearth_scaler = pickle.load(file)
@@ -755,61 +903,72 @@ class PredictStreamflow:
         for x, z, j in zip(predictors, scaled_alphaearth, area):
             this_area = np.expm1(j)
             self.catch_area_list.append(this_area)
-            scaled_train_predictor = np.log1p((x.values /this_area) + 0.001)
+            scaled_train_predictor = x.values / this_area
+            scaled_train_predictor = np.log1p(scaled_train_predictor)
 
             num_samples = scaled_train_predictor.shape[0] - 365
-            p30_samples, p90_samples, p180_samples, p365_samples = [], [], [], []
-            area_samples = []
+            p45_samples = []
+            p90_samples = []
+            p180_samples = []
+            p365_samples = []
             alphaearth_samples = []
+            area_samples = []
 
             self.catch_area = np.expm1(j)
             
             for i in range(num_samples):
                 full_window = scaled_train_predictor[i : i + 365, :]
                 
-                # --- MULTI-SCALE SLICING ---
-                # We slice from the END of the full_window so all branches share 'Day 365'
-                p30_samples.append(full_window[-30:, :])
+                p45_samples.append(full_window[-45:, :])
                 p90_samples.append(full_window[-90:, :])
                 p180_samples.append(full_window[-180:, :])
-                p365_samples.append(full_window) # This is the full 365
+                p365_samples.append(full_window)
         
                 alphaearth_samples.append(z)
-                area_samples.append(j)
+                area_samples.append(j.reshape(1))
             
             # --- FILER NAANS ---
             timesteps_to_keep = []
             for i in range(num_samples):
-                if not np.isnan(p365_samples[i]).any():
+                if (
+                    not np.isnan(p45_samples[i]).any()
+                    and not np.isnan(p90_samples[i]).any()
+                    and not np.isnan(p180_samples[i]).any()
+                    and not np.isnan(p365_samples[i]).any()
+                ):
                     timesteps_to_keep.append(i)
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            full_train_30d.append(np.array(p30_samples))
-            full_train_90d.append(np.array(p90_samples))
-            full_train_180d.append(np.array(p180_samples))
-            full_train_365d.append(np.array(p365_samples))
+            if len(timesteps_to_keep) > 0:
+                full_train_45d.append(np.array(p45_samples)[timesteps_to_keep])
+                full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
+                full_train_180d.append(np.array(p190_samples)[timesteps_to_keep])
+                full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
+                full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
+                full_area.append(np.array(area_samples)[timesteps_to_keep])
             
-            full_alphaearth.append(np.array(alphaearth_samples))
-            full_catchsize.append(np.array(area_samples))
-            
-        self.sim_30d = np.concatenate(full_train_30d, axis=0)
+        self.sim_45d = np.concatenate(full_train_45d, axis=0)
         self.sim_90d = np.concatenate(full_train_90d, axis=0)
         self.sim_180d = np.concatenate(full_train_180d, axis=0)
         self.sim_365d = np.concatenate(full_train_365d, axis=0)
-        
         self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
+        self.sim_area = np.concatenate(full_area, axis=0).reshape(-1, 1)
     
     def prepare_data_latlng(self, data_list):
         
         """
-        Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model. Preparation involves dividing time-series data into desired short sequences based on specified timesteps and reshaping into desired tensor shape.
+        Prepare model inputs for user-defined latitude/longitude points.
+
+        This uses routed runoff time series at specified lat/lon points (not GRDC
+        stations), slices multi-scale windows, and reshapes tensors for inference.
         
         Parameters:
         -----------
         data_list : Numpy array data 
-            The extracted flow accumulation and observed streamflow data i.e. the output of get_grdc_data() functions.
+            Output of get_data_latlng(), containing predictors and catchment info.
 
+        Returns:
+            None. Populates model input arrays on the instance.
         """
 
         predictors = list(map(lambda xy: xy[0], data_list[0]))
@@ -819,10 +978,12 @@ class PredictStreamflow:
         area = catchment_arr[:, 0:1]      # shape (N, 1)
         alphaearth = catchment_arr[:, 1:] # shape (N, D)
      
-        full_train_30d, full_train_90d = [], []
-        full_train_180d, full_train_365d = [], []
+        full_train_45d = []
+        full_train_90d = []
+        full_train_180d = []
+        full_train_365d = []
         full_alphaearth = []
-        full_catchsize = [] 
+        full_area = []
                 
         
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
@@ -838,70 +999,80 @@ class PredictStreamflow:
         for x, z, j in zip(predictors, scaled_alphaearth, area):
             this_area = np.expm1(j)
             self.catch_area_list.append(this_area)
-            scaled_train_predictor = np.log1p((x.values /this_area) + 0.001)
+            scaled_train_predictor = x.values / this_area
+            if scaled_train_predictor.ndim == 1:
+                scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
+            scaled_train_predictor = np.log1p(scaled_train_predictor)
 
             num_samples = scaled_train_predictor.shape[0] - 365
-            p30_samples, p90_samples, p180_samples, p365_samples = [], [], [], []
-            area_samples = []
+            p45_samples = []
+            p90_samples = []
+            p180_samples = []
+            p365_samples = []
             alphaearth_samples = []
+            area_samples = []
 
             #self.catch_area = np.expm1(j)
             
             for i in range(num_samples):
                 full_window = scaled_train_predictor[i : i + 365, :]
                 
-                # --- MULTI-SCALE SLICING ---
-                # We slice from the END of the full_window so all branches share 'Day 365'
-                p30_samples.append(full_window[-30:, :])
+                p45_samples.append(full_window[-45:, :])
                 p90_samples.append(full_window[-90:, :])
                 p180_samples.append(full_window[-180:, :])
-                p365_samples.append(full_window) # This is the full 365
+                p365_samples.append(full_window)
         
                 alphaearth_samples.append(z)
-                area_samples.append(j)
+                area_samples.append(j.reshape(1))
             
             # --- FILER NAANS ---
             timesteps_to_keep = []
             for i in range(num_samples):
-                if not np.isnan(p365_samples[i]).any():
+                if (
+                    not np.isnan(p45_samples[i]).any()
+                    and not np.isnan(p90_samples[i]).any()
+                    and not np.isnan(p180_samples[i]).any()
+                    and not np.isnan(p365_samples[i]).any()
+                ):
                     timesteps_to_keep.append(i)
 
             timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            full_train_30d.append(np.array(p30_samples))
-            full_train_90d.append(np.array(p90_samples))
-            full_train_180d.append(np.array(p180_samples))
-            full_train_365d.append(np.array(p365_samples))
+            if len(timesteps_to_keep) > 0:
+                full_train_45d.append(np.array(p45_samples)[timesteps_to_keep])
+                full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
+                full_train_180d.append(np.array(p180_samples)[timesteps_to_keep])
+                full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
+                full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
+                full_area.append(np.array(area_samples)[timesteps_to_keep])
             
-            full_alphaearth.append(np.array(alphaearth_samples))
-            full_catchsize.append(np.array(area_samples))
-            
-        self.sim_30d = np.concatenate(full_train_30d, axis=0)
+        self.sim_45d = np.concatenate(full_train_45d, axis=0)
         self.sim_90d = np.concatenate(full_train_90d, axis=0)
         self.sim_180d = np.concatenate(full_train_180d, axis=0)
         self.sim_365d = np.concatenate(full_train_365d, axis=0)
-        
         self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_catchsize = np.concatenate(full_catchsize, axis=0).reshape(-1, 1)
+        self.sim_area = np.concatenate(full_area, axis=0).reshape(-1, 1)
     
             
     def load_model(self, path):
         """
-        Load saved LSTM model. 
-        
-        Parameters:
-        -----------
-        Path : H5 file
-            Path to the saved neural network LSTM model
+        Load a trained regional model from disk.
 
+        Args:
+            path (str): Path to the saved Keras model.
+
+        Returns:
+            tensorflow.keras.Model: Loaded model instance.
         """
         from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope
 
-        custom_objects = {"TCN": TCN}
+        from bakaano.streamflow_trainer import asym_laplace_nll
+        custom_objects = {"TCN": TCN, "asym_laplace_nll": asym_laplace_nll}
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             with custom_object_scope(custom_objects):  
                 self.model = load_model(path, custom_objects=custom_objects)
         
     def summary(self):
+        """Print a summary of the loaded model."""
         self.model.summary()

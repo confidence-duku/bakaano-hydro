@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>Model Configuration</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+  <link rel="prev" title="Inputs and Outputs" href="inputs_outputs.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="current">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 current">
+            
+              <a href="#" class="reference internal current">Model Configuration</a>
+            
+
+            
+              <ul>
+                
+                  <li class="toctree-l2"><a href="#loss-functions" class="reference internal">Loss functions</a></li>
+                
+                  <li class="toctree-l2"><a href="#transforms-and-scaling" class="reference internal">Transforms and scaling</a></li>
+                
+                  <li class="toctree-l2"><a href="#spatial-resolution" class="reference internal">Spatial resolution</a></li>
+                
+                  <li class="toctree-l2"><a href="#learning-rate-schedule" class="reference internal">Learning rate schedule</a></li>
+                
+                  <li class="toctree-l2"><a href="#batch-size-and-generalization" class="reference internal">Batch size and generalization</a></li>
+                
+                  <li class="toctree-l2"><a href="#bootstrapping" class="reference internal">Bootstrapping</a></li>
+                
+                  <li class="toctree-l2"><a href="#asymmetric-laplace-outputs" class="reference internal">Asymmetric Laplace outputs</a></li>
+                
+              </ul>
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+    
+    <li>Model Configuration</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="inputs_outputs.html"
+       title="previous chapter">← Inputs and Outputs</a>
+  </li>
+  <li class="next">
+    <a href="troubleshooting.html"
+       title="next chapter">Troubleshooting →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="model-configuration">
+<h1>Model Configuration<a class="headerlink" href="#model-configuration" title="Link to this heading">¶</a></h1>
+<p>This page summarizes recommended settings and common tradeoffs.</p>
+<section id="loss-functions">
+<h2>Loss functions<a class="headerlink" href="#loss-functions" title="Link to this heading">¶</a></h2>
+<p>Point losses:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">mae</span></code>: stable baseline, good overall fit.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">huber</span></code>: robust to outliers; often better than MSE in linear space.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mse</span></code>: emphasizes large errors; can suppress peaks in linear space.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">msle</span></code>: emphasizes relative error; often better than MSE for wide ranges.</p></li>
+</ul>
+<p>Distributional loss:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code>: predicts (mu, b_plus, b_minus) per time step.
+Useful when you want asymmetric penalties and heteroscedastic uncertainty.</p></li>
+</ul>
+</section>
+<section id="transforms-and-scaling">
+<h2>Transforms and scaling<a class="headerlink" href="#transforms-and-scaling" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Area normalization and scaling are handled automatically in preprocessing.</p></li>
+<li><p>Accumulated runoff and discharge are converted to area-invariant depth
+(mm/day) using basin area (km²) so basins of different size are comparable.</p></li>
+<li><p>Predictor (runoff) values are robust-scaled, and responses are robust-scaled
+after area normalization.</p></li>
+<li><p>AlphaEarth embeddings are standardized with a <code class="docutils literal notranslate"><span class="pre">StandardScaler</span></code>.</p></li>
+<li><p>Scalers are saved to <code class="docutils literal notranslate"><span class="pre">{working_dir}/models</span></code> and reused at inference
+(<code class="docutils literal notranslate"><span class="pre">runoff_scaler.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">response_scaler.pkl</span></code>, <code class="docutils literal notranslate"><span class="pre">alpha_earth_scaler.pkl</span></code>).</p></li>
+</ul>
+</section>
+<section id="spatial-resolution">
+<h2>Spatial resolution<a class="headerlink" href="#spatial-resolution" title="Link to this heading">¶</a></h2>
+<p>The analysis resolution follows the DEM grid. By default the model downloads
+a 1 km DEM, but you can supply a finer or coarser DEM via <code class="docutils literal notranslate"><span class="pre">local_data_path</span></code>.</p>
+</section>
+<section id="learning-rate-schedule">
+<h2>Learning rate schedule<a class="headerlink" href="#learning-rate-schedule" title="Link to this heading">¶</a></h2>
+<p>Typical starting point:</p>
+<ul class="simple">
+<li><p>base LR: 1e-4</p></li>
+<li><p>min LR: 1e-5</p></li>
+<li><p>warmup epochs: 5</p></li>
+</ul>
+<p>If training is unstable:</p>
+<ul class="simple">
+<li><p>lower base LR to 5e-5</p></li>
+<li><p>reduce batch size</p></li>
+</ul>
+</section>
+<section id="batch-size-and-generalization">
+<h2>Batch size and generalization<a class="headerlink" href="#batch-size-and-generalization" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>Large batches improve throughput but can hurt peaks.</p></li>
+<li><p>Recommended ranges: 256–512 for 2 GPUs.</p></li>
+<li><p>If you need stronger peak learning, reduce batch size or use peak-weighted
+losses.</p></li>
+</ul>
+</section>
+<section id="bootstrapping">
+<h2>Bootstrapping<a class="headerlink" href="#bootstrapping" title="Link to this heading">¶</a></h2>
+<p>Streaming bootstrap sampling improves generalization but adds loss noise.
+Recommended <code class="docutils literal notranslate"><span class="pre">epoch_data_fraction</span></code>: 0.5–0.8.</p>
+</section>
+<section id="asymmetric-laplace-outputs">
+<h2>Asymmetric Laplace outputs<a class="headerlink" href="#asymmetric-laplace-outputs" title="Link to this heading">¶</a></h2>
+<p>If using <code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code>:</p>
+<ul class="simple">
+<li><p>Output layer is 3 units: <code class="docutils literal notranslate"><span class="pre">mu</span></code>, <code class="docutils literal notranslate"><span class="pre">log_b_plus</span></code>, <code class="docutils literal notranslate"><span class="pre">log_b_minus</span></code>.</p></li>
+<li><p>Prediction uses <code class="docutils literal notranslate"><span class="pre">mu</span></code> as the point estimate.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="inputs_outputs.html"
+       title="previous chapter">← Inputs and Outputs</a>
+  </li>
+  <li class="next">
+    <a href="troubleshooting.html"
+       title="next chapter">Troubleshooting →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

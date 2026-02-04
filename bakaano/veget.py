@@ -1,3 +1,7 @@
+"""Runoff generation and routing using the VegET formulation.
+
+Role: Compute daily runoff and route flow to river network.
+"""
 
 import numpy as np
 import pandas as pd
@@ -20,6 +24,16 @@ def update_soil_and_runoff(soil_moisture, eff_rain, ETa, max_allowable_depletion
     """
     Corrected Numba-optimized soil moisture and runoff update.
     All inputs must be float32 NumPy arrays (2D).
+
+    Args:
+        soil_moisture (np.ndarray): Current soil moisture grid (ny, nx).
+        eff_rain (np.ndarray): Effective rainfall grid (ny, nx).
+        ETa (np.ndarray): Actual evapotranspiration grid (ny, nx).
+        max_allowable_depletion (np.ndarray): Max allowable depletion grid.
+        whc (np.ndarray): Water holding capacity grid.
+
+    Returns:
+        tuple[np.ndarray, np.ndarray]: (updated soil_moisture, surface runoff).
     """
     ny, nx = soil_moisture.shape
     q_surf = np.empty((ny, nx), dtype=np.float32)
@@ -49,8 +63,7 @@ def update_soil_and_runoff(soil_moisture, eff_rain, ETa, max_allowable_depletion
     return soil_moisture, q_surf
 
 class VegET:
-    """Generate an instance
-    """
+    """Role: Orchestrate VegET runoff generation and routing."""
     def __init__(self, working_dir, study_area, start_date, end_date, climate_data_source, routing_method='mfd'):
         """Initialize a VegET object.
 
@@ -95,6 +108,14 @@ class VegET:
         self.climate_data_source = climate_data_source
 
     def compute_veget_runoff_route_flow(self):  
+        """Compute VegET runoff and route flow to the river network.
+
+        This routine loads climate inputs, computes PET, simulates soil moisture
+        and runoff, and performs routing to produce daily routed runoff outputs.
+
+        Returns:
+            None. Writes routed runoff outputs to ``{working_dir}/runoff_output``.
+        """
         if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
             # Initialize potential evapotranspiration and data preprocessor
             print('Computing VegET runoff and routing flow to river network')
@@ -177,6 +198,7 @@ class VegET:
 
             interception = ((0.15 * tree_cover) + (0.1 * herb_cover))/100
             interception = np.asarray(interception)
+            one_minus_interception = 1.0 - interception
             total_ETa = 0
             total_ETc = 0
 
@@ -198,38 +220,36 @@ class VegET:
             date_list = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
                         for i in range((end - start).days + 1)]
             
+            ref_shape = soil_moisture.shape
+
+            def _align_or_values(arr):
+                """Align arrays to DEM grid or return values if already aligned."""
+                if hasattr(arr, "shape") and arr.shape == ref_shape:
+                    return np.asarray(arr, dtype=np.float32)
+                aligned = self.uw.align_rasters(arr, israster=False)
+                return np.asarray(aligned, dtype=np.float32)
+
             print('\n')
             for count, date in tqdm(enumerate(date_list), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
                 count2 = count+1
-                this_rf = rf[count]
-                this_rf = self.uw.align_rasters(this_rf, israster=False)
-                this_rf = np.asarray(this_rf)
-                eff_rain = this_rf * (1- interception)
+                this_rf = _align_or_values(rf[count])
+                eff_rain = this_rf * one_minus_interception
                 eff_rain = np.where(eff_rain<0, 0, eff_rain)
 
                 doy = doys[count]
                 this_et = eto.compute_PET(self.pet_params[count], tan_lat, cos_lat, sin_lat, doy)
-                this_et = self.uw.align_rasters(this_et, israster=False)
+                this_et = _align_or_values(this_et)
 
-                day_num = tmean_period[count]['time'].dt.dayofyear
-                day_num = day_num.values.item()
-
-                ndvi_day = ndvi_array[day_num] * 0.0001
-                ndvi_day = self.uw.align_rasters(ndvi_day, israster=False)
-
-                
-                this_et = np.asarray(this_et)
-                ndvi_day = np.asarray(ndvi_day)
+                day_num = int(doys[count])
+                ndvi_day = _align_or_values(ndvi_array[day_num] * 0.0001)
 
                 #this_kcp = np.where(ndvi_day>0.4, (1.25*ndvi_day+0.2), (1.25*ndvi_day))
                 this_kcp = 1.25 * ndvi_day
                 this_kcp += 0.2 * (ndvi_day > 0.4)
 
-                
-                pks = soil_moisture - max_allowable_depletion
                 #ks = np.where(pks <0, (soil_moisture/max_allowable_depletion), 1)
                 ks = np.minimum(soil_moisture / max_allowable_depletion, 1.0)
 

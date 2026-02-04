@@ -89,7 +89,9 @@ working_dir/
 │
 ├── models/                          # Trained Bakaano-Hydro models & scalers
 │   ├── bakaano_model.keras
-│   └── alpha_earth_scaler.pkl
+│   ├── alpha_earth_scaler.pkl
+│   ├── runoff_scaler.pkl
+│   └── response_scaler.pkl
 │
 ├── ndvi/                            # MODIS NDVI products
 │   └── daily_ndvi_climatology.pkl
@@ -115,224 +117,10 @@ working_dir/
     └── vegetation_metadata.json
 ```
 
-## Quick start: runnable walkthrough (↔ workflow steps)
+## Quick start
 
-### Step 1 – Download & preprocess input data
-
-```python
-working_dir='/lustre/backup/WUR/ESG/duku002/Drought-Flood-Cascade/niger'
-study_area='/home/WUR/duku002/Scripts/NBAT/hydro/common_data/niger.shp'
-```
-
-**Tree cover**
-```python
-from bakaano.tree_cover import TreeCover
-vf = TreeCover(
-    working_dir=working_dir, 
-    study_area=study_area, 
-    start_date='2001-01-01', 
-    end_date='2020-12-31'
-)
-vf.get_tree_cover_data()
-vf.plot_tree_cover(variable='tree_cover') # options for plot are 'tree_cover' and 'herb_cover'
-```
-    
-![png](quick_start_files/quick_start_3_1.png)
-    
-
-**NDVI**
-
-```python
-from bakaano.ndvi import NDVI
-nd = NDVI(
-    working_dir=working_dir, 
-    study_area=study_area, 
-    start_date='2001-01-01', 
-    end_date='2010-12-31'
-)
-nd.get_ndvi_data()
-nd.plot_ndvi(interval_num=10)  # because NDVI is in 16-day interval the 'interval_num' represents a 16-day period. 
-                               #Hence 0 is the first 16 day period
-```
-    
-![png](quick_start_files/quick_start_4_2.png)
-    
-
-
-**DEM**
-
-```python
-from bakaano.dem import DEM
-dd = DEM(
-    working_dir=working_dir, 
-    study_area=study_area, 
-    local_data=False, 
-    local_data_path=None
-)
-dd.get_dem_data()
-dd.plot_dem()
-```
-
-    
-![png](quick_start_files/quick_start_5_2.png)
-    
-
-**Soil**
-
-```python
-from bakaano.soil import Soil
-sgd = Soil(
-    working_dir=working_dir, 
-    study_area=study_area
-)
-sgd.get_soil_data()
-sgd.plot_soil(variable='wilting_point')  #options are 'wilting_point', 'saturation_point' and 'available_water_content'
-```
-    
-![png](quick_start_files/quick_start_6_2.png)
-    
-
-**Alpha Earth Embeddings**
-
-```python
-from bakaano.alpha_earth import AlphaEarth
-dd = AlphaEarth(
-    working_dir=working_dir, 
-    study_area=study_area,
-    start_date='2013-01-01', 
-    end_date = '2024-01-01',
-)
-dd.get_alpha_earth()
-dd.plot_alpha_earth('A35') #Band options are A00 to A63
-```
-
-    
-![png](quick_start_files/quick_start_7_2.png)
-    
-
-
-**Meteorological forcings**
-
-```python
-from bakaano.meteo import Meteo
-cd = Meteo(
-    working_dir=working_dir, 
-    study_area=study_area, 
-    start_date='2001-01-01', 
-    end_date='2010-12-31',
-    local_data=False, 
-    data_source='ERA5'
-)
-cd.plot_meteo(variable='tasmin', date='2006-12-01') # variable options are 'tmean', 'precip', 'tasmax', 'tasmin'
-```
-
-    
-![png](quick_start_files/quick_start_8_2.png)
-    
-
-
-### Step 2 – Compute runoff, route to river network & visualize output
-
-```python
-from bakaano.veget import VegET
-vg = VegET(
-    working_dir=working_dir, 
-    study_area=study_area,
-    start_date='2001-01-01', 
-    end_date='2010-12-31',
-    climate_data_source='ERA5',
-    routing_method='mfd'
-)
-vg.compute_veget_runoff_route_flow()
-```
-
-
-```python
-from bakaano.plot_runoff import RoutedRunoff
-rr = RoutedRunoff(
-    working_dir=working_dir, 
-    study_area=study_area
-)
-rr.map_routed_runoff(date='2020-09-03', vmax=6) #output values have been log transformed for better visualization
-```
-
-    
-![png](quick_start_files/quick_start_11_1.png)
-    
-This step computes grid-cell runoff and routes it through the river network using a multi-flow direction routing scheme.
-
-
-### Step 3 – Interactive exploration of GRDC data (optional but recommended)
-
-
-```python
-from bakaano.runner import BakaanoHydro
-bk = BakaanoHydro(
-    working_dir=working_dir, 
-    study_area=study_area,
-    climate_data_source='ERA5'
-)
-bk.explore_data_interactively('1981-01-01', '2016-12-31', '/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc')
-```
-Use this to inspect station coverage before training.
-
-
-### Step 4 – Train an instance of Bakaano-Hydro model
-
-(Workflow node 4)
-
-
-```python
-from bakaano.runner import BakaanoHydro
-bk = BakaanoHydro(  
-    working_dir=working_dir, 
-    study_area=study_area,
-    climate_data_source='ERA5'
-)
-```
-
-
-```python
-bk.train_streamflow_model(
-    train_start='1991-01-01', 
-    train_end='2020-12-31', 
-    grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
-    batch_size=32, 
-    num_epochs=300,
-    learning_rate=0.001
-)
-```
-### Step 5 – Evaluate and apply the model
-
-```python
-model_path = f'{working_dir}/models/bakaano_model.keras' 
-
-bk.evaluate_streamflow_model_interactively(
-    model_path=model_path, 
-    val_start='1981-01-01', 
-    val_end='1988-12-31', 
-    grdc_netcdf='/lustre/backup/WUR/ESG/duku002/NBAT/hydro/input_data/GRDC-Daily-africa-south-america.nc', 
-)
-```
-
-    
-![png](quick_start_files/quick_start_17_5.png)
-    
-
-
-
-```python
-model_path = f'{working_dir}/models/bakaano_model.keras'
-
-bk.simulate_streamflow(
-    model_path=model_path, 
-    sim_start='1981-01-01', 
-    sim_end='1988-12-31', 
-    latlist=[13.8, 13.9, 9.15, 8.75, 10.66, 9.32, 7.8, 8.76, 6.17],
-    lonlist=[3.0, 4.0, 4.77, 5.91, 4.69, 4.63, 8.91, 10.82, 6.77],
-)
-
-```
+See the documentation quick start for a full runnable walkthrough:
+- docs/_build/quickstart.html
 ## How to cite
 
 If you use Bakaano-Hydro in academic work, please cite:
@@ -350,4 +138,3 @@ Bakaano-Hydro was developed at Wageningen Environmental Research with funding fr
 ## License
 
 Apache License
-
