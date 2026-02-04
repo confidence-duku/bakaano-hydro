@@ -327,6 +327,7 @@
         <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
         <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
         <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
@@ -349,6 +350,8 @@
 <span class="sd">            seed (int): Random seed for sampling.</span>
 <span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
 <span class="sd">            catchment_size_threshold (float): Minimum catchment size for stations.</span>
+<span class="sd">            area_normalize (bool): Whether to area-normalize predictors/response.</span>
+<span class="sd">                If False, responses are modeled in raw m³/s (after log1p).</span>
 <span class="sd">            csv_dir (str, optional): Directory of per-station CSVs.</span>
 <span class="sd">            lookup_csv (str, optional): CSV lookup file with station coords.</span>
 <span class="sd">            id_col (str): Station id column in lookup CSV.</span>
@@ -496,6 +499,7 @@
             <span class="n">train_start</span><span class="p">,</span>
             <span class="n">train_end</span><span class="p">,</span>
             <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+            <span class="n">area_normalize</span><span class="o">=</span><span class="n">area_normalize</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">smodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span><span class="p">)</span>
         <span class="n">smodel</span><span class="o">.</span><span class="n">build_model</span><span class="p">()</span>
@@ -515,6 +519,7 @@
         <span class="n">grdc_netcdf</span><span class="p">,</span>
         <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
         <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
         <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
         <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
@@ -533,6 +538,8 @@
 <span class="sd">            grdc_netcdf (str): GRDC NetCDF path (if using GRDC data).</span>
 <span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
 <span class="sd">            catchment_size_threshold (float): Minimum catchment size for stations.</span>
+<span class="sd">            area_normalize (bool): Whether to area-normalize predictors/response.</span>
+<span class="sd">                If False, predictions are interpreted in raw m³/s after log inversion.</span>
 <span class="sd">            csv_dir (str, optional): Directory of per-station CSVs.</span>
 <span class="sd">            lookup_csv (str, optional): CSV lookup file with station coords.</span>
 <span class="sd">            id_col (str): Station id column in lookup CSV.</span>
@@ -596,7 +603,7 @@
         
         <span class="n">observed_streamflow</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">rawdata</span><span class="p">))</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="n">area_normalize</span><span class="o">=</span><span class="n">area_normalize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
 
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
@@ -615,7 +622,10 @@
             <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
 
         <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
-        <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">area_normalize</span><span class="p">:</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span>
         <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span> 
 
         <span class="bp">self</span><span class="o">.</span><span class="n">_plot_grdc_streamflow</span><span class="p">(</span><span class="n">observed_streamflow</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">,</span>  <span class="n">val_start</span><span class="p">)</span></div>
@@ -625,7 +635,7 @@
 <div class="viewcode-block" id="BakaanoHydro.simulate_streamflow">
 <a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.simulate_streamflow">[docs]</a>
     <span class="k">def</span><span class="w"> </span><span class="nf">simulate_streamflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_path</span><span class="p">,</span> <span class="n">sim_start</span><span class="p">,</span> <span class="n">sim_end</span><span class="p">,</span> <span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">,</span> 
-                            <span class="n">routing_method</span><span class="o">=</span><span class="s1">&#39;mfd&#39;</span><span class="p">):</span>
+                            <span class="n">routing_method</span><span class="o">=</span><span class="s1">&#39;mfd&#39;</span><span class="p">,</span> <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate streamflow for given coordinates using a trained model.</span>
 
 <span class="sd">        Args:</span>
@@ -635,12 +645,14 @@
 <span class="sd">            latlist (list[float]): List of latitudes.</span>
 <span class="sd">            lonlist (list[float]): List of longitudes.</span>
 <span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">            area_normalize (bool): Whether to area-normalize predictors/response.</span>
+<span class="sd">                If False, outputs are raw m³/s after log inversion.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 1. Loading runoff data and other predictors&#39;</span><span class="p">)</span>
         <span class="n">vdp</span> <span class="o">=</span> <span class="n">PredictDataPreprocessor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span> <span class="n">sim_start</span><span class="p">,</span> <span class="n">sim_end</span><span class="p">,</span> <span class="n">routing_method</span><span class="p">)</span>
         <span class="n">rawdata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">get_data_latlng</span><span class="p">(</span><span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">)</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="n">area_normalize</span><span class="o">=</span><span class="n">area_normalize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data_latlng</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
         <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">latlist</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
@@ -665,7 +677,10 @@
 
         <span class="n">predicted_streamflow_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">catch_area</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area_list</span><span class="p">):</span>
-            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span>
             <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span>
             
             <span class="n">predicted_streamflow_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
@@ -703,6 +718,7 @@
         <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
         <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
         <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+        <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate streamflow for GRDC or CSV stations in batch.</span>
 
@@ -720,6 +736,8 @@
 <span class="sd">            date_col (str): Date column in station CSVs.</span>
 <span class="sd">            discharge_col (str): Discharge column in station CSVs.</span>
 <span class="sd">            file_pattern (str): Filename pattern for station CSVs.</span>
+<span class="sd">            area_normalize (bool): Whether to area-normalize predictors/response.</span>
+<span class="sd">                If False, outputs are raw m³/s after log inversion.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 1. Loading runoff data and other predictors&#39;</span><span class="p">)</span>
         <span class="n">vdp</span> <span class="o">=</span> <span class="n">PredictDataPreprocessor</span><span class="p">(</span>
@@ -751,7 +769,7 @@
 
         <span class="n">rawdata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
 
-        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="n">area_normalize</span><span class="o">=</span><span class="n">area_normalize</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
         <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">)</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
@@ -776,7 +794,10 @@
 
         <span class="n">predicted_streamflow_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">catch_area</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area_list</span><span class="p">):</span>
-            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1000000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1000000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span>
             <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span>
             
             <span class="n">predicted_streamflow_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>

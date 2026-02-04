@@ -46,6 +46,10 @@ Model training is performed on area-normalized targets (mm/day) and uses a
 area normalization. The CSV outputs written to
 ``{working_dir}/predicted_streamflow_data`` are in m³/s.
 
+If ``area_normalize=False`` is used, the model trains and predicts in raw
+m³/s (after ``log1p``/``expm1``), and no area-based conversion is applied at
+inference time.
+
 Module reference
 ----------------
 

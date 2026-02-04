@@ -251,6 +251,10 @@ Useful when you want asymmetric penalties and heteroscedastic uncertainty.</p></
 <h2>Transforms and scaling<a class="headerlink" href="#transforms-and-scaling" title="Link to this heading">¶</a></h2>
 <ul class="simple">
 <li><p>Area normalization is handled automatically in preprocessing.</p></li>
+<li><p>You can disable area normalization via <code class="docutils literal notranslate"><span class="pre">area_normalize=False</span></code> in the
+training, evaluation, and simulation APIs.</p></li>
+<li><p>Area normalization is recommended for large-scale modeling and for
+generalizing to unseen basins.</p></li>
 <li><p>Accumulated runoff and discharge are converted to area-invariant depth
 (mm/day) using basin area (km²) so basins of different size are comparable.</p></li>
 <li><p>Predictors and responses are log-transformed (<code class="docutils literal notranslate"><span class="pre">log1p</span></code>) after area

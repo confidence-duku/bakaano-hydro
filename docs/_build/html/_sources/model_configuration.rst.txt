@@ -22,6 +22,10 @@ Transforms and scaling
 ----------------------
 
 - Area normalization is handled automatically in preprocessing.
+- You can disable area normalization via ``area_normalize=False`` in the
+  training, evaluation, and simulation APIs.
+- Area normalization is recommended for large-scale modeling and for
+  generalizing to unseen basins.
 - Accumulated runoff and discharge are converted to area-invariant depth
   (mm/day) using basin area (km²) so basins of different size are comparable.
 - Predictors and responses are log-transformed (``log1p``) after area

@@ -591,6 +591,7 @@ depending on GPU, batch size, and the number of stations.</p>
     <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
     <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -619,6 +620,7 @@ depending on GPU, batch size, and the number of stations.</p>
     <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
     <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">csv_dir</span><span class="o">=</span><span class="s2">&quot;/path/to/observed_csvs&quot;</span><span class="p">,</span>
     <span class="n">lookup_csv</span><span class="o">=</span><span class="s2">&quot;/path/to/station_lookup.csv&quot;</span><span class="p">,</span>
     <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
@@ -631,7 +633,8 @@ depending on GPU, batch size, and the number of stations.</p>
 </pre></div>
 </div>
 <p>Notes:
-- Training saves scalers to <code class="docutils literal notranslate"><span class="pre">{working_dir}/models</span></code> (AlphaEarth, runoff, and response).</p>
+- Training saves scalers to <code class="docutils literal notranslate"><span class="pre">{working_dir}/models</span></code> (AlphaEarth).
+- Set <code class="docutils literal notranslate"><span class="pre">area_normalize=False</span></code> to train directly on raw m³/s instead of area-normalized depth (mm/day).</p>
 </section>
 </section>
 <section id="advanced-training-option-model-configuration">
@@ -648,6 +651,7 @@ depending on GPU, batch size, and the number of stations.</p>
 <li><p><code class="docutils literal notranslate"><span class="pre">min_learning_rate</span></code>: minimum LR for schedules.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">routing_method</span></code>: must match the runoff routing method used in VegET.</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">catchment_size_threshold</span></code>: filters very small catchments.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">area_normalize</span></code>: toggle area normalization for predictors/response.</p></li>
 </ul>
 <p>Guidance:
 - Use <code class="docutils literal notranslate"><span class="pre">loss_function=&quot;asym_laplace_nll&quot;</span></code> for asymmetric uncertainty.
@@ -667,6 +671,7 @@ depending on GPU, batch size, and the number of stations.</p>
     <span class="n">min_learning_rate</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
     <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -683,6 +688,7 @@ this to inspect model performance before running batch simulations.</p>
     <span class="n">val_end</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
     <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -729,6 +735,7 @@ per station to <code class="docutils literal notranslate"><span class="pre">pred
     <span class="n">sim_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
     <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>
@@ -741,6 +748,7 @@ per station to <code class="docutils literal notranslate"><span class="pre">pred
     <span class="n">sim_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
     <span class="n">grdc_netcdf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">csv_dir</span><span class="o">=</span><span class="s2">&quot;/path/to/observed_csvs&quot;</span><span class="p">,</span>
     <span class="n">lookup_csv</span><span class="o">=</span><span class="s2">&quot;/path/to/station_lookup.csv&quot;</span><span class="p">,</span>
     <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
@@ -765,6 +773,7 @@ Each coordinate produces a separate CSV output time series.</p>
     <span class="n">latlist</span><span class="o">=</span><span class="p">[</span><span class="mf">13.8</span><span class="p">,</span> <span class="mf">13.9</span><span class="p">],</span>
     <span class="n">lonlist</span><span class="o">=</span><span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">],</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
 </div>

@@ -1066,7 +1066,7 @@
 <div class="viewcode-block" id="PredictStreamflow">
 <a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow">[docs]</a>
 <span class="k">class</span><span class="w"> </span><span class="nc">PredictStreamflow</span><span class="p">:</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Role: Prepare model inputs and run inference.</span>
 
@@ -1074,6 +1074,7 @@
 
 <span class="sd">        Args:</span>
 <span class="sd">            working_dir (str): The working directory where the model and data are stored.</span>
+<span class="sd">            area_normalize (bool): Whether to area-normalize predictors/response.</span>
 
 <span class="sd">        Methods</span>
 <span class="sd">        -------</span>
@@ -1090,6 +1091,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">train_data_list</span> <span class="o">=</span> <span class="p">[]</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">scaled_trained_catchment</span> <span class="o">=</span> <span class="kc">None</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span> <span class="o">=</span> <span class="n">area_normalize</span>
 
 <div class="viewcode-block" id="PredictStreamflow.prepare_data">
 <a class="viewcode-back" href="../../api/bakaano.streamflow_simulator.html#bakaano.streamflow_simulator.PredictStreamflow.prepare_data">[docs]</a>
@@ -1134,9 +1136,10 @@
         <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictors</span><span class="p">,</span> <span class="n">scaled_alphaearth</span><span class="p">,</span> <span class="n">area</span><span class="p">):</span>
             <span class="n">this_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_area</span><span class="p">)</span>
-            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
-            <span class="k">if</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
-                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span>
             <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_predictor</span><span class="p">)</span>
 
             <span class="n">num_samples</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">-</span> <span class="mi">365</span>
@@ -1175,7 +1178,7 @@
             <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">timesteps_to_keep</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
                 <span class="n">full_train_45d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p45_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
                 <span class="n">full_train_90d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p90_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
-                <span class="n">full_train_180d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p180_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
+                <span class="n">full_train_180d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p190_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
                 <span class="n">full_train_365d</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">p365_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
                 <span class="n">full_alphaearth</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">alphaearth_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
                 <span class="n">full_area</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">area_samples</span><span class="p">)[</span><span class="n">timesteps_to_keep</span><span class="p">])</span>
@@ -1235,7 +1238,10 @@
         <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predictors</span><span class="p">,</span> <span class="n">scaled_alphaearth</span><span class="p">,</span> <span class="n">area</span><span class="p">):</span>
             <span class="n">this_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">catch_area_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">this_area</span><span class="p">)</span>
-            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span>
             <span class="k">if</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
                 <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">scaled_train_predictor</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
             <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_predictor</span><span class="p">)</span>

@@ -262,6 +262,9 @@
 <code class="docutils literal notranslate"><span class="pre">expm1</span></code> and converted back to volumetric discharge (m³/s) by reversing the
 area normalization. The CSV outputs written to
 <code class="docutils literal notranslate"><span class="pre">{working_dir}/predicted_streamflow_data</span></code> are in m³/s.</p>
+<p>If <code class="docutils literal notranslate"><span class="pre">area_normalize=False</span></code> is used, the model trains and predicts in raw
+m³/s (after <code class="docutils literal notranslate"><span class="pre">log1p</span></code>/<code class="docutils literal notranslate"><span class="pre">expm1</span></code>), and no area-based conversion is applied at
+inference time.</p>
 </section>
 <section id="module-reference">
 <h2>Module reference<a class="headerlink" href="#module-reference" title="Link to this heading">¶</a></h2>
