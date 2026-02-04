@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>bakaano.streamflow_trainer</title>
+    
+          <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../_static/theme-vendors.js"></script> -->
+      <script src="../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../genindex.html" />
+  <link rel="search" title="Search" href="../search.html" />
+  <link rel="next" title="bakaano.streamflow_simulator" href="bakaano.streamflow_simulator.html" />
+  <link rel="prev" title="bakaano.runner" href="bakaano.runner.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../api.html">API Reference</a> &raquo;</li>
+    
+    <li>bakaano.streamflow_trainer</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.runner.html"
+       title="previous chapter">← bakaano.runner</a>
+  </li>
+  <li class="next">
+    <a href="bakaano.streamflow_simulator.html"
+       title="next chapter">bakaano.streamflow_simulator →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="module-bakaano.streamflow_trainer">
+<span id="bakaano-streamflow-trainer"></span><h1>bakaano.streamflow_trainer<a class="headerlink" href="#module-bakaano.streamflow_trainer" title="Link to this heading">¶</a></h1>
+<p>Training pipeline for regional streamflow models.</p>
+<p>Role: Build training datasets and train the TCN-based streamflow model.</p>
+<dl class="py function">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.asym_laplace_nll">
+<span class="sig-prename descclassname"><span class="pre">bakaano.streamflow_trainer.</span></span><span class="sig-name descname"><span class="pre">asym_laplace_nll</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">y_true</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">params</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#asym_laplace_nll"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.asym_laplace_nll" title="Link to this definition">¶</a></dt>
+<dd><p>Asymmetric Laplace negative log-likelihood (heteroscedastic).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>y_true</strong> (<em>tf.Tensor</em>) – Target discharge (area-normalized).</p></li>
+<li><p><strong>params</strong> (<em>tf.Tensor</em>) – Model outputs [mu, log_b_plus, log_b_minus].</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Scalar loss value.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tf.Tensor</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bakaano.streamflow_trainer.</span></span><span class="sig-name descname"><span class="pre">DataPreprocessor</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">working_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">grdc_streamflow_nc_file</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_start</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_end</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">routing_method</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">catchment_size_threshold</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor._extract_station_rowcol">
+<span class="sig-name descname"><span class="pre">_extract_station_rowcol</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor._extract_station_rowcol"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor._extract_station_rowcol" title="Link to this definition">¶</a></dt>
+<dd><p>Extract the row and column indices for a given latitude and longitude
+from given raster file.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat</strong> (<em>float</em>) – The latitude of the station.</p></li>
+<li><p><strong>lon</strong> (<em>float</em>) – The longitude of the station.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>row</strong> (<em>int</em>) – The row index corresponding to the given latitude and longitude.</p></li>
+<li><p><strong>col</strong> (<em>int</em>) – The column index corresponding to the given latitude and longitude.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor._snap_coordinates">
+<span class="sig-name descname"><span class="pre">_snap_coordinates</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">lat</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor._snap_coordinates"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor._snap_coordinates" title="Link to this definition">¶</a></dt>
+<dd><p>Snap the given latitude and longitude to the nearest river segment based on a river grid.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>lat</strong> (<em>float</em>) – The latitude to be snapped.</p></li>
+<li><p><strong>lon</strong> (<em>float</em>) – The longitude to be snapped.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p><ul class="simple">
+<li><p><strong>snapped_lat</strong> (<em>float</em>) – The latitude of the nearest river segment.</p></li>
+<li><p><strong>snapped_lon</strong> (<em>float</em>) – The longitude of the nearest river segment.</p></li>
+</ul>
+</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor.load_observed_streamflow">
+<span class="sig-name descname"><span class="pre">load_observed_streamflow</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">grdc_streamflow_nc_file</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor.load_observed_streamflow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor.load_observed_streamflow" title="Link to this definition">¶</a></dt>
+<dd><p>Load and filter observed GRDC streamflow data in a schema-robust way.
+Works for single- and multi-station NetCDFs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>grdc_streamflow_nc_file</strong> (<em>str</em>) – Path to GRDC NetCDF file.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Filtered GRDC subset for the study area.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>xarray.Dataset</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor.load_observed_streamflow_from_csv_dir">
+<span class="sig-name descname"><span class="pre">load_observed_streamflow_from_csv_dir</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">csv_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lookup_csv</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">id_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'id'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lat_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'latitude'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">lon_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'longitude'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">date_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'date'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">discharge_col</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'discharge'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">file_pattern</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'{id}.csv'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor.load_observed_streamflow_from_csv_dir"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor.load_observed_streamflow_from_csv_dir" title="Link to this definition">¶</a></dt>
+<dd><p>Load observed streamflow from per-station CSV files using a lookup table.</p>
+<p>The lookup table must include station identifiers and coordinates. The method
+filters stations to the study area, then loads per-station CSVs by ID.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>csv_dir</strong> (<em>str</em>) – Directory containing per-station CSV files.</p></li>
+<li><p><strong>lookup_csv</strong> (<em>str</em>) – CSV file with station ids and coordinates.</p></li>
+<li><p><strong>id_col</strong> (<em>str</em>) – Station id column in lookup CSV.</p></li>
+<li><p><strong>lat_col</strong> (<em>str</em>) – Latitude column in lookup CSV.</p></li>
+<li><p><strong>lon_col</strong> (<em>str</em>) – Longitude column in lookup CSV.</p></li>
+<li><p><strong>date_col</strong> (<em>str</em>) – Date column in station CSVs.</p></li>
+<li><p><strong>discharge_col</strong> (<em>str</em>) – Discharge column in station CSVs.</p></li>
+<li><p><strong>file_pattern</strong> (<em>str</em>) – Pattern for station CSV filenames (e.g., <code class="docutils literal notranslate"><span class="pre">&quot;{id}.csv&quot;</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mapping of station_id to observed discharge DataFrame.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>dict</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.DataPreprocessor.get_data">
+<span class="sig-name descname"><span class="pre">get_data</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#DataPreprocessor.get_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.DataPreprocessor.get_data" title="Link to this definition">¶</a></dt>
+<dd><p>Extract and preprocess predictor and response variables for each station based on its coordinates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A list containing two elements:
+- self.data_list: A list of tuples, each containing predictors (DataFrame) and response (DataFrame).
+- self.catchment: A list of tuples, each containing catchment data (accumulation and slope values).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bakaano.streamflow_trainer.</span></span><span class="sig-name descname"><span class="pre">StreamflowModel</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">working_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">batch_size</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">num_epochs</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">learning_rate</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.0001</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">loss_function</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'huber'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_start</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">train_end</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">seed</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Role: Define and train the multi-scale TCN streamflow model.</p>
+<p>Streamed training variant of the regional streamflow model.</p>
+<p>Key characteristics (actual behavior):
+- Prepares per-station scaled series and streams sliding windows via a generator.
+- Samples windows stochastically each epoch (bootstrapped training).
+- Uses tf.data.Dataset.from_generator with batching + prefetch.
+- Enables XLA globally via tf.config.optimizer.set_jit(True).</p>
+<p>Note: This class does not materialize all windows in memory.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel.prepare_data">
+<span class="sig-name descname"><span class="pre">prepare_data</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">data_list</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel.prepare_data"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel.prepare_data" title="Link to this definition">¶</a></dt>
+<dd><p>Prepare the data for training the streamflow prediction model.</p>
+<p>This materializes all sliding windows (365),
+filters NaNs once, and concatenates across stations.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel.build_model">
+<span class="sig-name descname"><span class="pre">build_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel.build_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel.build_model" title="Link to this definition">¶</a></dt>
+<dd><p>Build and compile the regional model (TCN + FiLM).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Compiled model instance.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>tensorflow.keras.Model</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel.train_model">
+<span class="sig-name descname"><span class="pre">train_model</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel.train_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel.train_model" title="Link to this definition">¶</a></dt>
+<dd><p>Train the model using fully materialized arrays.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None. Trains the model and writes checkpoints.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel.load_regional_model">
+<span class="sig-name descname"><span class="pre">load_regional_model</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">path</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel.load_regional_model"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel.load_regional_model" title="Link to this definition">¶</a></dt>
+<dd><p>Load a previously saved regional model from disk.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>path</strong> (<em>str</em>) – Path to the saved model file.</p></li>
+<li><p><strong>Returns</strong> – tensorflow.keras.Model: Loaded model instance.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.streamflow_trainer.StreamflowModel.regional_summary">
+<span class="sig-name descname"><span class="pre">regional_summary</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/streamflow_trainer.html#StreamflowModel.regional_summary"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.streamflow_trainer.StreamflowModel.regional_summary" title="Link to this definition">¶</a></dt>
+<dd><p>Print the Keras model summary.</p>
+</dd></dl>
+
+</dd></dl>
+
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.runner.html"
+       title="previous chapter">← bakaano.runner</a>
+  </li>
+  <li class="next">
+    <a href="bakaano.streamflow_simulator.html"
+       title="next chapter">bakaano.streamflow_simulator →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

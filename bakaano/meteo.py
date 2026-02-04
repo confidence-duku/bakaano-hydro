@@ -1,3 +1,7 @@
+"""Meteorological forcing download and preprocessing.
+
+Role: Retrieve and prepare precipitation and temperature forcings.
+"""
 
 import os
 import ee
@@ -19,6 +23,8 @@ class Meteo:
                  local_tasmax_path=None, local_tasmin_path=None, local_tmean_path=None):
         
         """
+        Role: Download/prepare meteorological forcing for VegET.
+
         Initialize a Meteo object.
 
         Args:
@@ -102,6 +108,14 @@ class Meteo:
 
     
     def check_missing_dates(self, variables=None):
+        """Check for missing daily ERA5-Land GeoTIFFs in scratch folder.
+
+        Args:
+            variables (list[str], optional): Variable names to check.
+
+        Returns:
+            list[str]: Missing dates in YYYY-MM-DD format.
+        """
         import os
         from collections import defaultdict
         from datetime import datetime, timedelta
@@ -158,6 +172,15 @@ class Meteo:
         return missing
 
     def _download_chelsa_data(self, climate_variable, output_folder):
+        """Download CHELSA daily climate data using ISIMIP client.
+
+        Args:
+            climate_variable (str): Variable id for ISIMIP (e.g., "tasmax", "pr").
+            output_folder (str): Output folder name under working_dir.
+
+        Returns:
+            None. Downloads and extracts NetCDF files to disk.
+        """
 
         if not any(folder.exists() and any(folder.iterdir()) for folder in [self.tasmax_path, self.tasmin_path, self.tmean_path, self.prep_path]):
             response = self.client.datasets(
@@ -185,6 +208,11 @@ class Meteo:
             print(f"     - Climate data already exists in {self.tasmax_path}, {self.tasmin_path}, {self.tmean_path} and {self.prep_path}; skipping download.")
     
     def _download_era5_land_data(self):
+        """Download ERA5-Land daily data via Earth Engine and store as GeoTIFFs.
+
+        Returns:
+            None. Writes GeoTIFFs to the scratch folder.
+        """
         ee.Authenticate()
         ee.Initialize()
        
@@ -266,6 +294,11 @@ class Meteo:
     
 
     def _download_chirps_prep_data(self):
+        """Download CHIRPS precipitation + ERA5 temperatures via Earth Engine.
+
+        Returns:
+            None. Writes GeoTIFFs to scratch folders.
+        """
         ee.Authenticate()
         ee.Initialize()
     
@@ -376,6 +409,12 @@ class Meteo:
         print("CHIRPS and ERA5 download (with checks) completed.")
         
     def get_era5_land_meteo_data(self):
+        """Download/process ERA5-Land daily data and return datasets.
+
+        Returns:
+            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
+        """
         if self.local_data is False:
             data_check = f'{self.working_dir}/ERA5/prep/pr.nc'
             if not os.path.exists(data_check):
@@ -442,6 +481,12 @@ class Meteo:
             
 
     def get_chirps_prep_meteo_data(self):
+        """Download/process CHIRPS precipitation and ERA5 temperatures.
+
+        Returns:
+            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
+        """
         if self.local_data is False:
             data_check = f'{self.working_dir}/CHIRPS/prep/pr.nc'
             if not os.path.exists(data_check):
@@ -505,6 +550,12 @@ class Meteo:
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
 
     def get_chelsa_meteo_data(self):
+        """Download/process CHELSA daily data (or load local NetCDFs).
+
+        Returns:
+            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
+        """
         if self.local_data is False:
             climate_variables = {
                 'tasmax': 'CHELSA/tasmax',
@@ -567,6 +618,7 @@ class Meteo:
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
     
     def export_urls_for_download_manager(self):
+        """Export CHELSA download URLs to text files in the working directory."""
         climate_variables = ['tasmax', 'tasmin', 'tas', 'pr']
         all_urls = []
 
@@ -589,9 +641,12 @@ class Meteo:
                 f.write("\n".join(urls))
     
     def get_meteo_data(self):
-        '''
-        Get meteo data from the specified data source: 'CHELSA', 'ERA5' or 'CHIRPS'
-        '''
+        """Get meteo data for the selected source.
+
+        Returns:
+            tuple[xr.Dataset, xr.Dataset, xr.Dataset, xr.Dataset]:
+                prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
+        """
         if self.data_source == 'CHELSA':
             prep_nc, tasmax_nc, tasmin_nc, tmean_nc = self.get_chelsa_meteo_data()
         elif self.data_source == 'ERA5':
@@ -601,6 +656,15 @@ class Meteo:
         return prep_nc, tasmax_nc, tasmin_nc, tmean_nc
     
     def plot_meteo(self, variable, date):
+        """Plot a meteorological field for a given date.
+
+        Args:
+            variable (str): One of ``"precip"``, ``"tasmax"``, ``"tasmin"``, ``"tmean"``.
+            date (str or datetime): Date to plot (nearest available).
+
+        Returns:
+            None. Displays a matplotlib plot.
+        """
         prep_nc, tasmax_nc, tasmin_nc, tmean_nc = self.get_meteo_data()
         
         if variable=='precip':
@@ -637,4 +701,3 @@ class Meteo:
         
         
                     
-

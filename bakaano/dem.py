@@ -1,3 +1,7 @@
+"""Digital elevation model (DEM) download and preprocessing.
+
+Role: Provide clipped DEM and derived slope for the study area.
+"""
 
 import requests as r
 import os
@@ -11,6 +15,8 @@ from scipy.ndimage import convolve
 class DEM:
     def __init__(self, working_dir, study_area, local_data=False, local_data_path=None):
         """
+        Role: Download/prepare DEM inputs for the basin.
+
         Initialize a DEM (Digital Elevation Model) object.
 
         Args:
@@ -42,7 +48,13 @@ class DEM:
         self.local_data_path = local_data_path
         
     def get_dem_data(self):
-        """Download DEM data.
+        """Download or ingest DEM data and clip to the study area.
+
+        If ``local_data`` is False, downloads HydroSHEDS 30s DEM and clips it.
+        If ``local_data`` is True, clips the provided local GeoTIFF.
+
+        Returns:
+            None. Writes ``dem_clipped.tif`` to ``{working_dir}/elevation``.
         """
         if self.local_data is False:
             if not os.path.exists(self.out_path):
@@ -87,7 +99,10 @@ class DEM:
                 print(f"Error: {e}")
 
     def preprocess(self):
-        """Preprocess DEM data.
+        """Clip the DEM and derive slope output if missing.
+
+        Returns:
+            None. Writes ``dem_clipped.tif`` and ``slope_clipped.tif``.
         """
         dem = f'{self.working_dir}/elevation/hyd_glo_dem_30s.tif'   
         self.uw.clip(raster_path=dem, out_path=self.out_path, save_output=True, crop_type=False)
@@ -98,6 +113,11 @@ class DEM:
             self.compute_slope_percent_riserun()
 
     def compute_slope_percent_riserun(self):
+        """Compute slope (percent rise/run) from the clipped DEM.
+
+        Returns:
+            None. Writes ``slope_clipped.tif`` to ``{working_dir}/elevation``.
+        """
         with rasterio.open(self.out_path) as src:
             elevation = src.read(1).astype(float)
             profile = src.profile.copy()
@@ -140,7 +160,10 @@ class DEM:
         print(f"Slope saved to: {output_path}")
 
     def plot_dem(self):
-        """Plot DEM data.
+        """Plot the clipped DEM within the study area.
+
+        Returns:
+            None. Displays a matplotlib plot.
         """
         dem_data = self.uw.clip(raster_path=self.out_path, out_path=None, save_output=False, crop_type=True)[0]
         dem_data = np.where(dem_data > 0, dem_data, np.nan)

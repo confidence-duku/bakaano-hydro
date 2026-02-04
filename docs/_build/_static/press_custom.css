@@ -1,0 +1,35 @@
+/* Inline references: red text with light box */
+
+.docutils.literal,
+.docutils.literal.notranslate,
+code,
+.rst-content code,
+.literal,
+.reference.internal .literal,
+.reference.external .literal,
+.reference.internal code,
+.reference.external code {
+  color: #c00000 !important;
+  background: #f7f1f1;
+  border: 1px solid #e4c3c3;
+  border-radius: 4px;
+  padding: 0.1rem 0.25rem;
+}
+
+pre code,
+.rst-content pre code {
+  color: inherit !important;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+
+/* Make page title larger */
+h1 {
+  font-size: 2.6rem;
+}
+
+/* Make the page title (Bakaano-Hydro) larger */
+h1 {
+  font-size: 2.6rem;
+}

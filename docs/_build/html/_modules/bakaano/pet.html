@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>bakaano.pet</title>
+    
+          <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../../_static/theme-vendors.js"></script> -->
+      <script src="../../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../../genindex.html" />
+  <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../index.html">Module code</a> &raquo;</li>
+    
+    <li>bakaano.pet</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <h1>Source code for bakaano.pet</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;Potential evapotranspiration helper functions.</span>
+
+<span class="sd">Role: Compute daily PET parameters for VegET.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Utils</span>
+
+<div class="viewcode-block" id="PotentialEvapotranspiration">
+<a class="viewcode-back" href="../../api/bakaano.pet.html#bakaano.pet.PotentialEvapotranspiration">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">PotentialEvapotranspiration</span><span class="p">:</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">project_name</span><span class="p">,</span> <span class="n">study_area</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize PET helper for a study area and period.</span>
+
+<span class="sd">        Role: Compute daily PET based on temperature inputs.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            project_name (str): Working directory for outputs.</span>
+<span class="sd">            study_area (str): Path to the basin/watershed shapefile.</span>
+<span class="sd">            start_date (str): Start date (YYYY-MM-DD).</span>
+<span class="sd">            end_date (str): End date (YYYY-MM-DD).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span> <span class="o">=</span> <span class="n">study_area</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">start_date</span> <span class="o">=</span> <span class="n">start_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">end_date</span> <span class="o">=</span> <span class="n">end_date</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span> <span class="o">=</span> <span class="n">Utils</span><span class="p">(</span><span class="n">project_name</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span><span class="o">.</span><span class="n">get_bbox</span><span class="p">(</span><span class="s1">&#39;EPSG:4326&#39;</span><span class="p">)</span>
+    
+<div class="viewcode-block" id="PotentialEvapotranspiration.compute_PET">
+<a class="viewcode-back" href="../../api/bakaano.pet.html#bakaano.pet.PotentialEvapotranspiration.compute_PET">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_PET</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">day_pet_params</span><span class="p">,</span> <span class="n">tan_lat</span><span class="p">,</span> <span class="n">cos_lat</span><span class="p">,</span> <span class="n">sin_lat</span><span class="p">,</span> <span class="n">doy</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute daily potential evapotranspiration (Hargreaves-style).</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            day_pet_params (np.ndarray): Daily PET parameters array.</span>
+<span class="sd">            tan_lat (np.ndarray): Tangent of latitude grid (radians).</span>
+<span class="sd">            cos_lat (np.ndarray): Cosine of latitude grid (radians).</span>
+<span class="sd">            sin_lat (np.ndarray): Sine of latitude grid (radians).</span>
+<span class="sd">            doy (int): Day of year (1-366).</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            np.ndarray: PET array for the day.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        
+        <span class="n">p2</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="mf">0.033</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">doy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">365</span><span class="p">)</span>
+        <span class="n">p3</span> <span class="o">=</span> <span class="mf">0.409</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(((</span><span class="mi">2</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="n">doy</span><span class="p">)</span> <span class="o">/</span> <span class="mi">365</span><span class="p">)</span> <span class="o">-</span> <span class="mf">1.39</span><span class="p">)</span>
+        
+        <span class="c1"># grid-based radiation terms (only 1 heavy operation)</span>
+        <span class="n">p4</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arccos</span><span class="p">(</span><span class="o">-</span><span class="n">tan_lat</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">tan</span><span class="p">(</span><span class="n">p3</span><span class="p">))</span>   <span class="c1"># only heavy grid-operation per day</span>
+        <span class="n">p5</span> <span class="o">=</span> <span class="n">sin_lat</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">p3</span><span class="p">)</span>
+        <span class="n">p6</span> <span class="o">=</span> <span class="n">cos_lat</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">p3</span><span class="p">)</span>
+        
+        <span class="n">Ra</span> <span class="o">=</span> <span class="p">((</span><span class="mi">24</span> <span class="o">*</span> <span class="mi">60</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">pi</span><span class="p">)</span> <span class="o">*</span> <span class="mf">0.0820</span> <span class="o">*</span> <span class="n">p2</span> <span class="o">*</span> <span class="p">((</span><span class="n">p4</span> <span class="o">*</span> <span class="n">p5</span><span class="p">)</span> <span class="o">+</span> <span class="n">p6</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">p4</span><span class="p">))</span>
+        <span class="n">this_et</span> <span class="o">=</span> <span class="n">day_pet_params</span> <span class="o">*</span> <span class="n">Ra</span>
+        <span class="k">return</span> <span class="n">this_et</span></div>
+</div>
+
+        
+    
+</pre></div>
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

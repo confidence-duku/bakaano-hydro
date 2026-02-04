@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+      <title>bakaano.runner</title>
+    
+          <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../../_static/theme-vendors.js"></script> -->
+      <script src="../../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../../genindex.html" />
+  <link rel="search" title="Search" href="../../search.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../index.html">Module code</a> &raquo;</li>
+    
+    <li>bakaano.runner</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <h1>Source code for bakaano.runner</h1><div class="highlight"><pre>
+<span></span><span class="sd">&quot;&quot;&quot;High-level orchestration for Bakaano-Hydro workflows.</span>
+
+<span class="sd">Role: Provide a user-facing API to train, evaluate, and simulate streamflow.</span>
+<span class="sd">&quot;&quot;&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">Utils</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">importlib.util</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.router</span><span class="w"> </span><span class="kn">import</span> <span class="n">RunoffRouter</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">hydroeval</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">matplotlib.pyplot</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">plt</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">xarray</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">xr</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rasterio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">glob</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pickle</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">datetime</span><span class="w"> </span><span class="kn">import</span> <span class="n">datetime</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">leafmap.foliumap</span><span class="w"> </span><span class="kn">import</span> <span class="n">Map</span>
+
+<span class="c1"># Load &quot;copy&quot; modules by filename to avoid import issues with spaces in filenames.</span>
+<span class="n">_here</span> <span class="o">=</span> <span class="n">Path</span><span class="p">(</span><span class="vm">__file__</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">()</span><span class="o">.</span><span class="n">parent</span>
+<span class="n">_trainer_mod_path</span> <span class="o">=</span> <span class="n">_here</span> <span class="o">/</span> <span class="s2">&quot;streamflow_trainer copy.py&quot;</span>
+<span class="n">_sim_mod_path</span> <span class="o">=</span> <span class="n">_here</span> <span class="o">/</span> <span class="s2">&quot;streamflow_simulator copy.py&quot;</span>
+
+<span class="k">def</span><span class="w"> </span><span class="nf">_load_module</span><span class="p">(</span><span class="n">mod_name</span><span class="p">,</span> <span class="n">path</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Load a Python module from an explicit file path.</span>
+
+<span class="sd">    Args:</span>
+<span class="sd">        mod_name (str): Name to assign the loaded module.</span>
+<span class="sd">        path (pathlib.Path): Path to the module file.</span>
+
+<span class="sd">    Returns:</span>
+<span class="sd">        module: Imported module object.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">spec</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">spec_from_file_location</span><span class="p">(</span><span class="n">mod_name</span><span class="p">,</span> <span class="n">path</span><span class="p">)</span>
+    <span class="n">module</span> <span class="o">=</span> <span class="n">importlib</span><span class="o">.</span><span class="n">util</span><span class="o">.</span><span class="n">module_from_spec</span><span class="p">(</span><span class="n">spec</span><span class="p">)</span>
+    <span class="n">spec</span><span class="o">.</span><span class="n">loader</span><span class="o">.</span><span class="n">exec_module</span><span class="p">(</span><span class="n">module</span><span class="p">)</span>  <span class="c1"># type: ignore[attr-defined]</span>
+    <span class="k">return</span> <span class="n">module</span>
+
+<span class="k">if</span> <span class="n">_trainer_mod_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="n">_trainer_mod</span> <span class="o">=</span> <span class="n">_load_module</span><span class="p">(</span><span class="s2">&quot;streamflow_trainer_copy&quot;</span><span class="p">,</span> <span class="n">_trainer_mod_path</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">bakaano</span><span class="w"> </span><span class="kn">import</span> <span class="n">streamflow_trainer</span> <span class="k">as</span> <span class="n">_trainer_mod</span>
+
+<span class="k">if</span> <span class="n">_sim_mod_path</span><span class="o">.</span><span class="n">exists</span><span class="p">():</span>
+    <span class="n">_sim_mod</span> <span class="o">=</span> <span class="n">_load_module</span><span class="p">(</span><span class="s2">&quot;streamflow_simulator_copy&quot;</span><span class="p">,</span> <span class="n">_sim_mod_path</span><span class="p">)</span>
+<span class="k">else</span><span class="p">:</span>
+    <span class="kn">from</span><span class="w"> </span><span class="nn">bakaano</span><span class="w"> </span><span class="kn">import</span> <span class="n">streamflow_simulator</span> <span class="k">as</span> <span class="n">_sim_mod</span>
+
+<span class="n">DataPreprocessor</span> <span class="o">=</span> <span class="n">_trainer_mod</span><span class="o">.</span><span class="n">DataPreprocessor</span>
+<span class="n">StreamflowModel</span> <span class="o">=</span> <span class="n">_trainer_mod</span><span class="o">.</span><span class="n">StreamflowModel</span>
+<span class="n">PredictDataPreprocessor</span> <span class="o">=</span> <span class="n">_sim_mod</span><span class="o">.</span><span class="n">PredictDataPreprocessor</span>
+<span class="n">PredictStreamflow</span> <span class="o">=</span> <span class="n">_sim_mod</span><span class="o">.</span><span class="n">PredictStreamflow</span>
+
+<span class="c1">#========================================================================================================================  </span>
+<div class="viewcode-block" id="BakaanoHydro">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">BakaanoHydro</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Main user-facing interface for Bakaano-Hydro workflows.&quot;&quot;&quot;</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">study_area</span><span class="p">,</span> <span class="n">climate_data_source</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialize the BakaanoHydro object with project details.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            working_dir (str): The parent working directory where files and outputs will be stored.</span>
+<span class="sd">            study_area (str): The path to the shapefile of the river basin or watershed.</span>
+<span class="sd">            climate_data_source (str): The source of climate data: &#39;CHELSA&#39;, &#39;ERA5&#39;, or &#39;CHIRPS&#39;.</span>
+
+<span class="sd">        Methods</span>
+<span class="sd">        -------</span>
+<span class="sd">        __init__(working_dir, study_area_path, start_date, end_date, climate_data_source):</span>
+<span class="sd">            Initializes the BakaanoHydro object with project details.</span>
+<span class="sd">        train_streamflow_model(grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size, num_epochs):</span>
+<span class="sd">            Train the deep learning streamflow prediction model.</span>
+<span class="sd">        evaluate_streamflow_model(model_path, grdc_netcdf, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size):</span>
+<span class="sd">            Evaluate the streamflow prediction model.</span>
+<span class="sd">        simulate_streamflow(model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback, batch_size):</span>
+<span class="sd">            Simulate streamflow using the trained model.</span>
+<span class="sd">        simulate_streamflow_batch(model_path, latlist, lonlist, prep_nc, tasmax_nc, tasmin_nc, tmean_nc, loss_fn, num_input_branch, lookback):</span>
+<span class="sd">            Simulate streamflow in batch mode using the trained model.</span>
+<span class="sd">        plot_grdc_streamflow(observed_streamflow, predicted_streamflow, loss_fn):</span>
+<span class="sd">            Plot the observed and predicted streamflow data.</span>
+<span class="sd">        compute_metrics(observed_streamflow, predicted_streamflow, loss_fn):</span>
+<span class="sd">            Compute performance metrics for the model.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+         <span class="c1"># Initialize the project name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">climate_data_source</span> <span class="o">=</span> <span class="n">climate_data_source</span>
+        
+        <span class="c1"># Initialize the study area</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span> <span class="o">=</span> <span class="n">study_area</span>
+        
+        <span class="c1"># Initialize utility class with project name and study area.</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">uw</span> <span class="o">=</span> <span class="n">Utils</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+        
+        <span class="c1"># Set the start and end dates for the project</span>
+
+        <span class="c1"># Create necessary directories for the project structure   </span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/runoff_output&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/scratch&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/shapes&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/catchment&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">os</span><span class="o">.</span><span class="n">makedirs</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/predicted_streamflow_data&#39;</span><span class="p">,</span> <span class="n">exist_ok</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+      
+        <span class="bp">self</span><span class="o">.</span><span class="n">clipped_dem</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span>
+
+<span class="c1">#=========================================================================================================================================</span>
+<div class="viewcode-block" id="BakaanoHydro.train_streamflow_model">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.train_streamflow_model">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">train_streamflow_model</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">train_start</span><span class="p">,</span>
+        <span class="n">train_end</span><span class="p">,</span>
+        <span class="n">grdc_netcdf</span><span class="p">,</span>
+        <span class="n">batch_size</span><span class="p">,</span>
+        <span class="n">num_epochs</span><span class="p">,</span>
+        <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.0001</span><span class="p">,</span>
+        <span class="n">loss_function</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">,</span>
+        <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+        <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+        <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+        <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+        <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+        <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+        <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+        <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Train the deep learning streamflow prediction model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            train_start (str): Training start date (YYYY-MM-DD).</span>
+<span class="sd">            train_end (str): Training end date (YYYY-MM-DD).</span>
+<span class="sd">            grdc_netcdf (str): GRDC NetCDF path (if using GRDC data).</span>
+<span class="sd">            batch_size (int): Training batch size.</span>
+<span class="sd">            num_epochs (int): Number of training epochs.</span>
+<span class="sd">            learning_rate (float): Optimizer learning rate.</span>
+<span class="sd">            loss_function (str): Loss name (e.g., &quot;mse&quot;).</span>
+<span class="sd">            seed (int): Random seed for sampling.</span>
+<span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">            catchment_size_threshold (float): Minimum catchment size for stations.</span>
+<span class="sd">            csv_dir (str, optional): Directory of per-station CSVs.</span>
+<span class="sd">            lookup_csv (str, optional): CSV lookup file with station coords.</span>
+<span class="sd">            id_col (str): Station id column in lookup CSV.</span>
+<span class="sd">            lat_col (str): Latitude column in lookup CSV.</span>
+<span class="sd">            lon_col (str): Longitude column in lookup CSV.</span>
+<span class="sd">            date_col (str): Date column in station CSVs.</span>
+<span class="sd">            discharge_col (str): Discharge column in station CSVs.</span>
+<span class="sd">            file_pattern (str): Filename pattern for station CSVs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">rawdata</span> <span class="o">=</span> <span class="n">glob</span><span class="o">.</span><span class="n">glob</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models/*_predictor_response*.pkl&#39;</span><span class="p">)</span>
+    
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39;</span><span class="se">\n</span><span class="s1">TRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL&#39;</span><span class="p">)</span>
+        
+            
+        <span class="n">sdp</span> <span class="o">=</span> <span class="n">DataPreprocessor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span> <span class="n">grdc_netcdf</span><span class="p">,</span> <span class="n">train_start</span><span class="p">,</span> <span class="n">train_end</span><span class="p">,</span> 
+                               <span class="n">routing_method</span><span class="p">,</span> <span class="n">catchment_size_threshold</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 1. Loading observed streamflow&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">csv_dir</span> <span class="ow">and</span> <span class="n">lookup_csv</span><span class="p">:</span>
+            <span class="n">sdp</span><span class="o">.</span><span class="n">load_observed_streamflow_from_csv_dir</span><span class="p">(</span>
+                <span class="n">csv_dir</span><span class="o">=</span><span class="n">csv_dir</span><span class="p">,</span>
+                <span class="n">lookup_csv</span><span class="o">=</span><span class="n">lookup_csv</span><span class="p">,</span>
+                <span class="n">id_col</span><span class="o">=</span><span class="n">id_col</span><span class="p">,</span>
+                <span class="n">lat_col</span><span class="o">=</span><span class="n">lat_col</span><span class="p">,</span>
+                <span class="n">lon_col</span><span class="o">=</span><span class="n">lon_col</span><span class="p">,</span>
+                <span class="n">date_col</span><span class="o">=</span><span class="n">date_col</span><span class="p">,</span>
+                <span class="n">discharge_col</span><span class="o">=</span><span class="n">discharge_col</span><span class="p">,</span>
+                <span class="n">file_pattern</span><span class="o">=</span><span class="n">file_pattern</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sdp</span><span class="o">.</span><span class="n">load_observed_streamflow</span><span class="p">(</span><span class="n">grdc_netcdf</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 2. Loading runoff data and other predictors&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">rawdata</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">f</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span> <span class="o">=</span> <span class="n">sdp</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        <span class="n">sn</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">sdp</span><span class="o">.</span><span class="n">sim_station_names</span><span class="p">))</span>
+
+        <span class="c1"># Normalize station_ids to a set (supports single int or iterable)</span>
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">sdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">,</span> <span class="p">(</span><span class="nb">list</span><span class="p">,</span> <span class="nb">tuple</span><span class="p">,</span> <span class="nb">set</span><span class="p">)):</span>
+            <span class="n">target_ids</span> <span class="o">=</span> <span class="nb">set</span><span class="p">(</span><span class="n">sdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">target_ids</span> <span class="o">=</span> <span class="p">{</span><span class="n">sdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">}</span>
+        
+        <span class="n">filtered</span> <span class="o">=</span> <span class="p">[</span>
+            <span class="n">item</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span>
+            <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mi">4</span>
+            <span class="ow">and</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">],</span> <span class="nb">tuple</span><span class="p">)</span>
+            <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">])</span> <span class="o">==</span> <span class="mi">1</span>
+            <span class="ow">and</span> <span class="n">item</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span> <span class="ow">in</span> <span class="n">target_ids</span>
+        <span class="p">]</span>
+        
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">filtered</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">        ERROR: Station ID not found in raw data</span>
+<span class="s2">        </span>
+<span class="s2">        Requested station ID(s):</span>
+<span class="s2">          </span><span class="si">{</span><span class="nb">sorted</span><span class="p">(</span><span class="n">target_ids</span><span class="p">)</span><span class="si">}</span>
+<span class="s2">        </span>
+<span class="s2">        No matching station entries were found.</span>
+<span class="s2">        </span>
+<span class="s2">        Please verify that the station ID(s) exist in the dataset.</span>
+<span class="s2">        &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        
+        <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span> <span class="o">=</span> <span class="n">filtered</span>
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="c1"># --- Parse dates ---</span>
+            <span class="n">start_dt</span> <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">train_start</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">end_dt</span>   <span class="o">=</span> <span class="n">datetime</span><span class="o">.</span><span class="n">strptime</span><span class="p">(</span><span class="n">train_end</span><span class="p">,</span> <span class="s2">&quot;%Y-%m-</span><span class="si">%d</span><span class="s2">&quot;</span><span class="p">)</span>
+        
+            <span class="c1"># --- Sanity check on runoff data ---</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span>
+                    <span class="s2">&quot;No runoff data loaded. &quot;</span>
+                    <span class="s2">&quot;Check the runoff_output directory and pickle files.&quot;</span>
+                <span class="p">)</span>
+        
+            <span class="c1"># Use the runoff dataframe of the first entry as reference</span>
+            <span class="n">df_runoff</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>   <span class="c1"># first element of tuple</span>
+        
+            <span class="c1"># --- Ensure datetime index ---</span>
+            <span class="k">if</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="p">,</span> <span class="n">pd</span><span class="o">.</span><span class="n">DatetimeIndex</span><span class="p">):</span>
+                <span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="p">)</span>
+        
+            <span class="c1"># --- Available date range ---</span>
+            <span class="n">available_start</span> <span class="o">=</span> <span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">min</span><span class="p">()</span>
+            <span class="n">available_end</span>   <span class="o">=</span> <span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">max</span><span class="p">()</span>
+        
+            <span class="c1"># --- Explicit presence check ---</span>
+            <span class="n">missing</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">if</span> <span class="n">start_dt</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;start date (</span><span class="si">{</span><span class="n">start_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="n">end_dt</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">df_runoff</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+                <span class="n">missing</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;end date (</span><span class="si">{</span><span class="n">end_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span><span class="s2">)&quot;</span><span class="p">)</span>
+        
+            <span class="k">if</span> <span class="n">missing</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                    ERROR: Invalid simulation period</span>
+<span class="s2">                    </span>
+<span class="s2">                    Requested period:</span>
+<span class="s2">                      start: </span><span class="si">{</span><span class="n">start_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">                      end:   </span><span class="si">{</span><span class="n">end_dt</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">                    </span>
+<span class="s2">                    Available routed runoff data:</span>
+<span class="s2">                      from:  </span><span class="si">{</span><span class="n">available_start</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">                      to:    </span><span class="si">{</span><span class="n">available_end</span><span class="o">.</span><span class="n">date</span><span class="p">()</span><span class="si">}</span>
+<span class="s2">                    </span>
+<span class="s2">                    Please re-run the runoff and routing modules and ensure the simulation</span>
+<span class="s2">                    period covers the intended training, validation, and inference periods.</span>
+<span class="s2">                    &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">())</span>
+        <span class="k">except</span> <span class="ne">ValueError</span><span class="p">:</span>
+            <span class="c1"># Re-raise ValueErrors unchanged (user-facing, informative)</span>
+            <span class="k">raise</span>
+        
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="c1"># Catch-all for unexpected issues</span>
+            <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;&quot;&quot;</span>
+<span class="s2">                ERROR: Simulation period validation failed</span>
+<span class="s2">                </span>
+<span class="s2">                The model failed while validating the simulation period against the</span>
+<span class="s2">                available routed runoff data.</span>
+<span class="s2">                </span>
+<span class="s2">                This may indicate one of the following:</span>
+<span class="s2">                  - corrupted or incomplete runoff files</span>
+<span class="s2">                  - an unexpected runoff data format</span>
+<span class="s2">                  - inconsistent or non-datetime time indexing</span>
+<span class="s2">                </span>
+<span class="s2">                Please verify the runoff outputs and ensure they were generated</span>
+<span class="s2">                correctly before running training or evaluation again.</span>
+<span class="s2">                &quot;&quot;&quot;</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+            <span class="p">)</span> <span class="kn">from</span><span class="w"> </span><span class="nn">e</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;     Training deepstrmm model based on </span><span class="si">{</span><span class="n">sn</span><span class="si">}</span><span class="s1"> stations in the GRDC database&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="n">sdp</span><span class="o">.</span><span class="n">sim_station_names</span><span class="p">)</span>
+        
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 3. Building neural network model&#39;</span><span class="p">)</span>
+        <span class="n">smodel</span> <span class="o">=</span> <span class="n">StreamflowModel</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span>
+            <span class="n">batch_size</span><span class="p">,</span>
+            <span class="n">num_epochs</span><span class="p">,</span>
+            <span class="n">learning_rate</span><span class="p">,</span>
+            <span class="n">loss_function</span><span class="p">,</span>
+            <span class="n">train_start</span><span class="p">,</span>
+            <span class="n">train_end</span><span class="p">,</span>
+            <span class="n">seed</span><span class="o">=</span><span class="n">seed</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="n">smodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">rawdata</span><span class="p">)</span>
+        <span class="n">smodel</span><span class="o">.</span><span class="n">build_model</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 4. Training neural network model&#39;</span><span class="p">)</span>
+        <span class="n">smodel</span><span class="o">.</span><span class="n">train_model</span><span class="p">()</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;     Completed! Trained model saved at </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/models/bakaano_model.keras&#39;</span><span class="p">)</span></div>
+
+<span class="c1">#========================================================================================================================  </span>
+                
+<div class="viewcode-block" id="BakaanoHydro.evaluate_streamflow_model_interactively">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.evaluate_streamflow_model_interactively">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">evaluate_streamflow_model_interactively</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model_path</span><span class="p">,</span>
+        <span class="n">val_start</span><span class="p">,</span>
+        <span class="n">val_end</span><span class="p">,</span>
+        <span class="n">grdc_netcdf</span><span class="p">,</span>
+        <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+        <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+        <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+        <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+        <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+        <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+        <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Interactively evaluate a trained streamflow model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model_path (str): Path to a trained Keras model.</span>
+<span class="sd">            val_start (str): Validation start date (YYYY-MM-DD).</span>
+<span class="sd">            val_end (str): Validation end date (YYYY-MM-DD).</span>
+<span class="sd">            grdc_netcdf (str): GRDC NetCDF path (if using GRDC data).</span>
+<span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">            catchment_size_threshold (float): Minimum catchment size for stations.</span>
+<span class="sd">            csv_dir (str, optional): Directory of per-station CSVs.</span>
+<span class="sd">            lookup_csv (str, optional): CSV lookup file with station coords.</span>
+<span class="sd">            id_col (str): Station id column in lookup CSV.</span>
+<span class="sd">            lat_col (str): Latitude column in lookup CSV.</span>
+<span class="sd">            lon_col (str): Longitude column in lookup CSV.</span>
+<span class="sd">            date_col (str): Date column in station CSVs.</span>
+<span class="sd">            discharge_col (str): Discharge column in station CSVs.</span>
+<span class="sd">            file_pattern (str): Filename pattern for station CSVs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="n">vdp</span> <span class="o">=</span> <span class="n">PredictDataPreprocessor</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span>
+            <span class="n">val_start</span><span class="p">,</span>
+            <span class="n">val_end</span><span class="p">,</span>
+            <span class="n">routing_method</span><span class="p">,</span>
+            <span class="n">grdc_netcdf</span><span class="p">,</span>
+            <span class="n">catchment_size_threshold</span><span class="p">,</span>
+        <span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">csv_dir</span> <span class="ow">and</span> <span class="n">lookup_csv</span><span class="p">:</span>
+            <span class="n">vdp</span><span class="o">.</span><span class="n">load_observed_streamflow_from_csv_dir</span><span class="p">(</span>
+                <span class="n">csv_dir</span><span class="o">=</span><span class="n">csv_dir</span><span class="p">,</span>
+                <span class="n">lookup_csv</span><span class="o">=</span><span class="n">lookup_csv</span><span class="p">,</span>
+                <span class="n">id_col</span><span class="o">=</span><span class="n">id_col</span><span class="p">,</span>
+                <span class="n">lat_col</span><span class="o">=</span><span class="n">lat_col</span><span class="p">,</span>
+                <span class="n">lon_col</span><span class="o">=</span><span class="n">lon_col</span><span class="p">,</span>
+                <span class="n">date_col</span><span class="o">=</span><span class="n">date_col</span><span class="p">,</span>
+                <span class="n">discharge_col</span><span class="o">=</span><span class="n">discharge_col</span><span class="p">,</span>
+                <span class="n">file_pattern</span><span class="o">=</span><span class="n">file_pattern</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available station ids:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">)</span>
+            <span class="n">station_id</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> Please enter the station id: &quot;</span><span class="p">)</span>
+            <span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="nb">str</span><span class="p">(</span><span class="n">station_id</span><span class="p">)])</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">station</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">observed_streamflow_csv</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="nb">str</span><span class="p">(</span><span class="n">station_id</span><span class="p">))</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">station</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+                <span class="k">raise</span> <span class="ne">SystemExit</span><span class="p">(</span><span class="s2">&quot;Station id not found in observed CSV directory.&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">fulldata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">load_observed_streamflow</span><span class="p">(</span><span class="n">grdc_netcdf</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stat_names</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">sim_station_names</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available station names:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stat_names</span><span class="p">)</span>
+
+            <span class="n">station_name</span> <span class="o">=</span> <span class="nb">input</span><span class="p">(</span><span class="s2">&quot;</span><span class="se">\n</span><span class="s2"> Please enter the station name: &quot;</span><span class="p">)</span>
+            
+            <span class="n">extracted_data</span> <span class="o">=</span> <span class="n">fulldata</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">fulldata</span><span class="o">.</span><span class="n">station_name</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">str</span><span class="p">)</span> <span class="o">==</span> <span class="n">station_name</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+            <span class="n">full_ids</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="n">extracted_data</span><span class="o">.</span><span class="n">id</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+            
+            <span class="bp">self</span><span class="o">.</span><span class="n">station</span> <span class="o">=</span> <span class="n">extracted_data</span><span class="p">[</span><span class="s1">&#39;runoff_mean&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                <span class="n">extracted_data</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="n">station_name</span><span class="p">,</span>
+                <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+            <span class="p">)</span><span class="o">.</span><span class="n">to_dataframe</span><span class="p">(</span><span class="n">name</span><span class="o">=</span><span class="s1">&#39;station_discharge&#39;</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+
+            <span class="n">station_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">station</span><span class="p">[</span><span class="s1">&#39;id&#39;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+            <span class="n">station_index</span> <span class="o">=</span> <span class="n">full_ids</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">station_id</span><span class="p">)</span>
+
+            <span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">unique</span><span class="p">([</span><span class="n">full_ids</span><span class="p">[</span><span class="n">station_index</span><span class="p">]])</span>
+        
+        <span class="n">rawdata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+        
+        <span class="n">observed_streamflow</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">xy</span><span class="p">:</span> <span class="n">xy</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">rawdata</span><span class="p">))</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+
+        <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_365d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_alphaearth</span><span class="p">]</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">predicted_streamflow</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">predicted_streamflow</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">response_scaler_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="s2">&quot;models/response_scaler.pkl&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">response_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">response_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
+        
+        <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+        <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span> 
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_plot_grdc_streamflow</span><span class="p">(</span><span class="n">observed_streamflow</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">,</span>  <span class="n">val_start</span><span class="p">)</span></div>
+
+        
+<span class="c1">#==============================================================================================================================</span>
+<div class="viewcode-block" id="BakaanoHydro.simulate_streamflow">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.simulate_streamflow">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simulate_streamflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model_path</span><span class="p">,</span> <span class="n">sim_start</span><span class="p">,</span> <span class="n">sim_end</span><span class="p">,</span> <span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">,</span> 
+                            <span class="n">routing_method</span><span class="o">=</span><span class="s1">&#39;mfd&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate streamflow for given coordinates using a trained model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model_path (str): Path to a trained Keras model.</span>
+<span class="sd">            sim_start (str): Simulation start date (YYYY-MM-DD).</span>
+<span class="sd">            sim_end (str): Simulation end date (YYYY-MM-DD).</span>
+<span class="sd">            latlist (list[float]): List of latitudes.</span>
+<span class="sd">            lonlist (list[float]): List of longitudes.</span>
+<span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 1. Loading runoff data and other predictors&#39;</span><span class="p">)</span>
+        <span class="n">vdp</span> <span class="o">=</span> <span class="n">PredictDataPreprocessor</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span> <span class="n">sim_start</span><span class="p">,</span> <span class="n">sim_end</span><span class="p">,</span> <span class="n">routing_method</span><span class="p">)</span>
+        <span class="n">rawdata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">get_data_latlng</span><span class="p">(</span><span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data_latlng</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">latlist</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 2. Batch prediction&#39;</span><span class="p">)</span>
+        <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_365d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_alphaearth</span><span class="p">],</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">predicted_streamflows</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">response_scaler_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="s2">&quot;models/response_scaler.pkl&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">response_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">response_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">)</span>
+
+        <span class="n">seq</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">)</span><span class="o">/</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">predicted_streamflow_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">catch_area</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area_list</span><span class="p">):</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1_000_000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span>
+            
+            <span class="n">predicted_streamflow_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 3. Generating csv file for each coordinate&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="n">lon</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflow_list</span><span class="p">,</span> <span class="n">latlist</span><span class="p">,</span> <span class="n">lonlist</span><span class="p">):</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">adjusted_start_date</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">sim_start</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">DateOffset</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">)</span>
+            <span class="n">period</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">adjusted_start_date</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">)</span>  <span class="c1"># Match time length with mu</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">period</span><span class="p">,</span>  <span class="c1"># Adjusted time column</span>
+                <span class="s1">&#39;streamflow (m3/s)&#39;</span><span class="p">:</span> <span class="n">predicted_streamflow</span>
+            <span class="p">})</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;predicted_streamflow_data/predicted_streamflow_lat</span><span class="si">{</span><span class="n">lat</span><span class="si">}</span><span class="s2">_lon</span><span class="si">{</span><span class="n">lon</span><span class="si">}</span><span class="s2">.csv&quot;</span><span class="p">)</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">out_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="s1">&#39;predicted_streamflow_data&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39; COMPLETED! csv files available at </span><span class="si">{</span><span class="n">out_folder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+<span class="c1">#==============================================================================================================================</span>
+<div class="viewcode-block" id="BakaanoHydro.simulate_grdc_csv_stations">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.simulate_grdc_csv_stations">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">simulate_grdc_csv_stations</span><span class="p">(</span>
+        <span class="bp">self</span><span class="p">,</span>
+        <span class="n">model_path</span><span class="p">,</span>
+        <span class="n">sim_start</span><span class="p">,</span>
+        <span class="n">sim_end</span><span class="p">,</span>
+        <span class="n">grdc_netcdf</span><span class="p">,</span>
+        <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+        <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+        <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+        <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+        <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+        <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+        <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+        <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+    <span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Simulate streamflow for GRDC or CSV stations in batch.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            model_path (str): Path to a trained Keras model.</span>
+<span class="sd">            sim_start (str): Simulation start date (YYYY-MM-DD).</span>
+<span class="sd">            sim_end (str): Simulation end date (YYYY-MM-DD).</span>
+<span class="sd">            grdc_netcdf (str): GRDC NetCDF path (if using GRDC data).</span>
+<span class="sd">            routing_method (str): Routing method (&quot;mfd&quot;, &quot;d8&quot;, &quot;dinf&quot;).</span>
+<span class="sd">            csv_dir (str, optional): Directory of per-station CSVs.</span>
+<span class="sd">            lookup_csv (str, optional): CSV lookup file with station coords.</span>
+<span class="sd">            id_col (str): Station id column in lookup CSV.</span>
+<span class="sd">            lat_col (str): Latitude column in lookup CSV.</span>
+<span class="sd">            lon_col (str): Longitude column in lookup CSV.</span>
+<span class="sd">            date_col (str): Date column in station CSVs.</span>
+<span class="sd">            discharge_col (str): Discharge column in station CSVs.</span>
+<span class="sd">            file_pattern (str): Filename pattern for station CSVs.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 1. Loading runoff data and other predictors&#39;</span><span class="p">)</span>
+        <span class="n">vdp</span> <span class="o">=</span> <span class="n">PredictDataPreprocessor</span><span class="p">(</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">,</span>
+            <span class="n">sim_start</span><span class="p">,</span>
+            <span class="n">sim_end</span><span class="p">,</span>
+            <span class="n">routing_method</span><span class="p">,</span>
+            <span class="n">grdc_netcdf</span><span class="p">,</span>
+        <span class="p">)</span>
+    
+        <span class="k">if</span> <span class="n">csv_dir</span> <span class="ow">and</span> <span class="n">lookup_csv</span><span class="p">:</span>
+            <span class="n">vdp</span><span class="o">.</span><span class="n">load_observed_streamflow_from_csv_dir</span><span class="p">(</span>
+                <span class="n">csv_dir</span><span class="o">=</span><span class="n">csv_dir</span><span class="p">,</span>
+                <span class="n">lookup_csv</span><span class="o">=</span><span class="n">lookup_csv</span><span class="p">,</span>
+                <span class="n">id_col</span><span class="o">=</span><span class="n">id_col</span><span class="p">,</span>
+                <span class="n">lat_col</span><span class="o">=</span><span class="n">lat_col</span><span class="p">,</span>
+                <span class="n">lon_col</span><span class="o">=</span><span class="n">lon_col</span><span class="p">,</span>
+                <span class="n">date_col</span><span class="o">=</span><span class="n">date_col</span><span class="p">,</span>
+                <span class="n">discharge_col</span><span class="o">=</span><span class="n">discharge_col</span><span class="p">,</span>
+                <span class="n">file_pattern</span><span class="o">=</span><span class="n">file_pattern</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available station ids:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">stat_names</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">sim_station_names</span>
+            <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Available station names:&quot;</span><span class="p">)</span>
+            <span class="nb">print</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">stat_names</span><span class="p">)</span>
+
+        <span class="n">rawdata</span> <span class="o">=</span> <span class="n">vdp</span><span class="o">.</span><span class="n">get_data</span><span class="p">()</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span> <span class="o">=</span> <span class="n">PredictStreamflow</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">prepare_data</span><span class="p">(</span><span class="n">rawdata</span><span class="p">)</span>
+        <span class="n">batch_size</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">load_model</span><span class="p">(</span><span class="n">model_path</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 2. Batch prediction&#39;</span><span class="p">)</span>
+        <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">model</span><span class="o">.</span><span class="n">predict</span><span class="p">(</span>
+            <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_365d</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">sim_alphaearth</span><span class="p">],</span>
+            <span class="n">batch_size</span><span class="o">=</span><span class="n">batch_size</span><span class="p">,</span>
+        <span class="p">)</span>
+        <span class="k">if</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">ndim</span> <span class="o">==</span> <span class="mi">2</span> <span class="ow">and</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+            <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">predicted_streamflows</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">:</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="n">response_scaler_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="s2">&quot;models/response_scaler.pkl&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">exists</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">):</span>
+            <span class="k">with</span> <span class="nb">open</span><span class="p">(</span><span class="n">response_scaler_path</span><span class="p">,</span> <span class="s2">&quot;rb&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">file</span><span class="p">:</span>
+                <span class="n">response_scaler</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">file</span><span class="p">)</span>
+            <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">response_scaler</span><span class="o">.</span><span class="n">inverse_transform</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">)</span>
+
+        <span class="n">seq</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">)</span><span class="o">/</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="n">predicted_streamflows</span> <span class="o">=</span> <span class="n">predicted_streamflows</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="n">batch_size</span><span class="p">,</span> <span class="n">seq</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+
+        <span class="n">predicted_streamflow_list</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">catch_area</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflows</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">vmodel</span><span class="o">.</span><span class="n">catch_area_list</span><span class="p">):</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">*</span> <span class="n">catch_area</span> <span class="o">*</span> <span class="mf">1000000.0</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">predicted_streamflow</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">,</span> <span class="mi">0</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span>
+            
+            <span class="n">predicted_streamflow_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="s1">&#39; 3. Generating csv file for each coordinate&#39;</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">snames</span><span class="p">,</span> <span class="n">sids</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">predicted_streamflow_list</span><span class="p">,</span> <span class="n">vdp</span><span class="o">.</span><span class="n">sim_station_names</span><span class="p">,</span> <span class="n">vdp</span><span class="o">.</span><span class="n">station_ids</span><span class="p">):</span>
+            <span class="n">predicted_streamflow</span> <span class="o">=</span> <span class="n">predicted_streamflow</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">)</span>
+
+            <span class="n">adjusted_start_date</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">sim_start</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">DateOffset</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">)</span>
+            <span class="n">period</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">adjusted_start_date</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="nb">len</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">),</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">)</span>  <span class="c1"># Match time length with mu</span>
+            <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                <span class="s1">&#39;time&#39;</span><span class="p">:</span> <span class="n">period</span><span class="p">,</span>  <span class="c1"># Adjusted time column</span>
+                <span class="s1">&#39;streamflow (m3/s)&#39;</span><span class="p">:</span> <span class="n">predicted_streamflow</span>
+            <span class="p">})</span>
+            <span class="n">output_path</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="sa">f</span><span class="s2">&quot;predicted_streamflow_data/bakaano_</span><span class="si">{</span><span class="n">sids</span><span class="si">}</span><span class="s2">.csv&quot;</span><span class="p">)</span>
+            <span class="n">df</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="n">output_path</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">out_folder</span> <span class="o">=</span> <span class="n">os</span><span class="o">.</span><span class="n">path</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="s1">&#39;predicted_streamflow_data&#39;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39; COMPLETED! csv files available at </span><span class="si">{</span><span class="n">out_folder</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span></div>
+
+
+<span class="c1">#========================================================================================================================  </span>
+            
+    <span class="k">def</span><span class="w"> </span><span class="nf">_plot_grdc_streamflow</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observed_streamflow</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">,</span> <span class="n">val_start</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Plot the observed and predicted streamflow data.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            observed_streamflow (list[pd.DataFrame]): Observed discharge data.</span>
+<span class="sd">            predicted_streamflow (np.ndarray): Predicted discharge array.</span>
+<span class="sd">            val_start (str): Validation start date (YYYY-MM-DD).</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">nse</span><span class="p">,</span> <span class="n">kge</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_compute_metrics</span><span class="p">(</span><span class="n">observed_streamflow</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">)</span>
+        <span class="n">kge1</span> <span class="o">=</span> <span class="n">kge</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">R</span> <span class="o">=</span> <span class="n">kge</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Beta</span> <span class="o">=</span> <span class="n">kge</span><span class="p">[</span><span class="mi">2</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">Alpha</span> <span class="o">=</span> <span class="n">kge</span><span class="p">[</span><span class="mi">3</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="n">start_date</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">to_datetime</span><span class="p">(</span><span class="n">val_start</span><span class="p">)</span> <span class="o">+</span> <span class="n">pd</span><span class="o">.</span><span class="n">Timedelta</span><span class="p">(</span><span class="n">days</span><span class="o">=</span><span class="mi">365</span><span class="p">)</span>
+        <span class="n">num_days</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">predicted_streamflow</span><span class="p">)</span>
+        <span class="n">date_range</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">date_range</span><span class="p">(</span><span class="n">start</span><span class="o">=</span><span class="n">start_date</span><span class="p">,</span> <span class="n">periods</span><span class="o">=</span><span class="n">num_days</span><span class="p">,</span> <span class="n">freq</span><span class="o">=</span><span class="s1">&#39;D&#39;</span><span class="p">)</span>
+
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Nash-Sutcliffe Efficiency (NSE): </span><span class="si">{</span><span class="n">nse</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Kling-Gupta Efficiency (KGE): </span><span class="si">{</span><span class="n">kge1</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">date_range</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">[:],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;blue&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Predicted Streamflow&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">date_range</span><span class="p">,</span> <span class="n">observed_streamflow</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;station_discharge&#39;</span><span class="p">][</span><span class="mi">365</span><span class="p">:]</span><span class="o">.</span><span class="n">values</span><span class="p">[:],</span> <span class="n">color</span><span class="o">=</span><span class="s1">&#39;red&#39;</span><span class="p">,</span> <span class="n">label</span><span class="o">=</span><span class="s1">&#39;Observed Streamflow&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">title</span><span class="p">(</span><span class="s1">&#39;Comparison of observed and simulated streamflow&#39;</span><span class="p">)</span>  <span class="c1"># Add a title</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">xlabel</span><span class="p">(</span><span class="s1">&#39;Date&#39;</span><span class="p">)</span>  <span class="c1"># Label the x-axis</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">ylabel</span><span class="p">(</span><span class="s1">&#39;River Discharge (m³/s)&#39;</span><span class="p">)</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">()</span>  <span class="c1"># Add a legend to label the lines</span>
+        <span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+
+<span class="c1">#========================================================================================================================  </span>
+        
+    <span class="k">def</span><span class="w"> </span><span class="nf">_compute_metrics</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">observed_streamflow</span><span class="p">,</span> <span class="n">predicted_streamflow</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute performance metrics for the model.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            observed_streamflow (list[pd.DataFrame]): Observed discharge data.</span>
+<span class="sd">            predicted_streamflow (np.ndarray): Predicted discharge array.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            tuple: (nse, kge) metric values from hydroeval.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">observed</span> <span class="o">=</span> <span class="n">observed_streamflow</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s1">&#39;station_discharge&#39;</span><span class="p">][</span><span class="mi">365</span><span class="p">:]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="n">predicted_streamflow</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+        <span class="n">nan_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">observed</span><span class="p">)</span> <span class="o">|</span> <span class="n">np</span><span class="o">.</span><span class="n">isnan</span><span class="p">(</span><span class="n">predicted</span><span class="p">)</span>
+        <span class="n">observed</span> <span class="o">=</span> <span class="n">observed</span><span class="p">[</span><span class="o">~</span><span class="n">nan_indices</span><span class="p">]</span>
+        <span class="n">predicted</span> <span class="o">=</span> <span class="n">predicted</span><span class="p">[</span><span class="o">~</span><span class="n">nan_indices</span><span class="p">]</span>
+        <span class="n">nse</span> <span class="o">=</span> <span class="n">hydroeval</span><span class="o">.</span><span class="n">nse</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="n">observed</span><span class="p">)</span>
+        <span class="n">kge</span> <span class="o">=</span> <span class="n">hydroeval</span><span class="o">.</span><span class="n">kge</span><span class="p">(</span><span class="n">predicted</span><span class="p">,</span> <span class="n">observed</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">nse</span><span class="p">,</span> <span class="n">kge</span>
+  
+<span class="c1">#===========================================================================================================================</span>
+<div class="viewcode-block" id="BakaanoHydro.explore_data_interactively">
+<a class="viewcode-back" href="../../api/bakaano.runner.html#bakaano.runner.BakaanoHydro.explore_data_interactively">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">explore_data_interactively</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="n">grdc_netcdf</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Launch an interactive map to explore inputs and stations.</span>
+
+<span class="sd">        Args:</span>
+<span class="sd">            start_date (str): Start date (YYYY-MM-DD) for GRDC filtering.</span>
+<span class="sd">            end_date (str): End date (YYYY-MM-DD) for GRDC filtering.</span>
+<span class="sd">            grdc_netcdf (str, optional): GRDC NetCDF path for stations overlay.</span>
+
+<span class="sd">        Returns:</span>
+<span class="sd">            leafmap.foliumap.Map: Interactive map object.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">m</span> <span class="o">=</span> <span class="n">Map</span><span class="p">()</span>
+        <span class="n">rout</span> <span class="o">=</span> <span class="n">RunoffRouter</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">clipped_dem</span><span class="p">,</span> <span class="s1">&#39;mfd&#39;</span><span class="p">)</span>
+        <span class="n">fdir</span><span class="p">,</span> <span class="n">acc</span> <span class="o">=</span> <span class="n">rout</span><span class="o">.</span><span class="n">compute_flow_dir</span><span class="p">()</span>
+
+        <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">clipped_dem</span><span class="p">)</span> <span class="k">as</span> <span class="n">dm</span><span class="p">:</span>
+            <span class="n">dem_profile</span> <span class="o">=</span> <span class="n">dm</span><span class="o">.</span><span class="n">profile</span>
+
+        <span class="n">dem_profile</span><span class="o">.</span><span class="n">update</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">rasterio</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">count</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+        <span class="n">acc_name</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/scratch/river_network.tif&#39;</span>
+        <span class="k">with</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">acc_name</span><span class="p">,</span> <span class="s1">&#39;w&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">dem_profile</span><span class="p">)</span> <span class="k">as</span> <span class="n">dst</span><span class="p">:</span>
+                <span class="n">dst</span><span class="o">.</span><span class="n">write</span><span class="p">(</span><span class="n">acc</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+    
+
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">tree_cover</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/vcf/mean_tree_cover.tif&#39;</span>
+            <span class="n">dem</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/dem_clipped.tif&#39;</span>
+            <span class="n">slope</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/elevation/slope_clipped.tif&#39;</span>
+            <span class="n">awc</span> <span class="o">=</span> <span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span><span class="si">}</span><span class="s1">/soil/clipped_AWCh3_M_sl6_1km_ll.tif&#39;</span>
+        
+
+            <span class="n">m</span><span class="o">.</span><span class="n">add_raster</span><span class="p">(</span><span class="n">dem</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;DEM&quot;</span><span class="p">,</span> <span class="n">colormap</span><span class="o">=</span><span class="s1">&#39;gist_ncar&#39;</span><span class="p">,</span> <span class="n">zoom_to_layer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="mf">0.6</span><span class="p">)</span>
+            <span class="n">vmx</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nanmax</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">acc</span><span class="p">))</span><span class="o">*</span><span class="mf">0.025</span>
+            <span class="k">for</span> <span class="n">path</span><span class="p">,</span> <span class="n">name</span><span class="p">,</span> <span class="n">cmap</span><span class="p">,</span> <span class="n">vmax</span><span class="p">,</span> <span class="n">opacity</span> <span class="ow">in</span> <span class="p">[</span>
+                <span class="p">(</span><span class="n">awc</span><span class="p">,</span> <span class="s2">&quot;Available water content&quot;</span><span class="p">,</span> <span class="s2">&quot;terrain&quot;</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">),</span>
+                <span class="p">(</span><span class="n">tree_cover</span><span class="p">,</span> <span class="s2">&quot;Tree cover&quot;</span><span class="p">,</span> <span class="s2">&quot;viridis_r&quot;</span><span class="p">,</span> <span class="mi">70</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">),</span>
+                <span class="p">(</span><span class="n">slope</span><span class="p">,</span> <span class="s2">&quot;Slope&quot;</span><span class="p">,</span> <span class="s2">&quot;gist_ncar&quot;</span><span class="p">,</span> <span class="mi">20</span><span class="p">,</span> <span class="mf">0.75</span><span class="p">),</span>
+                <span class="p">(</span><span class="n">acc_name</span><span class="p">,</span> <span class="s2">&quot;River network&quot;</span><span class="p">,</span> <span class="s2">&quot;viridis&quot;</span><span class="p">,</span> <span class="n">vmx</span><span class="p">,</span> <span class="mf">0.9</span><span class="p">),</span>
+            <span class="p">]:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">m</span><span class="o">.</span><span class="n">add_raster</span><span class="p">(</span><span class="n">path</span><span class="p">,</span> <span class="n">layer_name</span><span class="o">=</span><span class="n">name</span><span class="p">,</span> <span class="n">colormap</span><span class="o">=</span><span class="n">cmap</span><span class="p">,</span> <span class="n">zoom_to_layer</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">opacity</span><span class="o">=</span><span class="n">opacity</span><span class="p">,</span> 
+                                 <span class="n">vmax</span><span class="o">=</span><span class="n">vmax</span><span class="p">,</span> <span class="n">visible</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;⚠️ Failed to load raster &#39;</span><span class="si">{</span><span class="n">name</span><span class="si">}</span><span class="s2">&#39;: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Raster setup failed: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="c1"># Process GRDC data if provided</span>
+        <span class="k">if</span> <span class="n">grdc_netcdf</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">grdc</span> <span class="o">=</span> <span class="n">xr</span><span class="o">.</span><span class="n">open_dataset</span><span class="p">(</span><span class="n">grdc_netcdf</span><span class="p">)</span>
+
+                <span class="n">stations_df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                    <span class="s1">&#39;station_name&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="s1">&#39;geo_x&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;geo_x&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+                    <span class="s1">&#39;geo_y&#39;</span><span class="p">:</span> <span class="n">grdc</span><span class="p">[</span><span class="s1">&#39;geo_y&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+                <span class="p">})</span>
+
+                <span class="n">stations_gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+                    <span class="n">stations_df</span><span class="p">,</span>
+                    <span class="n">geometry</span><span class="o">=</span><span class="n">gpd</span><span class="o">.</span><span class="n">points_from_xy</span><span class="p">(</span><span class="n">stations_df</span><span class="p">[</span><span class="s1">&#39;geo_x&#39;</span><span class="p">],</span> <span class="n">stations_df</span><span class="p">[</span><span class="s1">&#39;geo_y&#39;</span><span class="p">]),</span>
+                    <span class="n">crs</span><span class="o">=</span><span class="s2">&quot;EPSG:4326&quot;</span>
+                <span class="p">)</span>
+
+                <span class="c1"># Load region shapefile</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">region_shape</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">read_file</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">study_area</span><span class="p">)</span>
+                <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Could not read study area shapefile: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                    <span class="k">return</span> <span class="n">m</span>
+
+                <span class="c1"># Spatial join</span>
+                <span class="n">stations_in_region</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">sjoin</span><span class="p">(</span><span class="n">stations_gdf</span><span class="p">,</span> <span class="n">region_shape</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;inner&#39;</span><span class="p">,</span> <span class="n">predicate</span><span class="o">=</span><span class="s1">&#39;intersects&#39;</span><span class="p">)</span>
+                <span class="n">overlapping_station_names</span> <span class="o">=</span> <span class="n">stations_in_region</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span>
+
+                <span class="c1"># Filter by time and station</span>
+                <span class="n">grdc_time_filtered</span> <span class="o">=</span> <span class="n">grdc</span><span class="o">.</span><span class="n">sel</span><span class="p">(</span><span class="n">time</span><span class="o">=</span><span class="nb">slice</span><span class="p">(</span><span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">))</span>
+
+                <span class="n">filtered_grdc</span> <span class="o">=</span> <span class="n">grdc_time_filtered</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
+                    <span class="n">grdc_time_filtered</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">overlapping_station_names</span><span class="p">),</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span>
+                <span class="p">)</span>
+
+                <span class="n">x</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s2">&quot;geo_x&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">y</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s2">&quot;geo_y&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">name</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s1">&#39;station_name&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">runoff</span> <span class="o">=</span> <span class="n">filtered_grdc</span><span class="p">[</span><span class="s2">&quot;runoff_mean&quot;</span><span class="p">]</span>
+
+                <span class="n">percent_missing</span> <span class="o">=</span> <span class="p">(</span>
+                    <span class="n">runoff</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">dim</span><span class="o">=</span><span class="s2">&quot;time&quot;</span><span class="p">)</span> <span class="o">/</span> <span class="n">runoff</span><span class="o">.</span><span class="n">sizes</span><span class="p">[</span><span class="s2">&quot;time&quot;</span><span class="p">]</span> <span class="o">*</span> <span class="mi">100</span>
+                <span class="p">)</span><span class="o">.</span><span class="n">round</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+                <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span>
+                    <span class="s1">&#39;Station_name&#39;</span><span class="p">:</span> <span class="n">name</span><span class="p">,</span>
+                    <span class="s1">&#39;Percent_missing&#39;</span><span class="p">:</span> <span class="n">percent_missing</span><span class="p">,</span>
+                    <span class="s2">&quot;Longitude&quot;</span><span class="p">:</span> <span class="n">x</span><span class="p">,</span>
+                    <span class="s2">&quot;Latitude&quot;</span><span class="p">:</span> <span class="n">y</span>
+                <span class="p">})</span><span class="o">.</span><span class="n">dropna</span><span class="p">()</span>
+
+                <span class="n">m</span><span class="o">.</span><span class="n">add_points_from_xy</span><span class="p">(</span>
+                    <span class="n">data</span><span class="o">=</span><span class="n">df</span><span class="p">,</span> <span class="n">x</span><span class="o">=</span><span class="s2">&quot;Longitude&quot;</span><span class="p">,</span> <span class="n">y</span><span class="o">=</span><span class="s2">&quot;Latitude&quot;</span><span class="p">,</span> <span class="n">color</span><span class="o">=</span><span class="s2">&quot;brown&quot;</span><span class="p">,</span>
+                    <span class="n">layer_name</span><span class="o">=</span><span class="s2">&quot;Stations&quot;</span><span class="p">,</span> <span class="n">radius</span><span class="o">=</span><span class="mi">3</span>
+                <span class="p">)</span>
+
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;❌ Failed to process GRDC NetCDF: </span><span class="si">{</span><span class="n">e</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">m</span></div>
+</div>
+
+</pre></div>
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

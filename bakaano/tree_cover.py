@@ -1,3 +1,8 @@
+"""Fractional vegetation cover preparation from MODIS VCF.
+
+Role: Download and preprocess tree/herbaceous cover rasters.
+"""
+
 import ee
 import numpy as np
 import geemap
@@ -11,6 +16,8 @@ from datetime import datetime, timedelta
 class TreeCover:
     def __init__(self, working_dir, study_area, start_date, end_date):
         """
+        Role: Prepare tree and herbaceous cover inputs.
+
         A class used to download and preprocess fractional vegetation cover data
 
         Args:
@@ -40,6 +47,9 @@ class TreeCover:
 
     def _download_tree_cover(self):
         """Download fractional vegetation cover data.
+
+        Returns:
+            None. Downloads GeoTIFFs to ``{working_dir}/vcf``.
         """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
         if not os.path.exists(vcf_check):
@@ -62,6 +72,9 @@ class TreeCover:
 
     def _preprocess_tree_cover(self):
         """Preprocess downloaded data
+
+        Returns:
+            None. Writes mean tree/herb cover rasters.
         """
         vcf_check = f'{self.working_dir}/vcf/mean_tree_cover.tif'
         if not os.path.exists(vcf_check):
@@ -105,12 +118,23 @@ class TreeCover:
             print(f"     - Tree cover data already exists in {self.working_dir}/vcf/mean_tree_cover.tif; skipping preprocessing.")
     
     def get_tree_cover_data(self):
+        """Download and preprocess tree and herbaceous cover rasters.
+
+        Returns:
+            None. Writes mean cover rasters to ``{working_dir}/vcf``.
+        """
         self._download_tree_cover()
         self._preprocess_tree_cover()
 
 
     def plot_tree_cover(self, variable='tree_cover'):
-        """Plot mean tree cover data
+        """Plot mean vegetation cover.
+
+        Args:
+            variable (str): ``'tree_cover'`` or ``'herb_cover'``.
+
+        Returns:
+            None. Displays a matplotlib plot.
         """
    
         if variable == 'tree_cover':

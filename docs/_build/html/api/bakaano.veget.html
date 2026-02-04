@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>bakaano.veget</title>
+    
+          <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="../_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="../_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="../_static/documentation_options.js?v=bb516dca"></script>
+        <script src="../_static/doctools.js?v=9a2dae69"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="../_static/theme-vendors.js"></script> -->
+      <script src="../_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="../genindex.html" />
+  <link rel="search" title="Search" href="../search.html" />
+  <link rel="next" title="bakaano.tree_cover" href="bakaano.tree_cover.html" />
+  <link rel="prev" title="bakaano.alpha_earth" href="bakaano.alpha_earth.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="../index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="../index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="../search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="../index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="../api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="../index.html">Docs</a> &raquo;</li>
+    
+      <li><a href="../api.html">API Reference</a> &raquo;</li>
+    
+    <li>bakaano.veget</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.alpha_earth.html"
+       title="previous chapter">← bakaano.alpha_earth</a>
+  </li>
+  <li class="next">
+    <a href="bakaano.tree_cover.html"
+       title="next chapter">bakaano.tree_cover →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="module-bakaano.veget">
+<span id="bakaano-veget"></span><h1>bakaano.veget<a class="headerlink" href="#module-bakaano.veget" title="Link to this heading">¶</a></h1>
+<p>Runoff generation and routing using the VegET formulation.</p>
+<p>Role: Compute daily runoff and route flow to river network.</p>
+<dl class="py class">
+<dt class="sig sig-object py" id="bakaano.veget.VegET">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bakaano.veget.</span></span><span class="sig-name descname"><span class="pre">VegET</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">working_dir</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">study_area</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">start_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">end_date</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">climate_data_source</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">routing_method</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'mfd'</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/veget.html#VegET"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.veget.VegET" title="Link to this definition">¶</a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Role: Orchestrate VegET runoff generation and routing.</p>
+<dl class="py method">
+<dt class="sig sig-object py" id="bakaano.veget.VegET.compute_veget_runoff_route_flow">
+<span class="sig-name descname"><span class="pre">compute_veget_runoff_route_flow</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bakaano/veget.html#VegET.compute_veget_runoff_route_flow"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#bakaano.veget.VegET.compute_veget_runoff_route_flow" title="Link to this definition">¶</a></dt>
+<dd><p>Compute VegET runoff and route flow to the river network.</p>
+<p>This routine loads climate inputs, computes PET, simulates soil moisture
+and runoff, and performs routing to produce daily routed runoff outputs.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None. Writes routed runoff outputs to <code class="docutils literal notranslate"><span class="pre">{working_dir}/runoff_output</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="bakaano.veget.update_soil_and_runoff">
+<span class="sig-prename descclassname"><span class="pre">bakaano.veget.</span></span><span class="sig-name descname"><span class="pre">update_soil_and_runoff</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">soil_moisture</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">eff_rain</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">ETa</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">max_allowable_depletion</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">whc</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#bakaano.veget.update_soil_and_runoff" title="Link to this definition">¶</a></dt>
+<dd><p>Corrected Numba-optimized soil moisture and runoff update.
+All inputs must be float32 NumPy arrays (2D).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>soil_moisture</strong> (<em>np.ndarray</em>) – Current soil moisture grid (ny, nx).</p></li>
+<li><p><strong>eff_rain</strong> (<em>np.ndarray</em>) – Effective rainfall grid (ny, nx).</p></li>
+<li><p><strong>ETa</strong> (<em>np.ndarray</em>) – Actual evapotranspiration grid (ny, nx).</p></li>
+<li><p><strong>max_allowable_depletion</strong> (<em>np.ndarray</em>) – Max allowable depletion grid.</p></li>
+<li><p><strong>whc</strong> (<em>np.ndarray</em>) – Water holding capacity grid.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>(updated soil_moisture, surface runoff).</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>tuple[np.ndarray, np.ndarray]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="bakaano.alpha_earth.html"
+       title="previous chapter">← bakaano.alpha_earth</a>
+  </li>
+  <li class="next">
+    <a href="bakaano.tree_cover.html"
+       title="next chapter">bakaano.tree_cover →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

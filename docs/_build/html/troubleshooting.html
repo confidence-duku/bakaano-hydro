@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>Troubleshooting</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="API Structure" href="api_structure.html" />
+  <link rel="prev" title="Model Configuration" href="model_configuration.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="current">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 current">
+            
+              <a href="#" class="reference internal current">Troubleshooting</a>
+            
+
+            
+              <ul>
+                
+                  <li class="toctree-l2"><a href="#google-earth-engine-authentication" class="reference internal">Google Earth Engine authentication</a></li>
+                
+                  <li class="toctree-l2"><a href="#no-stations-found-inside-the-basin" class="reference internal">No stations found inside the basin</a></li>
+                
+                  <li class="toctree-l2"><a href="#missing-columns-in-csvs" class="reference internal">Missing columns in CSVs</a></li>
+                
+                  <li class="toctree-l2"><a href="#predictions-are-all-zeros-or-flatlines" class="reference internal">Predictions are all zeros or flatlines</a></li>
+                
+                  <li class="toctree-l2"><a href="#missing-or-empty-raster-inputs" class="reference internal">Missing or empty raster inputs</a></li>
+                
+                  <li class="toctree-l2"><a href="#observed-streamflow-dates-out-of-range" class="reference internal">Observed streamflow dates out of range</a></li>
+                
+                  <li class="toctree-l2"><a href="#mismatched-routing-method" class="reference internal">Mismatched routing method</a></li>
+                
+                  <li class="toctree-l2"><a href="#alphaearth-scaling-or-missing-scaler" class="reference internal">AlphaEarth scaling or missing scaler</a></li>
+                
+                  <li class="toctree-l2"><a href="#runoff-response-scaler-missing" class="reference internal">Runoff/response scaler missing</a></li>
+                
+                  <li class="toctree-l2"><a href="#model-outputs-in-unexpected-units" class="reference internal">Model outputs in unexpected units</a></li>
+                
+              </ul>
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+    
+    <li>Troubleshooting</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="model_configuration.html"
+       title="previous chapter">← Model Configuration</a>
+  </li>
+  <li class="next">
+    <a href="api_structure.html"
+       title="next chapter">API Structure →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading">¶</a></h1>
+<p>Common issues and fixes.</p>
+<section id="google-earth-engine-authentication">
+<h2>Google Earth Engine authentication<a class="headerlink" href="#google-earth-engine-authentication" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Errors when downloading NDVI/Tree cover/AlphaEarth/meteorology</p></li>
+<li><p>Authentication prompt keeps appearing</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Ensure you have registered for GEE and completed the browser login flow.</p></li>
+<li><p>On headless servers, run <code class="docutils literal notranslate"><span class="pre">earthengine</span> <span class="pre">authenticate</span></code> on a machine with a browser
+and copy <code class="docutils literal notranslate"><span class="pre">~/.config/earthengine/credentials</span></code> to the server.</p></li>
+</ul>
+</section>
+<section id="no-stations-found-inside-the-basin">
+<h2>No stations found inside the basin<a class="headerlink" href="#no-stations-found-inside-the-basin" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">No</span> <span class="pre">stations</span> <span class="pre">from</span> <span class="pre">the</span> <span class="pre">lookup</span> <span class="pre">table</span> <span class="pre">intersect</span> <span class="pre">the</span> <span class="pre">study</span> <span class="pre">area.</span></code></p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Confirm station coordinates are in EPSG:4326.</p></li>
+<li><p>Verify the study area polygon and station coordinates overlap.</p></li>
+</ul>
+</section>
+<section id="missing-columns-in-csvs">
+<h2>Missing columns in CSVs<a class="headerlink" href="#missing-columns-in-csvs" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Missing</span> <span class="pre">columns</span> <span class="pre">in</span> <span class="pre">station</span> <span class="pre">CSV</span> <span class="pre">for</span> <span class="pre">id=...</span></code></p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Ensure the per-station CSVs include the required <code class="docutils literal notranslate"><span class="pre">date</span></code> and <code class="docutils literal notranslate"><span class="pre">discharge</span></code> columns,
+or pass the correct <code class="docutils literal notranslate"><span class="pre">date_col</span></code> / <code class="docutils literal notranslate"><span class="pre">discharge_col</span></code> arguments.</p></li>
+</ul>
+</section>
+<section id="predictions-are-all-zeros-or-flatlines">
+<h2>Predictions are all zeros or flatlines<a class="headerlink" href="#predictions-are-all-zeros-or-flatlines" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Predicted streamflow is near-zero or flat across time.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Check that training targets are correctly scaled and not dominated by zeros.</p></li>
+<li><p>Verify loss settings and learning rate are reasonable for the data range.</p></li>
+<li><p>Inspect a few stations to confirm the observed discharge has non-zero values.</p></li>
+</ul>
+</section>
+<section id="missing-or-empty-raster-inputs">
+<h2>Missing or empty raster inputs<a class="headerlink" href="#missing-or-empty-raster-inputs" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Runoff computation fails or returns empty arrays.</p></li>
+<li><p>Interactive map shows blank layers.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Confirm the DEM, soil, NDVI, tree cover, and meteorology folders exist under
+<code class="docutils literal notranslate"><span class="pre">working_dir</span></code>.</p></li>
+<li><p>Re-run preprocessing if the study area or DEM resolution changed.</p></li>
+<li><p>Verify raster CRS is EPSG:4326 and extents overlap the basin.</p></li>
+</ul>
+</section>
+<section id="observed-streamflow-dates-out-of-range">
+<h2>Observed streamflow dates out of range<a class="headerlink" href="#observed-streamflow-dates-out-of-range" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>No data returned for training or evaluation periods.</p></li>
+<li><p>Empty observed time series after filtering.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Ensure the GRDC NetCDF or CSVs cover the selected date range.</p></li>
+<li><p>Check that dates are parsed correctly (<code class="docutils literal notranslate"><span class="pre">YYYY-MM-DD</span></code>) and are daily.</p></li>
+</ul>
+</section>
+<section id="mismatched-routing-method">
+<h2>Mismatched routing method<a class="headerlink" href="#mismatched-routing-method" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Training or simulation runs but outputs look inconsistent with runoff maps.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Use the same <code class="docutils literal notranslate"><span class="pre">routing_method</span></code> (e.g., <code class="docutils literal notranslate"><span class="pre">mfd</span></code>/<code class="docutils literal notranslate"><span class="pre">d8</span></code>/<code class="docutils literal notranslate"><span class="pre">dinf</span></code>) in VegET and
+in training/simulation calls.</p></li>
+</ul>
+</section>
+<section id="alphaearth-scaling-or-missing-scaler">
+<h2>AlphaEarth scaling or missing scaler<a class="headerlink" href="#alphaearth-scaling-or-missing-scaler" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Model fails to load or predictions are unstable.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Ensure <code class="docutils literal notranslate"><span class="pre">models/alpha_earth_scaler.pkl</span></code> exists in the training workspace.</p></li>
+<li><p>Re-train if the AlphaEarth inputs changed.</p></li>
+</ul>
+</section>
+<section id="runoff-response-scaler-missing">
+<h2>Runoff/response scaler missing<a class="headerlink" href="#runoff-response-scaler-missing" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Predictions look shifted or unstable after scaling changes.</p></li>
+<li><p>Inference fails to find scaler files.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Ensure <code class="docutils literal notranslate"><span class="pre">models/alpha_earth_scaler.pkl</span></code> exists and matches the model inputs.</p></li>
+<li><p>Re-train the model to regenerate scalers if missing.</p></li>
+</ul>
+</section>
+<section id="model-outputs-in-unexpected-units">
+<h2>Model outputs in unexpected units<a class="headerlink" href="#model-outputs-in-unexpected-units" title="Link to this heading">¶</a></h2>
+<p>Symptoms:</p>
+<ul class="simple">
+<li><p>Predicted streamflow magnitudes are implausible.</p></li>
+</ul>
+<p>Fix:</p>
+<ul class="simple">
+<li><p>Outputs are written in m³/s. Verify that the response scaler is being
+inverse-transformed before reversing area normalization, and that basin area
+and input runoff units are consistent.</p></li>
+</ul>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="model_configuration.html"
+       title="previous chapter">← Model Configuration</a>
+  </li>
+  <li class="next">
+    <a href="api_structure.html"
+       title="next chapter">API Structure →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

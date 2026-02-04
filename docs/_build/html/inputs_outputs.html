@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>Inputs and Outputs</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="Model Configuration" href="model_configuration.html" />
+  <link rel="prev" title="Quick Start" href="quickstart.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="current">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="quickstart.html" class="reference internal ">Quick Start</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 current">
+            
+              <a href="#" class="reference internal current">Inputs and Outputs</a>
+            
+
+            
+              <ul>
+                
+                  <li class="toctree-l2"><a href="#global-assumptions" class="reference internal">Global assumptions</a></li>
+                
+                  <li class="toctree-l2"><a href="#observed-streamflow-csv-schema" class="reference internal">Observed streamflow CSV schema</a></li>
+                
+                  <li class="toctree-l2"><a href="#predicted-streamflow-units" class="reference internal">Predicted streamflow units</a></li>
+                
+                  <li class="toctree-l2"><a href="#module-reference" class="reference internal">Module reference</a></li>
+                
+              </ul>
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+    
+    <li>Inputs and Outputs</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="quickstart.html"
+       title="previous chapter">← Quick Start</a>
+  </li>
+  <li class="next">
+    <a href="model_configuration.html"
+       title="next chapter">Model Configuration →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="inputs-and-outputs">
+<h1>Inputs and Outputs<a class="headerlink" href="#inputs-and-outputs" title="Link to this heading">¶</a></h1>
+<p>This page summarizes required inputs, expected units/CRS, and outputs by module.</p>
+<section id="global-assumptions">
+<h2>Global assumptions<a class="headerlink" href="#global-assumptions" title="Link to this heading">¶</a></h2>
+<ul class="simple">
+<li><p>CRS: EPSG:4326 for all rasters and vector inputs unless noted.</p></li>
+<li><p>Area units: number of 1 km x 1 km grid cells (km²).</p></li>
+<li><p>Discharge units: m³/s (raw), area-normalized to mm/day for model inputs.</p></li>
+</ul>
+</section>
+<section id="observed-streamflow-csv-schema">
+<h2>Observed streamflow CSV schema<a class="headerlink" href="#observed-streamflow-csv-schema" title="Link to this heading">¶</a></h2>
+<section id="lookup-csv-station-metadata">
+<h3>Lookup CSV (station metadata)<a class="headerlink" href="#lookup-csv-station-metadata" title="Link to this heading">¶</a></h3>
+<p>Required columns (default names in parentheses):
+- station id (<code class="docutils literal notranslate"><span class="pre">id</span></code>)
+- latitude (<code class="docutils literal notranslate"><span class="pre">latitude</span></code>)
+- longitude (<code class="docutils literal notranslate"><span class="pre">longitude</span></code>)</p>
+<p>Notes:
+- Coordinates must be in EPSG:4326.
+- Station IDs are treated as strings.</p>
+</section>
+<section id="per-station-csv-time-series">
+<h3>Per-station CSV (time series)<a class="headerlink" href="#per-station-csv-time-series" title="Link to this heading">¶</a></h3>
+<p>Required columns (default names in parentheses):
+- date (<code class="docutils literal notranslate"><span class="pre">date</span></code>)
+- discharge (<code class="docutils literal notranslate"><span class="pre">discharge</span></code>)</p>
+<p>Notes:
+- Dates must be parseable by pandas (e.g., <code class="docutils literal notranslate"><span class="pre">YYYY-MM-DD</span></code>).
+- Discharge is expected in m³/s.
+- One CSV per station; filenames follow <code class="docutils literal notranslate"><span class="pre">{id}.csv</span></code> by default.</p>
+</section>
+</section>
+<section id="predicted-streamflow-units">
+<h2>Predicted streamflow units<a class="headerlink" href="#predicted-streamflow-units" title="Link to this heading">¶</a></h2>
+<p>Model training is performed on area-normalized targets (mm/day) and uses a
+<code class="docutils literal notranslate"><span class="pre">log1p</span></code> transform during training. Predictions are inverse-transformed with
+<code class="docutils literal notranslate"><span class="pre">expm1</span></code> and converted back to volumetric discharge (m³/s) by reversing the
+area normalization. The CSV outputs written to
+<code class="docutils literal notranslate"><span class="pre">{working_dir}/predicted_streamflow_data</span></code> are in m³/s.</p>
+</section>
+<section id="module-reference">
+<h2>Module reference<a class="headerlink" href="#module-reference" title="Link to this heading">¶</a></h2>
+<section id="dem-bakaano-dem-dem">
+<h3>DEM (bakaano.dem.DEM)<a class="headerlink" href="#dem-bakaano-dem-dem" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- study_area: basin shapefile (EPSG:4326)
+- local_data_path (optional): local DEM GeoTIFF (EPSG:4326)</p>
+<p>Outputs:
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/elevation/dem_clipped.tif</span></code>
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/elevation/slope_clipped.tif</span></code></p>
+</section>
+<section id="soil-bakaano-soil-soil">
+<h3>Soil (bakaano.soil.Soil)<a class="headerlink" href="#soil-bakaano-soil-soil" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- study_area: basin shapefile (EPSG:4326)</p>
+<p>Outputs:
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif</span></code>
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/soil/clipped_WWP_M_sl6_1km_ll.tif</span></code>
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/soil/clipped_AWCtS_M_sl6_1km_ll.tif</span></code></p>
+</section>
+<section id="ndvi-bakaano-ndvi-ndvi">
+<h3>NDVI (bakaano.ndvi.NDVI)<a class="headerlink" href="#ndvi-bakaano-ndvi-ndvi" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- start_date / end_date: YYYY-MM-DD
+- study_area: basin shapefile (EPSG:4326)</p>
+<p>Outputs:
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/ndvi/daily_ndvi_climatology.pkl</span></code>
+- Intermediate NDVI GeoTIFFs in <code class="docutils literal notranslate"><span class="pre">{working_dir}/ndvi/</span></code></p>
+</section>
+<section id="tree-cover-bakaano-tree-cover-treecover">
+<h3>Tree cover (bakaano.tree_cover.TreeCover)<a class="headerlink" href="#tree-cover-bakaano-tree-cover-treecover" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- start_date / end_date: YYYY-MM-DD
+- study_area: basin shapefile (EPSG:4326)</p>
+<p>Outputs:
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/vcf/mean_tree_cover.tif</span></code>
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/vcf/mean_herb_cover.tif</span></code></p>
+</section>
+<section id="alphaearth-bakaano-alpha-earth-alphaearth">
+<h3>AlphaEarth (bakaano.alpha_earth.AlphaEarth)<a class="headerlink" href="#alphaearth-bakaano-alpha-earth-alphaearth" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- start_date / end_date: YYYY-MM-DD
+- study_area: basin shapefile (EPSG:4326)</p>
+<p>Outputs:
+- <code class="docutils literal notranslate"><span class="pre">{working_dir}/alpha_earth/band_A00.tif</span></code> … <code class="docutils literal notranslate"><span class="pre">band_A63.tif</span></code></p>
+</section>
+<section id="meteo-bakaano-meteo-meteo">
+<h3>Meteo (bakaano.meteo.Meteo)<a class="headerlink" href="#meteo-bakaano-meteo-meteo" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- start_date / end_date: YYYY-MM-DD
+- data_source: CHELSA, ERA5, or CHIRPS</p>
+<p>Outputs:</p>
+<ul class="simple">
+<li><p>NetCDFs in <code class="docutils literal notranslate"><span class="pre">{working_dir}/{data_source}/</span></code> (pr, tasmax, tasmin, tas)</p></li>
+<li><p>For Earth Engine downloads (ERA5/CHIRPS), intermediate GeoTIFFs are stored
+in scratch folders before conversion to NetCDF.</p></li>
+</ul>
+</section>
+<section id="veget-routing-bakaano-veget-veget">
+<h3>VegET + routing (bakaano.veget.VegET)<a class="headerlink" href="#veget-routing-bakaano-veget-veget" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- DEM, soil, NDVI, tree cover, meteo
+- routing_method: mfd, d8, dinf</p>
+<p>Outputs:
+- Routed runoff in <code class="docutils literal notranslate"><span class="pre">{working_dir}/runoff_output/*.pkl</span></code>
+- River grid in <code class="docutils literal notranslate"><span class="pre">{working_dir}/catchment/river_grid.tif</span></code> (if generated)</p>
+</section>
+<section id="streamflow-training-bakaano-streamflow-trainer">
+<h3>Streamflow training (bakaano.streamflow_trainer)<a class="headerlink" href="#streamflow-training-bakaano-streamflow-trainer" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- GRDC NetCDF (or CSV lookup + per-station CSVs)
+- Routed runoff in {working_dir}/runoff_output
+- AlphaEarth bands in {working_dir}/alpha_earth</p>
+<p>Outputs:
+- Trained model: <code class="docutils literal notranslate"><span class="pre">{working_dir}/models/bakaano_model.keras</span></code>
+- AlphaEarth scaler: <code class="docutils literal notranslate"><span class="pre">{working_dir}/models/alpha_earth_scaler.pkl</span></code></p>
+</section>
+<section id="streamflow-simulation-bakaano-streamflow-simulator">
+<h3>Streamflow simulation (bakaano.streamflow_simulator)<a class="headerlink" href="#streamflow-simulation-bakaano-streamflow-simulator" title="Link to this heading">¶</a></h3>
+<p>Inputs:
+- Trained model
+- Routed runoff and AlphaEarth bands
+- GRDC NetCDF or station CSVs (optional)</p>
+<p>Outputs:
+- Predicted streamflow CSVs in <code class="docutils literal notranslate"><span class="pre">{working_dir}/predicted_streamflow_data</span></code></p>
+</section>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="quickstart.html"
+       title="previous chapter">← Quick Start</a>
+  </li>
+  <li class="next">
+    <a href="model_configuration.html"
+       title="next chapter">Model Configuration →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>

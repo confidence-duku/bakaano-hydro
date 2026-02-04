@@ -1,3 +1,8 @@
+"""Shared spatial utilities for preprocessing and raster alignment.
+
+Role: Provide common geospatial helpers (clip, reproject, align, etc.).
+"""
+
 import numpy as np
 import xarray as xr
 import os
@@ -12,12 +17,18 @@ from shapely.geometry import shape
 from rasterio.windows import from_bounds
 import warnings
 from rasterio.warp import calculate_default_transform, reproject, Resampling
-warnings.filterwarnings("ignore", category=rasterio.errors.RasterioDeprecationWarning)
+try:
+    from rasterio.errors import RasterioDeprecationWarning as _RasterioDeprecationWarning
+except Exception:
+    _RasterioDeprecationWarning = None
+
+if isinstance(_RasterioDeprecationWarning, type):
+    warnings.filterwarnings("ignore", category=_RasterioDeprecationWarning)
 
 
 class Utils:
     def __init__(self, working_dir, study_area):
-        """_summary_
+        """Role: Geospatial helper utilities for raster/vector processing.
 
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
@@ -35,6 +46,14 @@ class Utils:
         self.ref_shape = self.match.shape[-2:]  # (height, width)
         
     def process_existing_file(self, file_path):
+        """Check whether a file already exists.
+
+        Args:
+            file_path (str): File path to check.
+
+        Returns:
+            bool: True if file exists, else False.
+        """
         directory, filename = os.path.split(file_path)
         if os.path.exists(file_path):
             #print(f"     - The file {filename} already exists in the directory {directory}. Skipping further processing.")
@@ -44,6 +63,12 @@ class Utils:
 
     # Write output to a new GeoTIFF file
     def save_to_scratch(self,output_file_path, array_to_save):
+        """Save an array as a GeoTIFF aligned to the DEM profile.
+
+        Args:
+            output_file_path (str): Destination GeoTIFF path.
+            array_to_save (np.ndarray): 2D array to write.
+        """
         with rasterio.open(f'{self.working_dir}/elevation/dem_clipped.tif') as lc_src: 
             luc = lc_src.profile
         lc_meta = lc_src.meta.copy()
@@ -58,6 +83,12 @@ class Utils:
             dst.write(array_to_save, 1)
             
     def reproject_raster(self, input_ras, out_ras):
+        """Reproject a raster to EPSG:4326.
+
+        Args:
+            input_ras (str): Path to input raster.
+            out_ras (str): Path to output raster.
+        """
         dst_crs = 'EPSG:4326'
 
         with rasterio.open(input_ras) as src:
@@ -83,6 +114,15 @@ class Utils:
                         resampling=Resampling.nearest)
     
     def align_rasters(self, input_ras, israster=True):
+        """Reproject/align rasters or xarray grids to the DEM reference grid.
+
+        Args:
+            input_ras: Raster path (if ``israster=True``) or xarray/DataArray.
+            israster (bool): Whether ``input_ras`` is a file path.
+
+        Returns:
+            xarray.DataArray: Reprojected data aligned to the DEM grid.
+        """
 
         # ---- 1. If array already matches reference grid, return early ----
         if not israster:
@@ -116,6 +156,11 @@ class Utils:
 
     
     def get_bbox(self, dst_crs):
+        """Compute and store the study area bounding box.
+
+        Args:
+            dst_crs (str): Target CRS (e.g., ``"EPSG:4326"``).
+        """
         shp = gpd.read_file(self.study_area)
         #dst_crs = 'EPSG:4326'
         dst_crs = dst_crs
@@ -137,6 +182,15 @@ class Utils:
 
         
     def concat_nc(self, clim_dir, dataset_str):
+        """Concatenate NetCDF files and clip to the study area.
+
+        Args:
+            clim_dir (pathlib.Path): Directory containing NetCDF files.
+            dataset_str (str): Glob pattern to match files.
+
+        Returns:
+            xarray.Dataset: Concatenated and clipped dataset.
+        """
         #nc_list = []
         self.get_bbox('EPSG:4326')
         files = list(map(str, clim_dir.glob(dataset_str)))
@@ -160,9 +214,14 @@ class Utils:
         and saves the clipped data to a new file (dst_path).
         
         Args:
-          src_path (str): Path to the source raster file.
-          clip_path (str): Path to the clip raster file.
-          dst_path (str): Path to save the clipped raster file.
+          raster_path (str): Path to the raster file.
+          dst_crs (str): Target CRS for clipping.
+          out_path (str, optional): Output path for the clipped raster.
+          save_output (bool): Whether to write the clipped raster to disk.
+          crop_type (bool): If True, crop strictly to shape; else to bounds.
+
+        Returns:
+          np.ndarray: Clipped raster array (bands, y, x).
         """
         shp = gpd.read_file(self.study_area)
         #dst_crs = 'EPSG:4326'

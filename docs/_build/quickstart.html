@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html  lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1"><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+      <title>Quick Start</title>
+    
+          <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+          <link rel="stylesheet" href="_static/theme.css " type="text/css" />
+          <link rel="stylesheet" href="_static/press_custom.css" type="text/css" />
+      
+      <!-- sphinx script_files -->
+        <script src="_static/documentation_options.js?v=bb516dca"></script>
+        <script src="_static/doctools.js?v=9a2dae69"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+
+      
+      <!-- bundled in js (rollup iife) -->
+      <!-- <script src="_static/theme-vendors.js"></script> -->
+      <script src="_static/theme.js" defer></script>
+    
+  <link rel="index" title="Index" href="genindex.html" />
+  <link rel="search" title="Search" href="search.html" />
+  <link rel="next" title="Inputs and Outputs" href="inputs_outputs.html" />
+  <link rel="prev" title="Installation" href="installation.html" /> 
+  </head>
+
+  <body>
+    <div id="app">
+    <div class="theme-container" :class="pageClasses"><navbar @toggle-sidebar="toggleSidebar">
+  <router-link to="index.html" class="home-link">
+    
+      <span class="site-name">Bakaano-Hydro</span>
+    
+  </router-link>
+
+  <div class="links">
+    <navlinks class="can-hide">
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+    </navlinks>
+  </div>
+</navbar>
+
+      
+      <div class="sidebar-mask" @click="toggleSidebar(false)">
+      </div>
+        <sidebar @toggle-sidebar="toggleSidebar">
+          
+          <navlinks>
+            
+
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link  router-link-active">
+         Getting Started
+      </a>
+    </div>
+  
+    <div class="nav-item">
+      <a href="index.html#contents"
+         class="nav-link ">
+         Reference
+      </a>
+    </div>
+  
+
+
+
+            
+          </navlinks><div id="searchbox" class="searchbox" role="search">
+  <div class="caption"><span class="caption-text">Quick search</span>
+    <div class="searchformwrapper">
+      <form class="search" action="search.html" method="get">
+        <input type="text" name="q" />
+        <input type="submit" value="Search" />
+        <input type="hidden" name="check_keywords" value="yes" />
+        <input type="hidden" name="area" value="default" />
+      </form>
+    </div>
+  </div>
+</div><div class="sidebar-links" role="navigation" aria-label="main navigation">
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Getting Started</a></span>
+      </p>
+      <ul class="current">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="installation.html" class="reference internal ">Installation</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 current">
+            
+              <a href="#" class="reference internal current">Quick Start</a>
+            
+
+            
+              <ul>
+                
+                  <li class="toctree-l2"><a href="#setup-working-directory-and-study-area" class="reference internal">1) Setup working directory and study area</a></li>
+                
+                  <li class="toctree-l2"><a href="#download-and-preprocess-input-data" class="reference internal">2) Download and preprocess input data</a></li>
+                
+                  <li class="toctree-l2"><a href="#computing-runoff-and-routing-to-river-network" class="reference internal">3) Computing runoff and routing to river network</a></li>
+                
+                  <li class="toctree-l2"><a href="#explore-input-data-river-networks-and-stations-interactively" class="reference internal">4) Explore input data, river networks and stations interactively</a></li>
+                
+                  <li class="toctree-l2"><a href="#training-evaluating-and-applying-bakaano-hydro" class="reference internal">5) Training, evaluating and applying Bakaano-Hydro</a></li>
+                
+              </ul>
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="inputs_outputs.html" class="reference internal ">Inputs and Outputs</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="model_configuration.html" class="reference internal ">Model Configuration</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="troubleshooting.html" class="reference internal ">Troubleshooting</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+    <div class="sidebar-group">
+      <p class="caption">
+        <span class="caption-text"><a href="index.html#contents">Reference</a></span>
+      </p>
+      <ul class="">
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api_structure.html" class="reference internal ">API Structure</a>
+            
+
+            
+          </li>
+
+        
+          <li class="toctree-l1 ">
+            
+              <a href="api.html" class="reference internal ">API Reference</a>
+            
+
+            
+          </li>
+
+        
+      </ul>
+    </div>
+  
+</div>
+        </sidebar>
+
+      <page>
+          <div class="body-header" role="navigation" aria-label="navigation">
+  
+  <ul class="breadcrumbs">
+    <li><a href="index.html">Docs</a> &raquo;</li>
+    
+    <li>Quick Start</li>
+  </ul>
+  
+
+  <ul class="page-nav">
+  <li class="prev">
+    <a href="installation.html"
+       title="previous chapter">← Installation</a>
+  </li>
+  <li class="next">
+    <a href="inputs_outputs.html"
+       title="next chapter">Inputs and Outputs →</a>
+  </li>
+</ul>
+  
+</div>
+<hr>
+          <div class="content" role="main" v-pre>
+            
+  <section id="quick-start">
+<h1>Quick Start<a class="headerlink" href="#quick-start" title="Link to this heading">¶</a></h1>
+<section id="setup-working-directory-and-study-area">
+<h2>1) Setup working directory and study area<a class="headerlink" href="#setup-working-directory-and-study-area" title="Link to this heading">¶</a></h2>
+<p>Define where all intermediate and output files will be stored, and the basin
+boundary shapefile that defines the spatial extent of the workflow. The
+shapefile should be in EPSG:4326 (WGS84) so that all raster downloads and
+clipping steps align correctly.</p>
+<p>At this stage you are only defining paths; no files are created yet. All
+subsequent modules will read from and write to subfolders under
+<code class="docutils literal notranslate"><span class="pre">working_dir</span></code>. Keep the basin shapefile small and clean (single polygon)
+to avoid clipping issues.</p>
+<p>Expected outputs:</p>
+<ul class="simple">
+<li><p>Folders under <code class="docutils literal notranslate"><span class="pre">working_dir</span></code> created by later steps (e.g., <code class="docutils literal notranslate"><span class="pre">elevation/</span></code>,
+<code class="docutils literal notranslate"><span class="pre">soil/</span></code>, <code class="docutils literal notranslate"><span class="pre">ndvi/</span></code>, <code class="docutils literal notranslate"><span class="pre">vcf/</span></code>).</p></li>
+</ul>
+<p>Common pitfalls:</p>
+<ul class="simple">
+<li><p>Shapefile in a different CRS (reproject to EPSG:4326).</p></li>
+<li><p>Shapefile path points to the wrong basin or an empty geometry.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">working_dir</span> <span class="o">=</span> <span class="s2">&quot;/path/to/working_dir&quot;</span>
+<span class="n">study_area</span> <span class="o">=</span> <span class="s2">&quot;/path/to/basin.shp&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="download-and-preprocess-input-data">
+<h2>2) Download and preprocess input data<a class="headerlink" href="#download-and-preprocess-input-data" title="Link to this heading">¶</a></h2>
+<p>These steps download and prepare static inputs (vegetation, DEM, soil, AlphaEarth)
+and dynamic forcing (meteorology). Most inputs are clipped to the study area and
+saved under <code class="docutils literal notranslate"><span class="pre">working_dir</span></code> for later stages.</p>
+<p>Run these once per basin. If you change the basin boundary or the DEM
+resolution, re-run the preprocessing steps so all inputs align. For Earth
+Engine-based datasets, the first run will prompt for authentication.</p>
+<section id="google-earth-engine-authentication">
+<h3>Google Earth Engine authentication<a class="headerlink" href="#google-earth-engine-authentication" title="Link to this heading">¶</a></h3>
+<p>Several inputs (NDVI, Tree cover, AlphaEarth, and ERA5/CHIRPS via Earth Engine)
+require Google Earth Engine (GEE). The first time you run these modules, you
+will be prompted to authenticate.</p>
+<p>Typical workflow:</p>
+<ul class="simple">
+<li><p>Register for a GEE account in the Earth Engine Code Editor.
+Code Editor: <code class="docutils literal notranslate"><span class="pre">https://code.earthengine.google.com/</span></code></p></li>
+<li><p>The Earth Engine Python API is installed as part of the project dependencies.</p></li>
+<li><p>Run any module that calls <code class="docutils literal notranslate"><span class="pre">ee.Authenticate()</span></code> (e.g., NDVI or TreeCover).</p></li>
+<li><p>A browser window will open with a Google login prompt.</p></li>
+<li><p>After login, copy the authorization code back to the terminal.</p></li>
+</ul>
+<p>If you are on a headless server:</p>
+<ul class="simple">
+<li><p>Run <code class="docutils literal notranslate"><span class="pre">earthengine</span> <span class="pre">authenticate</span></code> on a machine with a browser.</p></li>
+<li><p>Copy the generated credentials (<code class="docutils literal notranslate"><span class="pre">~/.config/earthengine/credentials</span></code>) to
+the server under the same path.</p></li>
+</ul>
+<p>Expected outputs:</p>
+<ul class="simple">
+<li><p>Raster files in <code class="docutils literal notranslate"><span class="pre">ndvi/</span></code>, <code class="docutils literal notranslate"><span class="pre">vcf/</span></code>, <code class="docutils literal notranslate"><span class="pre">elevation/</span></code>, <code class="docutils literal notranslate"><span class="pre">soil/</span></code>, <code class="docutils literal notranslate"><span class="pre">alpha_earth/</span></code>.</p></li>
+<li><p>NetCDF climate files in <code class="docutils literal notranslate"><span class="pre">{data_source}/</span></code>.</p></li>
+</ul>
+<p>Common pitfalls:</p>
+<ul class="simple">
+<li><p>Missing Earth Engine authentication (NDVI/Tree cover/AlphaEarth).</p></li>
+<li><p>Incomplete downloads (rerun the step).</p></li>
+</ul>
+</section>
+<section id="tree-cover-modis-vcf">
+<h3>Tree cover (MODIS VCF)<a class="headerlink" href="#tree-cover-modis-vcf" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads annual MODIS VCF tree cover, clips to the study area, and resamples
+to the DEM grid so it aligns with all other rasters.</p></li>
+<li><p>Produces a static vegetation cover layer used by VegET and the streamflow model
+as a land-surface predictor.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.tree_cover</span><span class="w"> </span><span class="kn">import</span> <span class="n">TreeCover</span>
+<span class="n">vf</span> <span class="o">=</span> <span class="n">TreeCover</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">vf</span><span class="o">.</span><span class="n">get_tree_cover_data</span><span class="p">()</span>
+<span class="n">vf</span><span class="o">.</span><span class="n">plot_tree_cover</span><span class="p">(</span><span class="n">variable</span><span class="o">=</span><span class="s2">&quot;tree_cover&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id1">
+<a class="reference internal image-reference" href="_images/quick_start_3_1.png"><img alt="Mean tree cover example" src="_images/quick_start_3_1.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: mean tree cover raster.</span><a class="headerlink" href="#id1" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="ndvi-modis-16-day">
+<h3>NDVI (MODIS 16-day)<a class="headerlink" href="#ndvi-modis-16-day" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads 16-day NDVI composites, clips to the basin, and resamples to the DEM grid.</p></li>
+<li><p>Aggregates to climatology or interval stacks (as stored under <code class="docutils literal notranslate"><span class="pre">ndvi/</span></code>) used by
+VegET to represent vegetation dynamics and seasonal water use.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.ndvi</span><span class="w"> </span><span class="kn">import</span> <span class="n">NDVI</span>
+<span class="n">nd</span> <span class="o">=</span> <span class="n">NDVI</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">nd</span><span class="o">.</span><span class="n">get_ndvi_data</span><span class="p">()</span>
+<span class="n">nd</span><span class="o">.</span><span class="n">plot_ndvi</span><span class="p">(</span><span class="n">interval_num</span><span class="o">=</span><span class="mi">10</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id2">
+<a class="reference internal image-reference" href="_images/quick_start_4_2.png"><img alt="NDVI example" src="_images/quick_start_4_2.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: NDVI climatology for a 16-day interval.</span><a class="headerlink" href="#id2" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="dem">
+<h3>DEM<a class="headerlink" href="#dem" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads a DEM (default 1 km), clips to the basin, and reprojects to match the
+project grid.</p></li>
+<li><p>Derives slope, flow direction, accumulation, and the river grid used for
+runoff routing and catchment geometry.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.dem</span><span class="w"> </span><span class="kn">import</span> <span class="n">DEM</span>
+<span class="n">dd</span> <span class="o">=</span> <span class="n">DEM</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">local_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">local_data_path</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">dd</span><span class="o">.</span><span class="n">get_dem_data</span><span class="p">()</span>
+<span class="n">dd</span><span class="o">.</span><span class="n">plot_dem</span><span class="p">()</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id3">
+<a class="reference internal image-reference" href="_images/quick_start_5_2.png"><img alt="DEM example" src="_images/quick_start_5_2.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: clipped DEM.</span><a class="headerlink" href="#id3" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="soil">
+<h3>Soil<a class="headerlink" href="#soil" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads global soil properties, clips to the basin, and resamples to the DEM grid.</p></li>
+<li><p>Produces soil layers (e.g., wilting point, field capacity) used by VegET to
+model soil moisture storage and evapotranspiration.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.soil</span><span class="w"> </span><span class="kn">import</span> <span class="n">Soil</span>
+<span class="n">sgd</span> <span class="o">=</span> <span class="n">Soil</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">sgd</span><span class="o">.</span><span class="n">get_soil_data</span><span class="p">()</span>
+<span class="n">sgd</span><span class="o">.</span><span class="n">plot_soil</span><span class="p">(</span><span class="n">variable</span><span class="o">=</span><span class="s2">&quot;wilting_point&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id4">
+<a class="reference internal image-reference" href="_images/quick_start_6_2.png"><img alt="Soil example" src="_images/quick_start_6_2.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: soil property raster.</span><a class="headerlink" href="#id4" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="alphaearth-embeddings">
+<h3>AlphaEarth embeddings<a class="headerlink" href="#alphaearth-embeddings" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads AlphaEarth embedding tiles, clips to the basin, and resamples to the
+DEM grid.</p></li>
+<li><p>Stacks the embedding bands as static catchment descriptors used by the streamflow
+model to capture land-surface characteristics beyond basic physiography.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.alpha_earth</span><span class="w"> </span><span class="kn">import</span> <span class="n">AlphaEarth</span>
+<span class="n">dd</span> <span class="o">=</span> <span class="n">AlphaEarth</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2013-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2024-01-01&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">dd</span><span class="o">.</span><span class="n">get_alpha_earth</span><span class="p">()</span>
+<span class="n">dd</span><span class="o">.</span><span class="n">plot_alpha_earth</span><span class="p">(</span><span class="s2">&quot;A35&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id5">
+<a class="reference internal image-reference" href="_images/quick_start_7_2.png"><img alt="AlphaEarth example" src="_images/quick_start_7_2.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: AlphaEarth band visualization.</span><a class="headerlink" href="#id5" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="meteorology-era5-chirps-chelsa">
+<h3>Meteorology (ERA5 / CHIRPS / CHELSA)<a class="headerlink" href="#meteorology-era5-chirps-chelsa" title="Link to this heading">¶</a></h3>
+<p>Preprocessing and model use:</p>
+<ul class="simple">
+<li><p>Downloads meteorological variables as raster time series, clips to the basin, and
+resamples to the DEM grid.</p></li>
+<li><p>ERA5 provides the full set of variables. CHIRPS is used for precipitation only,
+while other variables still come from ERA5. CHELSA provides downscaled ERA5 data.</p></li>
+<li><p>Stores results under <code class="docutils literal notranslate"><span class="pre">{data_source}/</span></code> and converts them to NetCDF stacks for
+efficient access during VegET runoff computation and model training.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.meteo</span><span class="w"> </span><span class="kn">import</span> <span class="n">Meteo</span>
+<span class="n">cd</span> <span class="o">=</span> <span class="n">Meteo</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
+    <span class="n">local_data</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+    <span class="n">data_source</span><span class="o">=</span><span class="s2">&quot;ERA5&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">cd</span><span class="o">.</span><span class="n">plot_meteo</span><span class="p">(</span><span class="n">variable</span><span class="o">=</span><span class="s2">&quot;tasmin&quot;</span><span class="p">,</span> <span class="n">date</span><span class="o">=</span><span class="s2">&quot;2006-12-01&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id6">
+<a class="reference internal image-reference" href="_images/quick_start_8_2.png"><img alt="Meteorology example" src="_images/quick_start_8_2.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: meteorological field.</span><a class="headerlink" href="#id6" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+<section id="computing-runoff-and-routing-to-river-network">
+<h2>3) Computing runoff and routing to river network<a class="headerlink" href="#computing-runoff-and-routing-to-river-network" title="Link to this heading">¶</a></h2>
+<p>This step computes daily runoff using VegET and routes it to the river network.
+Outputs are stored in <code class="docutils literal notranslate"><span class="pre">runoff_output</span></code> and are used as predictors for
+streamflow model training and simulation.</p>
+<p>The runoff computation depends on the DEM grid. If you provide a higher
+resolution DEM, the runtime will increase and outputs will be larger. Make
+sure you have enough disk space for the routed runoff files.</p>
+<p>Expected outputs:</p>
+<ul class="simple">
+<li><p>Routed runoff pickles in <code class="docutils literal notranslate"><span class="pre">runoff_output/</span></code>.</p></li>
+<li><p>River grid in <code class="docutils literal notranslate"><span class="pre">catchment/river_grid.tif</span></code> (if generated).</p></li>
+</ul>
+<p>Common pitfalls:</p>
+<ul class="simple">
+<li><p>DEM missing or not clipped to basin.</p></li>
+<li><p>Missing NDVI/tree cover/soil inputs.</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.veget</span><span class="w"> </span><span class="kn">import</span> <span class="n">VegET</span>
+<span class="n">vg</span> <span class="o">=</span> <span class="n">VegET</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
+    <span class="n">climate_data_source</span><span class="o">=</span><span class="s2">&quot;ERA5&quot;</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">vg</span><span class="o">.</span><span class="n">compute_veget_runoff_route_flow</span><span class="p">()</span>
+</pre></div>
+</div>
+<p>Visualize routed runoff</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.plot_runoff</span><span class="w"> </span><span class="kn">import</span> <span class="n">RoutedRunoff</span>
+<span class="n">rr</span> <span class="o">=</span> <span class="n">RoutedRunoff</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">rr</span><span class="o">.</span><span class="n">map_routed_runoff</span><span class="p">(</span><span class="n">date</span><span class="o">=</span><span class="s2">&quot;2020-01-03&quot;</span><span class="p">,</span> <span class="n">vmax</span><span class="o">=</span><span class="mi">7</span><span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id7">
+<a class="reference internal image-reference" href="_images/quick_start_11_1.png"><img alt="Routed runoff example" src="_images/quick_start_11_1.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: routed runoff map.</span><a class="headerlink" href="#id7" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+<section id="interactive-routed-runoff-timeseries">
+<h3>Interactive routed runoff timeseries<a class="headerlink" href="#interactive-routed-runoff-timeseries" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">rr</span><span class="o">.</span><span class="n">interactive_plot_routed_runoff_timeseries</span><span class="p">(</span>
+    <span class="n">start_date</span><span class="o">=</span><span class="s2">&quot;2000-01-01&quot;</span><span class="p">,</span>
+    <span class="n">end_date</span><span class="o">=</span><span class="s2">&quot;2000-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id8">
+<a class="reference internal image-reference" href="_images/routedrunofftimeseries.png"><img alt="Routed runoff timeseries example" src="_images/routedrunofftimeseries.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: routed runoff timeseries.</span><a class="headerlink" href="#id8" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+<section id="explore-input-data-river-networks-and-stations-interactively">
+<h2>4) Explore input data, river networks and stations interactively<a class="headerlink" href="#explore-input-data-river-networks-and-stations-interactively" title="Link to this heading">¶</a></h2>
+<p>Use the interactive map to inspect DEM, slope, vegetation, routed river network,
+and available hydrological stations for the study area. This is useful to verify
+data availability before training or simulation.</p>
+<p>Use this step to sanity-check that stations fall inside the basin and that
+the raster layers align spatially. If no stations appear, your GRDC file likely
+does not cover the basin or the CRS is mismatched.</p>
+<p>Expected outputs:</p>
+<ul class="simple">
+<li><p>An interactive map with layers and station points.</p></li>
+</ul>
+<p>Common pitfalls:</p>
+<ul class="simple">
+<li><p>GRDC NetCDF does not cover the basin (no stations appear).</p></li>
+</ul>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">BakaanoHydro</span>
+<span class="n">bk</span> <span class="o">=</span> <span class="n">BakaanoHydro</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">climate_data_source</span><span class="o">=</span><span class="s2">&quot;ERA5&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+<span class="n">bk</span><span class="o">.</span><span class="n">explore_data_interactively</span><span class="p">(</span>
+    <span class="s2">&quot;1989-01-01&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;1989-12-31&quot;</span><span class="p">,</span>
+    <span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="training-evaluating-and-applying-bakaano-hydro">
+<h2>5) Training, evaluating and applying Bakaano-Hydro<a class="headerlink" href="#training-evaluating-and-applying-bakaano-hydro" title="Link to this heading">¶</a></h2>
+<p>This section trains a regional model, evaluates it interactively, and runs
+batch simulations. Training uses routed runoff predictors and observed
+streamflow targets.</p>
+<p>Training can take hours depending on GPU and batch size. Evaluation is
+interactive and lets you choose stations to compare observed vs predicted
+streamflow. Simulation produces CSV files for each station or coordinate.</p>
+<p>Expected outputs:</p>
+<ul class="simple">
+<li><p>Trained model saved in <code class="docutils literal notranslate"><span class="pre">models/</span></code>.</p></li>
+<li><p>Predicted streamflow CSVs in <code class="docutils literal notranslate"><span class="pre">predicted_streamflow_data/</span></code>.</p></li>
+</ul>
+<p>Common pitfalls:</p>
+<ul class="simple">
+<li><p>GRDC NetCDF missing required variables (runoff_mean, geo_x, geo_y).</p></li>
+<li><p>Station IDs not found in the dataset.</p></li>
+</ul>
+<section id="initialize-model">
+<h3>Initialize model<a class="headerlink" href="#initialize-model" title="Link to this heading">¶</a></h3>
+<p>This creates the high-level Bakaano-Hydro object that manages training and
+simulation. It does not start any computation by itself, but it validates the
+working directory and establishes the study area context for later steps.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">bakaano.runner</span><span class="w"> </span><span class="kn">import</span> <span class="n">BakaanoHydro</span>
+<span class="n">bk</span> <span class="o">=</span> <span class="n">BakaanoHydro</span><span class="p">(</span>
+    <span class="n">working_dir</span><span class="o">=</span><span class="n">working_dir</span><span class="p">,</span>
+    <span class="n">study_area</span><span class="o">=</span><span class="n">study_area</span><span class="p">,</span>
+    <span class="n">climate_data_source</span><span class="o">=</span><span class="s2">&quot;ERA5&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="training">
+<h3>Training<a class="headerlink" href="#training" title="Link to this heading">¶</a></h3>
+<p>Training builds the multi-scale TCN model and fits it using routed runoff
+predictors and observed discharge. You can train with GRDC NetCDF stations or
+with per-station CSV files via a lookup table. This step can take hours
+depending on GPU, batch size, and the number of stations.</p>
+<section id="minimal-training-option-grdc">
+<h4>Minimal training option (GRDC)<a class="headerlink" href="#minimal-training-option-grdc" title="Link to this heading">¶</a></h4>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bk</span><span class="o">.</span><span class="n">train_streamflow_model</span><span class="p">(</span>
+    <span class="n">train_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">train_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="minimal-training-option-csv-observations">
+<h4>Minimal training option (CSV observations)<a class="headerlink" href="#minimal-training-option-csv-observations" title="Link to this heading">¶</a></h4>
+<p>Requirements for CSV training:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">lookup_csv</span></code> must include station ID and coordinates (default columns:
+<code class="docutils literal notranslate"><span class="pre">id</span></code>, <code class="docutils literal notranslate"><span class="pre">latitude</span></code>, <code class="docutils literal notranslate"><span class="pre">longitude</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">csv_dir</span></code> should contain one file per station.</p></li>
+<li><p>File naming follows <code class="docutils literal notranslate"><span class="pre">file_pattern</span></code> (default <code class="docutils literal notranslate"><span class="pre">{id}.csv</span></code>).</p></li>
+<li><p>Each station CSV must include a date column and discharge column (default:
+<code class="docutils literal notranslate"><span class="pre">date</span></code> and <code class="docutils literal notranslate"><span class="pre">discharge</span></code>).</p></li>
+</ul>
+<p>See <a class="reference internal" href="inputs_outputs.html"><span class="doc">Inputs and Outputs</span></a> for the full CSV schema and unit conventions.</p>
+<p>Optional column overrides (if your headers differ):
+- <code class="docutils literal notranslate"><span class="pre">id_col</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_col</span></code>, <code class="docutils literal notranslate"><span class="pre">lon_col</span></code>
+- <code class="docutils literal notranslate"><span class="pre">date_col</span></code>, <code class="docutils literal notranslate"><span class="pre">discharge_col</span></code>
+- <code class="docutils literal notranslate"><span class="pre">file_pattern</span></code></p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bk</span><span class="o">.</span><span class="n">train_streamflow_model</span><span class="p">(</span>
+    <span class="n">train_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">train_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">csv_dir</span><span class="o">=</span><span class="s2">&quot;/path/to/observed_csvs&quot;</span><span class="p">,</span>
+    <span class="n">lookup_csv</span><span class="o">=</span><span class="s2">&quot;/path/to/station_lookup.csv&quot;</span><span class="p">,</span>
+    <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+    <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+    <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+    <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+    <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+    <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>Notes:
+- Training saves scalers to <code class="docutils literal notranslate"><span class="pre">{working_dir}/models</span></code> (AlphaEarth, runoff, and response).</p>
+</section>
+</section>
+<section id="advanced-training-option-model-configuration">
+<h3>Advanced training option (model configuration)<a class="headerlink" href="#advanced-training-option-model-configuration" title="Link to this heading">¶</a></h3>
+<p>Parameter guidance (see <a class="reference internal" href="api/bakaano.runner.html#bakaano.runner.BakaanoHydro.train_streamflow_model" title="bakaano.runner.BakaanoHydro.train_streamflow_model"><code class="xref py py-meth docutils literal notranslate"><span class="pre">bakaano.runner.BakaanoHydro.train_streamflow_model()</span></code></a>):</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">learning_rate</span></code>: base optimizer step size; lower if training is unstable.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">epoch_data_fraction</span></code>: fraction of available windows sampled each epoch.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loss_function</span></code>: training objective (e.g., <code class="docutils literal notranslate"><span class="pre">mse</span></code>, <code class="docutils literal notranslate"><span class="pre">huber</span></code>, <code class="docutils literal notranslate"><span class="pre">msle</span></code>,
+<code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: controls bootstrap sampling reproducibility.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lr_schedule</span></code>: <code class="docutils literal notranslate"><span class="pre">cosine</span></code> or <code class="docutils literal notranslate"><span class="pre">exp_decay</span></code>; set to <code class="docutils literal notranslate"><span class="pre">None</span></code> for fixed LR.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">warmup_epochs</span></code>: warmup length before LR schedule ramps to base LR.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_learning_rate</span></code>: minimum LR for schedules.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">routing_method</span></code>: must match the runoff routing method used in VegET.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">catchment_size_threshold</span></code>: filters very small catchments.</p></li>
+</ul>
+<p>Guidance:
+- Use <code class="docutils literal notranslate"><span class="pre">loss_function=&quot;asym_laplace_nll&quot;</span></code> for asymmetric uncertainty.
+- Lower <code class="docutils literal notranslate"><span class="pre">learning_rate</span></code> if training is unstable.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bk</span><span class="o">.</span><span class="n">train_streamflow_model</span><span class="p">(</span>
+    <span class="n">train_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">train_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+    <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
+    <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
+    <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+    <span class="n">epoch_data_fraction</span><span class="o">=</span><span class="mf">0.5</span><span class="p">,</span>
+    <span class="n">loss_function</span><span class="o">=</span><span class="s2">&quot;mse&quot;</span><span class="p">,</span>
+    <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+    <span class="n">lr_schedule</span><span class="o">=</span><span class="s2">&quot;cosine&quot;</span><span class="p">,</span>
+    <span class="n">warmup_epochs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">min_learning_rate</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="evaluate-interactively-grdc">
+<h3>Evaluate interactively (GRDC)<a class="headerlink" href="#evaluate-interactively-grdc" title="Link to this heading">¶</a></h3>
+<p>This launches an interactive evaluation that prompts you to choose a station
+and then plots observed vs predicted discharge for the selected period. Use
+this to inspect model performance before running batch simulations.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">working_dir</span><span class="si">}</span><span class="s2">/models/bakaano_model.keras&quot;</span>
+<span class="n">bk</span><span class="o">.</span><span class="n">evaluate_streamflow_model_interactively</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+    <span class="n">val_start</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">val_end</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="advanced-evaluation-options-optional">
+<h3>Advanced evaluation options (optional)<a class="headerlink" href="#advanced-evaluation-options-optional" title="Link to this heading">¶</a></h3>
+<p>Required for model configuration:
+- <code class="docutils literal notranslate"><span class="pre">routing_method</span></code> must match the method used for runoff routing.</p>
+<p>Guidance:
+- Use <code class="docutils literal notranslate"><span class="pre">csv_dir</span></code> and <code class="docutils literal notranslate"><span class="pre">lookup_csv</span></code> to evaluate with station CSVs.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bk</span><span class="o">.</span><span class="n">evaluate_streamflow_model_interactively</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+    <span class="n">val_start</span><span class="o">=</span><span class="s2">&quot;2001-01-01&quot;</span><span class="p">,</span>
+    <span class="n">val_end</span><span class="o">=</span><span class="s2">&quot;2010-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+    <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+    <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+    <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+    <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+    <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id9">
+<a class="reference internal image-reference" href="_images/quick_start_17_5.png"><img alt="Interactive evaluation example" src="_images/quick_start_17_5.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Example output: observed vs predicted streamflow from interactive evaluation.</span><a class="headerlink" href="#id9" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+<section id="batch-prediction-for-grdc-stations">
+<h3>Batch prediction for GRDC stations<a class="headerlink" href="#batch-prediction-for-grdc-stations" title="Link to this heading">¶</a></h3>
+<p>This runs inference for all GRDC stations in the study area and writes one CSV
+per station to <code class="docutils literal notranslate"><span class="pre">predicted_streamflow_data/</span></code>.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">working_dir</span><span class="si">}</span><span class="s2">/models/bakaano_model.keras&quot;</span>
+<span class="n">bk</span><span class="o">.</span><span class="n">simulate_grdc_csv_stations</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+    <span class="n">sim_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">sim_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="batch-prediction-with-csv-stations">
+<h3>Batch prediction with CSV stations<a class="headerlink" href="#batch-prediction-with-csv-stations" title="Link to this heading">¶</a></h3>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">bk</span><span class="o">.</span><span class="n">simulate_grdc_csv_stations</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+    <span class="n">sim_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">sim_end</span><span class="o">=</span><span class="s2">&quot;2020-12-31&quot;</span><span class="p">,</span>
+    <span class="n">grdc_netcdf</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+    <span class="n">csv_dir</span><span class="o">=</span><span class="s2">&quot;/path/to/observed_csvs&quot;</span><span class="p">,</span>
+    <span class="n">lookup_csv</span><span class="o">=</span><span class="s2">&quot;/path/to/station_lookup.csv&quot;</span><span class="p">,</span>
+    <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
+    <span class="n">lat_col</span><span class="o">=</span><span class="s2">&quot;latitude&quot;</span><span class="p">,</span>
+    <span class="n">lon_col</span><span class="o">=</span><span class="s2">&quot;longitude&quot;</span><span class="p">,</span>
+    <span class="n">date_col</span><span class="o">=</span><span class="s2">&quot;date&quot;</span><span class="p">,</span>
+    <span class="n">discharge_col</span><span class="o">=</span><span class="s2">&quot;discharge&quot;</span><span class="p">,</span>
+    <span class="n">file_pattern</span><span class="o">=</span><span class="s2">&quot;</span><span class="si">{id}</span><span class="s2">.csv&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+</section>
+<section id="predict-streamflow-at-arbitrary-points">
+<h3>Predict streamflow at arbitrary points<a class="headerlink" href="#predict-streamflow-at-arbitrary-points" title="Link to this heading">¶</a></h3>
+<p>This simulates streamflow for user-defined coordinates inside the study area.
+Each coordinate produces a separate CSV output time series.</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="n">model_path</span> <span class="o">=</span> <span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">working_dir</span><span class="si">}</span><span class="s2">/models/bakaano_model.keras&quot;</span>
+<span class="n">bk</span><span class="o">.</span><span class="n">simulate_streamflow</span><span class="p">(</span>
+    <span class="n">model_path</span><span class="o">=</span><span class="n">model_path</span><span class="p">,</span>
+    <span class="n">sim_start</span><span class="o">=</span><span class="s2">&quot;1981-01-01&quot;</span><span class="p">,</span>
+    <span class="n">sim_end</span><span class="o">=</span><span class="s2">&quot;1990-12-31&quot;</span><span class="p">,</span>
+    <span class="n">latlist</span><span class="o">=</span><span class="p">[</span><span class="mf">13.8</span><span class="p">,</span> <span class="mf">13.9</span><span class="p">],</span>
+    <span class="n">lonlist</span><span class="o">=</span><span class="p">[</span><span class="mf">3.0</span><span class="p">,</span> <span class="mf">4.0</span><span class="p">],</span>
+    <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<figure class="align-center" id="id10">
+<a class="reference internal image-reference" href="_images/river_network_with_gages.png"><img alt="River network with prediction points" src="_images/river_network_with_gages.png" style="width: 80%;" /></a>
+<figcaption>
+<p><span class="caption-text">Illustration: prediction points sampled along the river network.</span><a class="headerlink" href="#id10" title="Link to this image">¶</a></p>
+</figcaption>
+</figure>
+</section>
+</section>
+</section>
+
+
+          </div>
+          <div class="page-nav">
+            <div class="inner"><ul class="page-nav">
+  <li class="prev">
+    <a href="installation.html"
+       title="previous chapter">← Installation</a>
+  </li>
+  <li class="next">
+    <a href="inputs_outputs.html"
+       title="next chapter">Inputs and Outputs →</a>
+  </li>
+</ul><div class="footer" role="contentinfo">
+      &#169; Copyright .
+    <br>
+    Created using <a href="http://sphinx-doc.org/">Sphinx</a> 7.4.7 with <a href="https://github.com/schettino72/sphinx_press_theme">Press Theme</a> 0.9.1.
+</div>
+            </div>
+          </div>
+      </page>
+    </div></div>
+    
+    
+  </body>
+</html>
