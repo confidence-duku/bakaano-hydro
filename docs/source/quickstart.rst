@@ -407,6 +407,9 @@ Minimal training option (GRDC)
        batch_size=32,
        num_epochs=300,
        learning_rate=0.001,
+       lr_schedule="cosine",
+       warmup_epochs=5,
+       min_learning_rate=1e-5,
        routing_method="mfd",
        area_normalize=True,
    )

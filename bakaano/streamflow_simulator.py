@@ -947,7 +947,7 @@ class PredictStreamflow:
             if len(timesteps_to_keep) > 0:
                 full_train_45d.append(np.array(p45_samples)[timesteps_to_keep])
                 full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
-                full_train_180d.append(np.array(p190_samples)[timesteps_to_keep])
+                full_train_180d.append(np.array(p180_samples)[timesteps_to_keep])
                 full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
                 full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
                 full_area.append(np.array(area_samples)[timesteps_to_keep])

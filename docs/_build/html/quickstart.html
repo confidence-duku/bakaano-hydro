@@ -590,6 +590,9 @@ depending on GPU, batch size, and the number of stations.</p>
     <span class="n">batch_size</span><span class="o">=</span><span class="mi">32</span><span class="p">,</span>
     <span class="n">num_epochs</span><span class="o">=</span><span class="mi">300</span><span class="p">,</span>
     <span class="n">learning_rate</span><span class="o">=</span><span class="mf">0.001</span><span class="p">,</span>
+    <span class="n">lr_schedule</span><span class="o">=</span><span class="s2">&quot;cosine&quot;</span><span class="p">,</span>
+    <span class="n">warmup_epochs</span><span class="o">=</span><span class="mi">5</span><span class="p">,</span>
+    <span class="n">min_learning_rate</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
     <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
 <span class="p">)</span>
@@ -706,6 +709,7 @@ this to inspect model performance before running batch simulations.</p>
     <span class="n">grdc_netcdf</span><span class="o">=</span><span class="s2">&quot;/path/to/GRDC.nc&quot;</span><span class="p">,</span>
     <span class="n">routing_method</span><span class="o">=</span><span class="s2">&quot;mfd&quot;</span><span class="p">,</span>
     <span class="n">catchment_size_threshold</span><span class="o">=</span><span class="mi">1000</span><span class="p">,</span>
+    <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
     <span class="n">csv_dir</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">lookup_csv</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
     <span class="n">id_col</span><span class="o">=</span><span class="s2">&quot;id&quot;</span><span class="p">,</span>
