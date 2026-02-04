@@ -19,6 +19,8 @@ autosummary_generate = True
 
 # Mock heavy optional dependencies for docs build
 autodoc_mock_imports = [
+    "numpy",
+    "pandas",
     "tensorflow",
     "tensorflow_probability",
     "tf_keras",
