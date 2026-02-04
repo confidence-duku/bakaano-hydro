@@ -54,6 +54,7 @@ Typical starting point:
 - base LR: 1e-4
 - min LR: 1e-5
 - warmup epochs: 5
+- schedule: ``cosine`` or ``exp_decay``
 
 If training is unstable:
 

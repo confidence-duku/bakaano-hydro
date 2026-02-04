@@ -234,17 +234,55 @@
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">&quot;ignore&quot;</span><span class="p">,</span> <span class="n">category</span><span class="o">=</span><span class="ne">UserWarning</span><span class="p">)</span>
 
 <span class="c1">#=====================================================================================================================================</span>
+<span class="c1"># def asym_laplace_nll(y_true, params):</span>
+<span class="c1">#     &quot;&quot;&quot;Asymmetric Laplace negative log-likelihood (heteroscedastic).</span>
+
+<span class="c1">#     Args:</span>
+<span class="c1">#         y_true (tf.Tensor): Target discharge (area-normalized).</span>
+<span class="c1">#         params (tf.Tensor): Model outputs [mu, log_b_plus, log_b_minus].</span>
+
+<span class="c1">#     Returns:</span>
+<span class="c1">#         tf.Tensor: Scalar loss value.</span>
+<span class="c1">#     &quot;&quot;&quot;</span>
+<span class="c1">#     import tensorflow as tf</span>
+
+<span class="c1">#     mu = params[:, 0:1]</span>
+<span class="c1">#     log_b_plus = params[:, 1:2]</span>
+<span class="c1">#     log_b_minus = params[:, 2:3]</span>
+
+<span class="c1">#     b_plus = tf.nn.softplus(log_b_plus) + 1e-6</span>
+<span class="c1">#     b_minus = tf.nn.softplus(log_b_minus) + 1e-6</span>
+
+<span class="c1">#     r = y_true - mu</span>
+
+<span class="c1">#     nll = tf.where(</span>
+<span class="c1">#         r &gt;= 0,</span>
+<span class="c1">#         tf.math.log(b_plus) + r / b_plus,</span>
+<span class="c1">#         tf.math.log(b_minus) - r / b_minus,</span>
+<span class="c1">#     )</span>
+<span class="c1">#     return tf.reduce_mean(nll)</span>
+
 <div class="viewcode-block" id="asym_laplace_nll">
 <a class="viewcode-back" href="../../api/bakaano.streamflow_trainer.html#bakaano.streamflow_trainer.asym_laplace_nll">[docs]</a>
-<span class="k">def</span><span class="w"> </span><span class="nf">asym_laplace_nll</span><span class="p">(</span><span class="n">y_true</span><span class="p">,</span> <span class="n">params</span><span class="p">):</span>
-<span class="w">    </span><span class="sd">&quot;&quot;&quot;Asymmetric Laplace negative log-likelihood (heteroscedastic).</span>
+<span class="k">def</span><span class="w"> </span><span class="nf">asym_laplace_nll</span><span class="p">(</span>
+    <span class="n">y_true</span><span class="p">,</span>
+    <span class="n">params</span><span class="p">,</span>
+    <span class="n">r_clip</span><span class="o">=</span><span class="mf">10.0</span><span class="p">,</span>          <span class="c1"># residual clipping (log-space!)</span>
+    <span class="n">scale_clip</span><span class="o">=</span><span class="p">(</span><span class="mf">1e-3</span><span class="p">,</span> <span class="mf">20.0</span><span class="p">),</span>
+    <span class="n">peak_weight</span><span class="o">=</span><span class="mf">1.5</span>
+<span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Stable Asymmetric Laplace NLL for global streamflow modeling.</span>
 
 <span class="sd">    Args:</span>
-<span class="sd">        y_true (tf.Tensor): Target discharge (area-normalized).</span>
-<span class="sd">        params (tf.Tensor): Model outputs [mu, log_b_plus, log_b_minus].</span>
+<span class="sd">        y_true: (batch, 1) log-area-normalized discharge</span>
+<span class="sd">        params: (batch, 3) [mu, log_b_plus, log_b_minus]</span>
+<span class="sd">        r_clip: residual clipping threshold (prevents flood explosions)</span>
+<span class="sd">        scale_clip: min/max allowed uncertainty scale</span>
+<span class="sd">        peak_weight: mild upweighting of large flows</span>
 
 <span class="sd">    Returns:</span>
-<span class="sd">        tf.Tensor: Scalar loss value.</span>
+<span class="sd">        scalar loss</span>
 <span class="sd">    &quot;&quot;&quot;</span>
     <span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
 
@@ -252,17 +290,32 @@
     <span class="n">log_b_plus</span> <span class="o">=</span> <span class="n">params</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:</span><span class="mi">2</span><span class="p">]</span>
     <span class="n">log_b_minus</span> <span class="o">=</span> <span class="n">params</span><span class="p">[:,</span> <span class="mi">2</span><span class="p">:</span><span class="mi">3</span><span class="p">]</span>
 
-    <span class="n">b_plus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="n">log_b_plus</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-6</span>
-    <span class="n">b_minus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="n">log_b_minus</span><span class="p">)</span> <span class="o">+</span> <span class="mf">1e-6</span>
+    <span class="c1"># Softplus ensures positivity</span>
+    <span class="n">b_plus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="n">log_b_plus</span><span class="p">)</span>
+    <span class="n">b_minus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">softplus</span><span class="p">(</span><span class="n">log_b_minus</span><span class="p">)</span>
 
+    <span class="c1"># Prevent pathological scale inflation</span>
+    <span class="n">b_plus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">b_plus</span><span class="p">,</span> <span class="n">scale_clip</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">scale_clip</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+    <span class="n">b_minus</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">b_minus</span><span class="p">,</span> <span class="n">scale_clip</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="n">scale_clip</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span>
+
+    <span class="c1"># Residual</span>
     <span class="n">r</span> <span class="o">=</span> <span class="n">y_true</span> <span class="o">-</span> <span class="n">mu</span>
 
+    <span class="c1"># Residual clipping (CRITICAL for floods)</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">clip_by_value</span><span class="p">(</span><span class="n">r</span><span class="p">,</span> <span class="o">-</span><span class="n">r_clip</span><span class="p">,</span> <span class="n">r_clip</span><span class="p">)</span>
+
+    <span class="c1"># Asymmetric Laplace log-likelihood</span>
     <span class="n">nll</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">where</span><span class="p">(</span>
         <span class="n">r</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">,</span>
         <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">b_plus</span><span class="p">)</span> <span class="o">+</span> <span class="n">r</span> <span class="o">/</span> <span class="n">b_plus</span><span class="p">,</span>
         <span class="n">tf</span><span class="o">.</span><span class="n">math</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">b_minus</span><span class="p">)</span> <span class="o">-</span> <span class="n">r</span> <span class="o">/</span> <span class="n">b_minus</span><span class="p">,</span>
     <span class="p">)</span>
-    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">nll</span><span class="p">)</span></div>
+
+    <span class="c1"># Mild peak emphasis (log-space safe)</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="mf">1.0</span> <span class="o">+</span> <span class="n">peak_weight</span> <span class="o">*</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">(</span><span class="n">y_true</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">nll</span><span class="p">)</span></div>
+
 
 
 <div class="viewcode-block" id="DataPreprocessor">
@@ -776,7 +829,7 @@
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">,</span>
                  <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">loss_function</span><span class="o">=</span><span class="s2">&quot;huber&quot;</span><span class="p">,</span> <span class="n">train_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">train_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
-                 <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
+                 <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">lr_schedule</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">warmup_epochs</span><span class="o">=</span><span class="mi">3</span><span class="p">,</span> <span class="n">min_learning_rate</span><span class="o">=</span><span class="mf">1e-5</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the streamed training model configuration.</span>
 
@@ -800,6 +853,12 @@
 <span class="sd">            Random seed for reproducible sampling. If None, sampling is random.</span>
 <span class="sd">        area_normalize : bool</span>
 <span class="sd">            Whether to area-normalize predictors/response before log1p.</span>
+<span class="sd">        lr_schedule : str or None</span>
+<span class="sd">            Learning-rate schedule (&quot;cosine&quot;, &quot;exp_decay&quot;, or None).</span>
+<span class="sd">        warmup_epochs : int</span>
+<span class="sd">            Number of warmup epochs before scheduling.</span>
+<span class="sd">        min_learning_rate : float</span>
+<span class="sd">            Minimum learning rate for schedules.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
@@ -820,6 +879,42 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">loss_function</span> <span class="o">=</span> <span class="n">loss_function</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span> <span class="o">=</span> <span class="n">area_normalize</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">lr_schedule</span> <span class="o">=</span> <span class="n">lr_schedule</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">warmup_epochs</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">warmup_epochs</span> <span class="ow">or</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">min_learning_rate</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="n">min_learning_rate</span><span class="p">)</span>
+
+<div class="viewcode-block" id="StreamflowModel._build_lr_callback">
+<a class="viewcode-back" href="../../api/bakaano.streamflow_trainer.html#bakaano.streamflow_trainer.StreamflowModel._build_lr_callback">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_build_lr_callback</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Create a learning-rate schedule callback with optional warmup.&quot;&quot;&quot;</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">math</span>
+        <span class="kn">import</span><span class="w"> </span><span class="nn">tensorflow</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">tf</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">lr_schedule</span><span class="p">:</span>
+            <span class="k">return</span> <span class="kc">None</span>
+
+        <span class="n">base_lr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span><span class="p">)</span>
+        <span class="n">min_lr</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">min_learning_rate</span><span class="p">)</span>
+        <span class="n">warmup_epochs</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">int</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">warmup_epochs</span><span class="p">))</span>
+        <span class="n">schedule</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">lr_schedule</span><span class="p">)</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span>
+
+        <span class="k">def</span><span class="w"> </span><span class="nf">_lr_fn</span><span class="p">(</span><span class="n">epoch</span><span class="p">,</span> <span class="n">lr</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">warmup_epochs</span> <span class="o">&gt;</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">epoch</span> <span class="o">&lt;</span> <span class="n">warmup_epochs</span><span class="p">:</span>
+                <span class="k">return</span> <span class="n">min_lr</span> <span class="o">+</span> <span class="p">(</span><span class="n">base_lr</span> <span class="o">-</span> <span class="n">min_lr</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="n">epoch</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">warmup_epochs</span>
+            <span class="n">t</span> <span class="o">=</span> <span class="n">epoch</span> <span class="o">-</span> <span class="n">warmup_epochs</span>
+            <span class="k">if</span> <span class="n">schedule</span> <span class="o">==</span> <span class="s2">&quot;cosine&quot;</span><span class="p">:</span>
+                <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_epochs</span> <span class="o">&lt;=</span> <span class="n">warmup_epochs</span><span class="p">:</span>
+                    <span class="k">return</span> <span class="n">base_lr</span>
+                <span class="n">total</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">num_epochs</span> <span class="o">-</span> <span class="n">warmup_epochs</span><span class="p">)</span>
+                <span class="n">cos_inner</span> <span class="o">=</span> <span class="n">math</span><span class="o">.</span><span class="n">pi</span> <span class="o">*</span> <span class="nb">min</span><span class="p">(</span><span class="n">t</span><span class="p">,</span> <span class="n">total</span><span class="p">)</span> <span class="o">/</span> <span class="n">total</span>
+                <span class="k">return</span> <span class="n">min_lr</span> <span class="o">+</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">base_lr</span> <span class="o">-</span> <span class="n">min_lr</span><span class="p">)</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">+</span> <span class="n">math</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">cos_inner</span><span class="p">))</span>
+            <span class="k">if</span> <span class="n">schedule</span> <span class="o">==</span> <span class="s2">&quot;exp_decay&quot;</span><span class="p">:</span>
+                <span class="n">decay_rate</span> <span class="o">=</span> <span class="mf">0.95</span>
+                <span class="k">return</span> <span class="nb">max</span><span class="p">(</span><span class="n">min_lr</span><span class="p">,</span> <span class="n">base_lr</span> <span class="o">*</span> <span class="p">(</span><span class="n">decay_rate</span> <span class="o">**</span> <span class="n">t</span><span class="p">))</span>
+            <span class="k">return</span> <span class="n">base_lr</span>
+
+        <span class="k">return</span> <span class="n">tf</span><span class="o">.</span><span class="n">keras</span><span class="o">.</span><span class="n">callbacks</span><span class="o">.</span><span class="n">LearningRateScheduler</span><span class="p">(</span><span class="n">_lr_fn</span><span class="p">,</span> <span class="n">verbose</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span></div>
+
 
     <span class="c1"># --------------------------------------------------</span>
     <span class="c1"># DATA PREPARATION (FULL MATERIALIZATION)</span>
@@ -1081,6 +1176,11 @@
             <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;min&quot;</span><span class="p">,</span>
         <span class="p">)</span>
 
+        <span class="n">callbacks</span> <span class="o">=</span> <span class="p">[</span><span class="n">checkpoint</span><span class="p">]</span>
+        <span class="n">lr_callback</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_build_lr_callback</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">lr_callback</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">callbacks</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">lr_callback</span><span class="p">)</span>
+
         <span class="bp">self</span><span class="o">.</span><span class="n">regional_model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span>
             <span class="n">x</span><span class="o">=</span><span class="p">[</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">train_45d</span><span class="p">,</span>
@@ -1093,7 +1193,7 @@
             <span class="n">y</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">train_response</span><span class="p">,</span>
             <span class="n">batch_size</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span><span class="p">,</span>
             <span class="n">epochs</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">num_epochs</span><span class="p">,</span>
-            <span class="n">callbacks</span><span class="o">=</span><span class="p">[</span><span class="n">checkpoint</span><span class="p">],</span>
+            <span class="n">callbacks</span><span class="o">=</span><span class="n">callbacks</span><span class="p">,</span>
             <span class="n">verbose</span><span class="o">=</span><span class="mi">2</span><span class="p">,</span>
         <span class="p">)</span></div>
 

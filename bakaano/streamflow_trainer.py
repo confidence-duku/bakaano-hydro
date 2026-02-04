@@ -31,15 +31,27 @@ warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 #=====================================================================================================================================
-def asym_laplace_nll(y_true, params):
-    """Asymmetric Laplace negative log-likelihood (heteroscedastic).
+
+
+def asym_laplace_nll(
+    y_true,
+    params,
+    r_clip=10.0,          # residual clipping (log-space!)
+    scale_clip=(1e-3, 20.0),
+    peak_weight=1.5
+):
+    """
+    Stable Asymmetric Laplace NLL for global streamflow modeling.
 
     Args:
-        y_true (tf.Tensor): Target discharge (area-normalized).
-        params (tf.Tensor): Model outputs [mu, log_b_plus, log_b_minus].
+        y_true: (batch, 1) log-area-normalized discharge
+        params: (batch, 3) [mu, log_b_plus, log_b_minus]
+        r_clip: residual clipping threshold (prevents flood explosions)
+        scale_clip: min/max allowed uncertainty scale
+        peak_weight: mild upweighting of large flows
 
     Returns:
-        tf.Tensor: Scalar loss value.
+        scalar loss
     """
     import tensorflow as tf
 
@@ -47,17 +59,32 @@ def asym_laplace_nll(y_true, params):
     log_b_plus = params[:, 1:2]
     log_b_minus = params[:, 2:3]
 
-    b_plus = tf.nn.softplus(log_b_plus) + 1e-6
-    b_minus = tf.nn.softplus(log_b_minus) + 1e-6
+    # Softplus ensures positivity
+    b_plus = tf.nn.softplus(log_b_plus)
+    b_minus = tf.nn.softplus(log_b_minus)
 
+    # Prevent pathological scale inflation
+    b_plus = tf.clip_by_value(b_plus, scale_clip[0], scale_clip[1])
+    b_minus = tf.clip_by_value(b_minus, scale_clip[0], scale_clip[1])
+
+    # Residual
     r = y_true - mu
 
+    # Residual clipping (CRITICAL for floods)
+    r = tf.clip_by_value(r, -r_clip, r_clip)
+
+    # Asymmetric Laplace log-likelihood
     nll = tf.where(
         r >= 0,
         tf.math.log(b_plus) + r / b_plus,
         tf.math.log(b_minus) - r / b_minus,
     )
-    return tf.reduce_mean(nll)
+
+    # Mild peak emphasis (log-space safe)
+    weights = 1.0 + peak_weight * tf.nn.relu(y_true)
+
+    return tf.reduce_mean(weights * nll)
+
 
 class DataPreprocessor:
     def __init__(self,  working_dir, study_area, grdc_streamflow_nc_file, train_start, 
@@ -550,7 +577,7 @@ class StreamflowModel:
 
     def __init__(self, working_dir, batch_size, num_epochs,
                  learning_rate=1e-4, loss_function="huber", train_start=None, train_end=None, seed=100,
-                 area_normalize=True):
+                 area_normalize=True, lr_schedule=None, warmup_epochs=3, min_learning_rate=1e-5):
         """
         Initialize the streamed training model configuration.
 
@@ -574,6 +601,12 @@ class StreamflowModel:
             Random seed for reproducible sampling. If None, sampling is random.
         area_normalize : bool
             Whether to area-normalize predictors/response before log1p.
+        lr_schedule : str or None
+            Learning-rate schedule ("cosine", "exp_decay", or None).
+        warmup_epochs : int
+            Number of warmup epochs before scheduling.
+        min_learning_rate : float
+            Minimum learning rate for schedules.
         """
         self.working_dir = working_dir
         self.batch_size = int(batch_size)
@@ -594,6 +627,39 @@ class StreamflowModel:
         self.loss_function = loss_function
         self.seed = seed
         self.area_normalize = area_normalize
+        self.lr_schedule = lr_schedule
+        self.warmup_epochs = int(warmup_epochs or 0)
+        self.min_learning_rate = float(min_learning_rate)
+
+    def _build_lr_callback(self):
+        """Create a learning-rate schedule callback with optional warmup."""
+        import math
+        import tensorflow as tf
+
+        if not self.lr_schedule:
+            return None
+
+        base_lr = float(self.learning_rate)
+        min_lr = float(self.min_learning_rate)
+        warmup_epochs = max(0, int(self.warmup_epochs))
+        schedule = str(self.lr_schedule).lower()
+
+        def _lr_fn(epoch, lr):
+            if warmup_epochs > 0 and epoch < warmup_epochs:
+                return min_lr + (base_lr - min_lr) * (epoch + 1) / warmup_epochs
+            t = epoch - warmup_epochs
+            if schedule == "cosine":
+                if self.num_epochs <= warmup_epochs:
+                    return base_lr
+                total = max(1, self.num_epochs - warmup_epochs)
+                cos_inner = math.pi * min(t, total) / total
+                return min_lr + 0.5 * (base_lr - min_lr) * (1 + math.cos(cos_inner))
+            if schedule == "exp_decay":
+                decay_rate = 0.95
+                return max(min_lr, base_lr * (decay_rate ** t))
+            return base_lr
+
+        return tf.keras.callbacks.LearningRateScheduler(_lr_fn, verbose=0)
 
     # --------------------------------------------------
     # DATA PREPARATION (FULL MATERIALIZATION)
@@ -847,6 +913,11 @@ class StreamflowModel:
             mode="min",
         )
 
+        callbacks = [checkpoint]
+        lr_callback = self._build_lr_callback()
+        if lr_callback is not None:
+            callbacks.append(lr_callback)
+
         self.regional_model.fit(
             x=[
                 self.train_45d,
@@ -859,7 +930,7 @@ class StreamflowModel:
             y=self.train_response,
             batch_size=self.batch_size,
             epochs=self.num_epochs,
-            callbacks=[checkpoint],
+            callbacks=callbacks,
             verbose=2,
         )
 

@@ -121,6 +121,9 @@ class BakaanoHydro:
         routing_method="mfd",
         catchment_size_threshold=1,
         area_normalize=True,
+        lr_schedule=None,
+        warmup_epochs=0,
+        min_learning_rate=1e-5,
         csv_dir=None,
         lookup_csv=None,
         id_col="id",
@@ -145,6 +148,9 @@ class BakaanoHydro:
             catchment_size_threshold (float): Minimum catchment size for stations.
             area_normalize (bool): Whether to area-normalize predictors/response.
                 If False, responses are modeled in raw m³/s (after log1p).
+            lr_schedule (str, optional): Learning-rate schedule ("cosine", "exp_decay").
+            warmup_epochs (int): Number of warmup epochs before scheduling.
+            min_learning_rate (float): Minimum learning rate for schedules.
             csv_dir (str, optional): Directory of per-station CSVs.
             lookup_csv (str, optional): CSV lookup file with station coords.
             id_col (str): Station id column in lookup CSV.
@@ -293,6 +299,9 @@ class BakaanoHydro:
             train_end,
             seed=seed,
             area_normalize=area_normalize,
+            lr_schedule=lr_schedule,
+            warmup_epochs=warmup_epochs,
+            min_learning_rate=min_learning_rate,
         )
         smodel.prepare_data(self.rawdata)
         smodel.build_model()
