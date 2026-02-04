@@ -549,7 +549,8 @@ class StreamflowModel:
     """
 
     def __init__(self, working_dir, batch_size, num_epochs,
-                 learning_rate=1e-4, loss_function="huber", train_start=None, train_end=None, seed=100):
+                 learning_rate=1e-4, loss_function="huber", train_start=None, train_end=None, seed=100,
+                 area_normalize=True):
         """
         Initialize the streamed training model configuration.
 
@@ -571,6 +572,8 @@ class StreamflowModel:
             Training end date (YYYY-MM-DD).
         seed : int or None
             Random seed for reproducible sampling. If None, sampling is random.
+        area_normalize : bool
+            Whether to area-normalize predictors/response before log1p.
         """
         self.working_dir = working_dir
         self.batch_size = int(batch_size)
@@ -590,6 +593,7 @@ class StreamflowModel:
         self.learning_rate = learning_rate
         self.loss_function = loss_function
         self.seed = seed
+        self.area_normalize = area_normalize
 
     # --------------------------------------------------
     # DATA PREPARATION (FULL MATERIALIZATION)
@@ -639,10 +643,16 @@ class StreamflowModel:
         for x, y, z, j in zip(train_predictors, train_response, alphaearth, area):
             this_area = np.expm1(j)
             area_m2 = this_area * 1000000.0
-            scaled_train_predictor = x.values / this_area
+            if self.area_normalize:
+                scaled_train_predictor = x.values / this_area
+            else:
+                scaled_train_predictor = x.values
             scaled_train_predictor = np.log1p(scaled_train_predictor)
 
-            scaled_train_response = (y.values * 86400 * 1000) / area_m2
+            if self.area_normalize:
+                scaled_train_response = (y.values * 86400 * 1000) / area_m2
+            else:
+                scaled_train_response = y.values
             scaled_train_response = np.log1p(scaled_train_response)
 
             z2 = z.reshape(-1, 64)

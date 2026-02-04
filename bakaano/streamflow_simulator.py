@@ -837,7 +837,7 @@ class PredictDataPreprocessor:
 
 
 class PredictStreamflow:
-    def __init__(self, working_dir):
+    def __init__(self, working_dir, area_normalize=True):
         """
         Role: Prepare model inputs and run inference.
 
@@ -845,6 +845,7 @@ class PredictStreamflow:
 
         Args:
             working_dir (str): The working directory where the model and data are stored.
+            area_normalize (bool): Whether to area-normalize predictors/response.
 
         Methods
         -------
@@ -861,6 +862,7 @@ class PredictStreamflow:
         self.train_data_list = []
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
+        self.area_normalize = area_normalize
 
     def prepare_data(self, data_list):
         
@@ -903,7 +905,10 @@ class PredictStreamflow:
         for x, z, j in zip(predictors, scaled_alphaearth, area):
             this_area = np.expm1(j)
             self.catch_area_list.append(this_area)
-            scaled_train_predictor = x.values / this_area
+            if self.area_normalize:
+                scaled_train_predictor = x.values / this_area
+            else:
+                scaled_train_predictor = x.values
             scaled_train_predictor = np.log1p(scaled_train_predictor)
 
             num_samples = scaled_train_predictor.shape[0] - 365
@@ -999,7 +1004,10 @@ class PredictStreamflow:
         for x, z, j in zip(predictors, scaled_alphaearth, area):
             this_area = np.expm1(j)
             self.catch_area_list.append(this_area)
-            scaled_train_predictor = x.values / this_area
+            if self.area_normalize:
+                scaled_train_predictor = x.values / this_area
+            else:
+                scaled_train_predictor = x.values
             if scaled_train_predictor.ndim == 1:
                 scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
             scaled_train_predictor = np.log1p(scaled_train_predictor)
