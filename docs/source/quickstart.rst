@@ -534,6 +534,7 @@ Guidance:
        grdc_netcdf="/path/to/GRDC.nc",
        routing_method="mfd",
        catchment_size_threshold=1000,
+       area_normalize=True,
        csv_dir=None,
        lookup_csv=None,
        id_col="id",
