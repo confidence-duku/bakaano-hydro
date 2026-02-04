@@ -408,6 +408,7 @@ Minimal training option (GRDC)
        num_epochs=300,
        learning_rate=0.001,
        routing_method="mfd",
+       area_normalize=True,
    )
 
 Minimal training option (CSV observations)
@@ -439,6 +440,7 @@ Optional column overrides (if your headers differ):
        num_epochs=300,
        learning_rate=0.001,
        routing_method="mfd",
+       area_normalize=True,
        csv_dir="/path/to/observed_csvs",
        lookup_csv="/path/to/station_lookup.csv",
        id_col="id",
@@ -450,7 +452,8 @@ Optional column overrides (if your headers differ):
    )
 
 Notes:
-- Training saves scalers to ``{working_dir}/models`` (AlphaEarth, runoff, and response).
+- Training saves scalers to ``{working_dir}/models`` (AlphaEarth).
+- Set ``area_normalize=False`` to train directly on raw m³/s instead of area-normalized depth (mm/day).
 
 Advanced training option (model configuration)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -467,6 +470,7 @@ Parameter guidance (see :meth:`bakaano.runner.BakaanoHydro.train_streamflow_mode
 - ``min_learning_rate``: minimum LR for schedules.
 - ``routing_method``: must match the runoff routing method used in VegET.
 - ``catchment_size_threshold``: filters very small catchments.
+- ``area_normalize``: toggle area normalization for predictors/response.
 
 Guidance:
 - Use ``loss_function="asym_laplace_nll"`` for asymmetric uncertainty.
@@ -489,6 +493,7 @@ Guidance:
        min_learning_rate=1e-5,
        routing_method="mfd",
        catchment_size_threshold=1,
+       area_normalize=True,
    )
 
 
@@ -508,6 +513,7 @@ this to inspect model performance before running batch simulations.
        val_end="2010-12-31",
        grdc_netcdf="/path/to/GRDC.nc",
        routing_method="mfd",
+       area_normalize=True,
    )
 
 Advanced evaluation options (optional)
@@ -561,6 +567,7 @@ per station to ``predicted_streamflow_data/``.
        sim_end="2020-12-31",
        grdc_netcdf="/path/to/GRDC.nc",
        routing_method="mfd",
+       area_normalize=True,
    )
 
 Batch prediction with CSV stations
@@ -574,6 +581,7 @@ Batch prediction with CSV stations
        sim_end="2020-12-31",
        grdc_netcdf=None,
        routing_method="mfd",
+       area_normalize=True,
        csv_dir="/path/to/observed_csvs",
        lookup_csv="/path/to/station_lookup.csv",
        id_col="id",
@@ -601,6 +609,7 @@ Each coordinate produces a separate CSV output time series.
        latlist=[13.8, 13.9],
        lonlist=[3.0, 4.0],
        routing_method="mfd",
+       area_normalize=True,
    )
 
 .. figure:: /_static/quick_start/river_network_with_gages.png

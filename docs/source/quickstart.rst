@@ -453,8 +453,7 @@ Optional column overrides (if your headers differ):
 
 Notes:
 - Training saves scalers to ``{working_dir}/models`` (AlphaEarth).
-- Set ``area_normalize=False`` to train directly on raw m³/s instead of
-  area-normalized depth (mm/day).
+- Set ``area_normalize=False`` to train directly on raw m³/s instead of area-normalized depth (mm/day).
 
 Advanced training option (model configuration)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

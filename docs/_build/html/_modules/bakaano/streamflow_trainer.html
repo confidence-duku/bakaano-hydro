@@ -775,7 +775,8 @@
 <span class="sd">    &quot;&quot;&quot;</span>
 
     <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">working_dir</span><span class="p">,</span> <span class="n">batch_size</span><span class="p">,</span> <span class="n">num_epochs</span><span class="p">,</span>
-                 <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">loss_function</span><span class="o">=</span><span class="s2">&quot;huber&quot;</span><span class="p">,</span> <span class="n">train_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">train_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">):</span>
+                 <span class="n">learning_rate</span><span class="o">=</span><span class="mf">1e-4</span><span class="p">,</span> <span class="n">loss_function</span><span class="o">=</span><span class="s2">&quot;huber&quot;</span><span class="p">,</span> <span class="n">train_start</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">train_end</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">seed</span><span class="o">=</span><span class="mi">100</span><span class="p">,</span>
+                 <span class="n">area_normalize</span><span class="o">=</span><span class="kc">True</span><span class="p">):</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Initialize the streamed training model configuration.</span>
 
@@ -797,6 +798,8 @@
 <span class="sd">            Training end date (YYYY-MM-DD).</span>
 <span class="sd">        seed : int or None</span>
 <span class="sd">            Random seed for reproducible sampling. If None, sampling is random.</span>
+<span class="sd">        area_normalize : bool</span>
+<span class="sd">            Whether to area-normalize predictors/response before log1p.</span>
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">working_dir</span> <span class="o">=</span> <span class="n">working_dir</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
@@ -816,6 +819,7 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">learning_rate</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">loss_function</span> <span class="o">=</span> <span class="n">loss_function</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">seed</span> <span class="o">=</span> <span class="n">seed</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span> <span class="o">=</span> <span class="n">area_normalize</span>
 
     <span class="c1"># --------------------------------------------------</span>
     <span class="c1"># DATA PREPARATION (FULL MATERIALIZATION)</span>
@@ -867,10 +871,16 @@
         <span class="k">for</span> <span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">z</span><span class="p">,</span> <span class="n">j</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="n">train_predictors</span><span class="p">,</span> <span class="n">train_response</span><span class="p">,</span> <span class="n">alphaearth</span><span class="p">,</span> <span class="n">area</span><span class="p">):</span>
             <span class="n">this_area</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">expm1</span><span class="p">(</span><span class="n">j</span><span class="p">)</span>
             <span class="n">area_m2</span> <span class="o">=</span> <span class="n">this_area</span> <span class="o">*</span> <span class="mf">1000000.0</span>
-            <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span> <span class="o">/</span> <span class="n">this_area</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">x</span><span class="o">.</span><span class="n">values</span>
             <span class="n">scaled_train_predictor</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_predictor</span><span class="p">)</span>
 
-            <span class="n">scaled_train_response</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">area_m2</span>
+            <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">area_normalize</span><span class="p">:</span>
+                <span class="n">scaled_train_response</span> <span class="o">=</span> <span class="p">(</span><span class="n">y</span><span class="o">.</span><span class="n">values</span> <span class="o">*</span> <span class="mi">86400</span> <span class="o">*</span> <span class="mi">1000</span><span class="p">)</span> <span class="o">/</span> <span class="n">area_m2</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">scaled_train_response</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">values</span>
             <span class="n">scaled_train_response</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log1p</span><span class="p">(</span><span class="n">scaled_train_response</span><span class="p">)</span>
 
             <span class="n">z2</span> <span class="o">=</span> <span class="n">z</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">64</span><span class="p">)</span>
