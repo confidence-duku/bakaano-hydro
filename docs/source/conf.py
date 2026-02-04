@@ -60,6 +60,7 @@ autodoc_mock_imports = [
     "shapely.geometry",
     "dask",
     "requests",
+    "tqdm",
     "isimip_client",
     "numba",
 ]
