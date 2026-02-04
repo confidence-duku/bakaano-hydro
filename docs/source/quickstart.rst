@@ -513,7 +513,7 @@ this to inspect model performance before running batch simulations.
        val_end="2010-12-31",
        grdc_netcdf="/path/to/GRDC.nc",
        routing_method="mfd",
-       area_normalize=False,
+       area_normalize=True,
    )
 
 Advanced evaluation options (optional)
