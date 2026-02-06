@@ -7,7 +7,8 @@ Global assumptions
 ------------------
 
 - CRS: EPSG:4326 for all rasters and vector inputs unless noted.
-- Area units: number of 1 km x 1 km grid cells (km²).
+- Area units: number of DEM grid cells; the effective cell area depends on the
+  DEM resolution.
 - Discharge units: m³/s (raw), area-normalized to mm/day for model inputs.
 
 Observed streamflow CSV schema
