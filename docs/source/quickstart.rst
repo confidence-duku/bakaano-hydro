@@ -301,12 +301,29 @@ Visualize routed runoff
 Interactive routed runoff timeseries
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+This opens an interactive plot that lets you explore routed runoff time series
+for stations in your study area. Provide GRDC NetCDF or a station lookup CSV
+(id + coordinates). Use it to spot missing data, unrealistic peaks, or routing
+artifacts before training. You will be prompted in the terminal to select a
+station.
+
 .. code-block:: python
 
+   # Option 1: GRDC NetCDF stations
    rr.interactive_plot_routed_runoff_timeseries(
        start_date="2000-01-01",
        end_date="2000-12-31",
        grdc_netcdf="/path/to/GRDC.nc",
+   )
+
+   # Option 2: Station lookup CSV (id + coordinates)
+   rr.interactive_plot_routed_runoff_timeseries(
+       start_date="2000-01-01",
+       end_date="2000-12-31",
+       lookup_csv="/path/to/station_lookup.csv",
+       id_col="id",
+       lat_col="latitude",
+       lon_col="longitude",
    )
 
 .. figure:: /_static/quick_start/routedrunofftimeseries.png
@@ -360,6 +377,8 @@ streamflow targets.
 Training can take hours depending on GPU and batch size. Evaluation is
 interactive and lets you choose stations to compare observed vs predicted
 streamflow. Simulation produces CSV files for each station or coordinate.
+Note: simulation outputs start after a one-year warmup period; the first 365 days
+are used as model context and are not written to the output CSVs.
 
 Expected outputs:
 
@@ -442,6 +461,9 @@ Optional column overrides (if your headers differ):
        batch_size=32,
        num_epochs=300,
        learning_rate=0.001,
+       lr_schedule="cosine",
+       warmup_epochs=5,
+       min_learning_rate=1e-5,
        routing_method="mfd",
        area_normalize=True,
        csv_dir="/path/to/observed_csvs",
@@ -464,7 +486,6 @@ Advanced training option (model configuration)
 Parameter guidance (see :meth:`bakaano.runner.BakaanoHydro.train_streamflow_model`):
 
 - ``learning_rate``: base optimizer step size; lower if training is unstable.
-- ``epoch_data_fraction``: fraction of available windows sampled each epoch.
 - ``loss_function``: training objective (e.g., ``mse``, ``huber``, ``msle``,
   ``asym_laplace_nll``).
 - ``seed``: controls bootstrap sampling reproducibility.
@@ -488,7 +509,6 @@ Guidance:
        batch_size=32,
        num_epochs=300,
        learning_rate=0.001,
-       epoch_data_fraction=0.5,
        loss_function="mse",
        seed=100,
        lr_schedule="cosine",
@@ -505,7 +525,8 @@ Evaluate interactively (GRDC)
 
 This launches an interactive evaluation that prompts you to choose a station
 and then plots observed vs predicted discharge for the selected period. Use
-this to inspect model performance before running batch simulations.
+this to inspect model performance before running batch simulations. You will be
+prompted in the terminal to select a station.
 
 .. code-block:: python
 
@@ -561,6 +582,10 @@ Batch prediction for GRDC stations
 
 This runs inference for all GRDC stations in the study area and writes one CSV
 per station to ``predicted_streamflow_data/``.
+Outputs start after a one-year warmup period; the first 365 days of the
+simulation window are used as model context and are not written to the CSVs.
+Example: if ``sim_start="1981-01-01"`` and ``sim_end="2020-12-31"``, the first
+timestamp in the output CSV is ``1982-01-01`` (one year after the start date).
 
 .. code-block:: python
 
@@ -576,6 +601,10 @@ per station to ``predicted_streamflow_data/``.
 
 Batch prediction with CSV stations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Outputs start after a one-year warmup period; the first 365 days of the
+simulation window are used as model context and are not written to the CSVs.
+Example: if ``sim_start="1981-01-01"``, the output begins at ``1982-01-01``.
 
 .. code-block:: python
 
@@ -602,6 +631,10 @@ Predict streamflow at arbitrary points
 
 This simulates streamflow for user-defined coordinates inside the study area.
 Each coordinate produces a separate CSV output time series.
+Outputs start after a one-year warmup period; the first 365 days of the
+simulation window are used as model context and are not written to the CSVs.
+Example: if ``sim_start="1981-01-01"`` and ``sim_end="1990-12-31"``, the CSV
+starts at ``1982-01-01`` and runs through ``1990-12-31``.
 
 .. code-block:: python
 

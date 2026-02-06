@@ -141,21 +141,9 @@
             
               <ul>
                 
-                  <li class="toctree-l2"><a href="#loss-functions" class="reference internal">Loss functions</a></li>
+                  <li class="toctree-l2"><a href="#user-defined-inputs" class="reference internal">User-defined inputs</a></li>
                 
-                  <li class="toctree-l2"><a href="#transforms-and-scaling" class="reference internal">Transforms and scaling</a></li>
-                
-                  <li class="toctree-l2"><a href="#model-inputs" class="reference internal">Model inputs</a></li>
-                
-                  <li class="toctree-l2"><a href="#spatial-resolution" class="reference internal">Spatial resolution</a></li>
-                
-                  <li class="toctree-l2"><a href="#learning-rate-schedule" class="reference internal">Learning rate schedule</a></li>
-                
-                  <li class="toctree-l2"><a href="#batch-size-and-generalization" class="reference internal">Batch size and generalization</a></li>
-                
-                  <li class="toctree-l2"><a href="#bootstrapping" class="reference internal">Bootstrapping</a></li>
-                
-                  <li class="toctree-l2"><a href="#asymmetric-laplace-outputs" class="reference internal">Asymmetric Laplace outputs</a></li>
+                  <li class="toctree-l2"><a href="#recommended-settings" class="reference internal">Recommended settings</a></li>
                 
               </ul>
             
@@ -232,86 +220,111 @@
   <section id="model-configuration">
 <h1>Model Configuration<a class="headerlink" href="#model-configuration" title="Link to this heading">¶</a></h1>
 <p>This page summarizes recommended settings and common tradeoffs.</p>
-<section id="loss-functions">
-<h2>Loss functions<a class="headerlink" href="#loss-functions" title="Link to this heading">¶</a></h2>
-<p>Point losses:</p>
+<section id="user-defined-inputs">
+<h2>User-defined inputs<a class="headerlink" href="#user-defined-inputs" title="Link to this heading">¶</a></h2>
+<p>This section defines the user-facing inputs used across training, evaluation,
+and simulation, with guidance on when to adjust them.</p>
+<section id="data-scope-and-timing">
+<h3>Data scope and timing<a class="headerlink" href="#data-scope-and-timing" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">mae</span></code>: stable baseline, good overall fit.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">huber</span></code>: robust to outliers; often better than MSE in linear space.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">mse</span></code>: emphasizes large errors; can suppress peaks in linear space.</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">msle</span></code>: emphasizes relative error; often better than MSE for wide ranges.</p></li>
-</ul>
-<p>Distributional loss:</p>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code>: predicts (mu, b_plus, b_minus) per time step.
-Useful when you want asymmetric penalties and heteroscedastic uncertainty.</p></li>
-</ul>
-</section>
-<section id="transforms-and-scaling">
-<h2>Transforms and scaling<a class="headerlink" href="#transforms-and-scaling" title="Link to this heading">¶</a></h2>
-<ul class="simple">
-<li><p>Area normalization is handled automatically in preprocessing.</p></li>
-<li><p>You can disable area normalization via <code class="docutils literal notranslate"><span class="pre">area_normalize=False</span></code> in the
-training, evaluation, and simulation APIs.</p></li>
-<li><p>Area normalization is recommended for large-scale modeling and for
-generalizing to unseen basins.</p></li>
-<li><p>Accumulated runoff and discharge are converted to area-invariant depth
-(mm/day) using basin area (km²) so basins of different size are comparable.</p></li>
-<li><p>Predictors and responses are log-transformed (<code class="docutils literal notranslate"><span class="pre">log1p</span></code>) after area
-normalization.</p></li>
-<li><p>AlphaEarth embeddings are standardized with a <code class="docutils literal notranslate"><span class="pre">StandardScaler</span></code>.</p></li>
-<li><p>The AlphaEarth scaler is saved to <code class="docutils literal notranslate"><span class="pre">{working_dir}/models</span></code> and reused at
-inference (<code class="docutils literal notranslate"><span class="pre">alpha_earth_scaler.pkl</span></code>).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">train_start</span></code> / <code class="docutils literal notranslate"><span class="pre">train_end</span></code>: Training window (YYYY-MM-DD). Ensure routed runoff
+and observations fully cover this period. If you see “date not found” errors,
+your routed runoff window is shorter than the requested training range.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">val_start</span></code> / <code class="docutils literal notranslate"><span class="pre">val_end</span></code>: Evaluation window (YYYY-MM-DD). Use a period outside
+the training range for a realistic check. Keep it long enough to capture
+wet/dry variability (multiple seasons if possible).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">sim_start</span></code> / <code class="docutils literal notranslate"><span class="pre">sim_end</span></code>: Simulation window (YYYY-MM-DD). Must be covered by
+the routed runoff inputs. Simulation outputs begin after a one-year warmup
+(the first 365 days are used as model context).</p></li>
 </ul>
 </section>
-<section id="model-inputs">
-<h2>Model inputs<a class="headerlink" href="#model-inputs" title="Link to this heading">¶</a></h2>
+<section id="paths-and-sources">
+<h3>Paths and sources<a class="headerlink" href="#paths-and-sources" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>Multi-scale temporal inputs: 45, 90, 180, and 365-day windows.</p></li>
-<li><p>Static conditioning inputs: AlphaEarth (64-D) and basin area (scalar).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">working_dir</span></code>: Project folder where inputs/outputs are stored. Keep it on
+fast local storage; large basins can generate many GB of routed runoff.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">study_area</span></code>: Basin boundary shapefile in EPSG:4326.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">grdc_netcdf</span></code>: GRDC NetCDF path for observed streamflow. Required unless you
+provide CSV observations. The file must include station name, coordinates,
+and discharge time series.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">model_path</span></code>: Path to a trained model (e.g., <code class="docutils literal notranslate"><span class="pre">{working_dir}/models/bakaano_model.keras</span></code>).</p></li>
 </ul>
 </section>
-<section id="spatial-resolution">
-<h2>Spatial resolution<a class="headerlink" href="#spatial-resolution" title="Link to this heading">¶</a></h2>
-<p>The analysis resolution follows the DEM grid. By default the model downloads
-a 1 km DEM, but you can supply a finer or coarser DEM via <code class="docutils literal notranslate"><span class="pre">local_data_path</span></code>.</p>
-</section>
-<section id="learning-rate-schedule">
-<h2>Learning rate schedule<a class="headerlink" href="#learning-rate-schedule" title="Link to this heading">¶</a></h2>
-<p>Typical starting point:</p>
+<section id="training-controls">
+<h3>Training controls<a class="headerlink" href="#training-controls" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>base LR: 1e-4</p></li>
-<li><p>min LR: 1e-5</p></li>
-<li><p>warmup epochs: 5</p></li>
-<li><p>schedule: <code class="docutils literal notranslate"><span class="pre">cosine</span></code> or <code class="docutils literal notranslate"><span class="pre">exp_decay</span></code></p></li>
-</ul>
-<p>If training is unstable:</p>
-<ul class="simple">
-<li><p>lower base LR to 5e-5</p></li>
-<li><p>reduce batch size</p></li>
-</ul>
-</section>
-<section id="batch-size-and-generalization">
-<h2>Batch size and generalization<a class="headerlink" href="#batch-size-and-generalization" title="Link to this heading">¶</a></h2>
-<ul class="simple">
-<li><p>Large batches improve throughput but can hurt peaks.</p></li>
-<li><p>Recommended ranges: 256–512 for 2 GPUs.</p></li>
-<li><p>If you need stronger peak learning, reduce batch size or use peak-weighted
-losses.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_size</span></code>: Number of samples per step. Larger is faster but can smooth peaks.
+Start with 32–64 (GPU) or 8–16 (CPU). If peaks are muted, reduce it.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_epochs</span></code>: Number of training epochs. 150–300 is a common range.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">learning_rate</span></code>: Base optimizer step size. Lower it (e.g., 5e-5) if training
+is unstable or the loss diverges early.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lr_schedule</span></code>: <code class="docutils literal notranslate"><span class="pre">cosine</span></code> or <code class="docutils literal notranslate"><span class="pre">exp_decay</span></code> for decayed learning rates. Set to
+<code class="docutils literal notranslate"><span class="pre">None</span></code> for a fixed rate. <code class="docutils literal notranslate"><span class="pre">cosine</span></code> is a robust default.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">warmup_epochs</span></code>: Number of warmup epochs before scheduling kicks in.
+Use 3 to stabilize early training; increase if the loss spikes in the
+first few epochs.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_learning_rate</span></code>: Floor learning rate when using a schedule (e.g., 1e-5).</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loss_function</span></code>: Training objective. <code class="docutils literal notranslate"><span class="pre">huber</span></code> is a stable default; <code class="docutils literal notranslate"><span class="pre">mse</span></code> is
+smoother but can suppress peaks; <code class="docutils literal notranslate"><span class="pre">msle</span></code> emphasizes relative errors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: Random seed for reproducibility. Fix this to compare experiments.</p></li>
 </ul>
 </section>
-<section id="bootstrapping">
-<h2>Bootstrapping<a class="headerlink" href="#bootstrapping" title="Link to this heading">¶</a></h2>
-<p>Streaming bootstrap sampling improves generalization but adds loss noise.
-Recommended <code class="docutils literal notranslate"><span class="pre">epoch_data_fraction</span></code>: 0.5–0.8.</p>
-</section>
-<section id="asymmetric-laplace-outputs">
-<h2>Asymmetric Laplace outputs<a class="headerlink" href="#asymmetric-laplace-outputs" title="Link to this heading">¶</a></h2>
-<p>If using <code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code>:</p>
+<section id="hydrology-and-scaling">
+<h3>Hydrology and scaling<a class="headerlink" href="#hydrology-and-scaling" title="Link to this heading">¶</a></h3>
 <ul class="simple">
-<li><p>Output layer is 3 units: <code class="docutils literal notranslate"><span class="pre">mu</span></code>, <code class="docutils literal notranslate"><span class="pre">log_b_plus</span></code>, <code class="docutils literal notranslate"><span class="pre">log_b_minus</span></code>.</p></li>
-<li><p>Prediction uses <code class="docutils literal notranslate"><span class="pre">mu</span></code> as the point estimate.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">routing_method</span></code>: Routing method used to generate runoff (<code class="docutils literal notranslate"><span class="pre">mfd</span></code>, <code class="docutils literal notranslate"><span class="pre">d8</span></code>,
+or <code class="docutils literal notranslate"><span class="pre">dinf</span></code>). Must match the method used in VegET routing; mismatches will
+cause inconsistent predictors.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">catchment_size_threshold</span></code>: Minimum catchment size filter for stations.
+Increase it to exclude very small basins or to reduce noise from tiny catchments.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">area_normalize</span></code>: If <code class="docutils literal notranslate"><span class="pre">True</span></code> (recommended), the model trains on area-normalized
+depth (mm/day) and converts outputs back to m³/s. Set to <code class="docutils literal notranslate"><span class="pre">False</span></code> if you need
+raw discharge units during training, evaluation, and simulation. Make sure you
+use the same value for training and inference.</p></li>
 </ul>
+</section>
+<section id="csv-observation-options-optional">
+<h3>CSV observation options (optional)<a class="headerlink" href="#csv-observation-options-optional" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">csv_dir</span></code>: Folder containing one CSV per station. Useful when you have custom
+observations not in GRDC.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lookup_csv</span></code>: Station metadata CSV with id/coordinates. Must align with the
+station IDs used in the per-station CSV filenames.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">id_col</span></code>, <code class="docutils literal notranslate"><span class="pre">lat_col</span></code>, <code class="docutils literal notranslate"><span class="pre">lon_col</span></code>: Column names in the lookup CSV.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">date_col</span></code>, <code class="docutils literal notranslate"><span class="pre">discharge_col</span></code>: Column names in station CSVs. Dates must be
+parseable (e.g., <code class="docutils literal notranslate"><span class="pre">YYYY-MM-DD</span></code>), and discharge must be in m³/s.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file_pattern</span></code>: Filename pattern for station CSVs (default <code class="docutils literal notranslate"><span class="pre">{id}.csv</span></code>).
+For example, use <code class="docutils literal notranslate"><span class="pre">station_{id}.csv</span></code> if your files are prefixed.</p></li>
+</ul>
+</section>
+<section id="simulation-coordinates-optional">
+<h3>Simulation coordinates (optional)<a class="headerlink" href="#simulation-coordinates-optional" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">latlist</span></code> / <code class="docutils literal notranslate"><span class="pre">lonlist</span></code>: Lists of coordinates for point simulations. Points
+should fall inside the study area and on or near the river network for
+meaningful results.</p></li>
+</ul>
+</section>
+</section>
+<section id="recommended-settings">
+<h2>Recommended settings<a class="headerlink" href="#recommended-settings" title="Link to this heading">¶</a></h2>
+<p>These defaults are a good starting point for most basins. Adjust only if you
+see instability or poor peak performance.</p>
+<section id="general-defaults">
+<h3>General defaults<a class="headerlink" href="#general-defaults" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">learning_rate</span></code>: 1e-4</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">min_learning_rate</span></code>: 1e-5</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">warmup_epochs</span></code>: 3</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">lr_schedule</span></code>: <code class="docutils literal notranslate"><span class="pre">cosine</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">loss_function</span></code>: <code class="docutils literal notranslate"><span class="pre">huber</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">batch_size</span></code>: 32–64 (GPU), 8–16 (CPU)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">num_epochs</span></code>: 150–300</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">routing_method</span></code>: match the method used in runoff routing (<code class="docutils literal notranslate"><span class="pre">mfd</span></code> recommended)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">catchment_size_threshold</span></code>: 1–10 (raise if you want to exclude tiny basins)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">area_normalize</span></code>: <code class="docutils literal notranslate"><span class="pre">True</span></code> (recommended for multi-basin/generalization)</p></li>
+</ul>
+</section>
 </section>
 </section>
 
