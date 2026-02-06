@@ -265,6 +265,9 @@ area normalization. The CSV outputs written to
 <p>If <code class="docutils literal notranslate"><span class="pre">area_normalize=False</span></code> is used, the model trains and predicts in raw
 m³/s (after <code class="docutils literal notranslate"><span class="pre">log1p</span></code>/<code class="docutils literal notranslate"><span class="pre">expm1</span></code>), and no area-based conversion is applied at
 inference time.</p>
+<p>Note: Prediction time series start after a one-year warmup period. The first 365
+days of the simulation window are used as model context and are not written to
+the output CSVs.</p>
 </section>
 <section id="module-reference">
 <h2>Module reference<a class="headerlink" href="#module-reference" title="Link to this heading">¶</a></h2>

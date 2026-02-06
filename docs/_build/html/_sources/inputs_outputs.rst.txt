@@ -50,6 +50,10 @@ If ``area_normalize=False`` is used, the model trains and predicts in raw
 m³/s (after ``log1p``/``expm1``), and no area-based conversion is applied at
 inference time.
 
+Note: Prediction time series start after a one-year warmup period. The first 365
+days of the simulation window are used as model context and are not written to
+the output CSVs.
+
 Module reference
 ----------------
 

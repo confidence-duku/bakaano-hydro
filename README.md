@@ -71,9 +71,9 @@ After running Bakaano-Hydro, the working directory follows this structure:
 ```text
 working_dir/
 ├── alpha_earth/                     # AlphaEarth satellite embeddings (A00–A63)
-│   ├── A00.tif
+│   ├── band_A00.tif
 │   ├── ...
-│   └── A63.tif
+│   └── band_A63.tif
 │
 ├── catchment/                       # Catchment-level static descriptors
 │   └── river_grid.tif
@@ -102,8 +102,8 @@ working_dir/
 │   └── daily_ndvi_climatology.pkl
 │
 ├── predicted_streamflow_data/       # Model simulation outputs
-│   ├── streamflow_lat_lon*.csv
-│   └── metadata.json
+│   ├── predicted_streamflow_lat{lat}_lon{lon}.csv
+│   └── bakaano_{station_id}.csv
 │
 ├── runoff_output/                   # Distributed runoff & routed flow tensors
 │   └── wacc_sparse_arrays.pkl
