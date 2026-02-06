@@ -269,6 +269,13 @@ smoother but can suppress peaks; <code class="docutils literal notranslate"><spa
 <li><p><code class="docutils literal notranslate"><span class="pre">seed</span></code>: Random seed for reproducibility. Fix this to compare experiments.</p></li>
 </ul>
 </section>
+<section id="when-to-choose-asym-laplace-nll">
+<h3>When to choose <code class="docutils literal notranslate"><span class="pre">asym_laplace_nll</span></code><a class="headerlink" href="#when-to-choose-asym-laplace-nll" title="Link to this heading">¶</a></h3>
+<p>Use <code class="docutils literal notranslate"><span class="pre">loss_function=&quot;asym_laplace_nll&quot;</span></code> when you care about cross-basin
+generalization or want the model to express asymmetric uncertainty. It can
+improve transfer to ungauged basins by letting the model adapt its error
+tolerance across regimes, and by treating under- vs over-prediction differently.</p>
+</section>
 <section id="hydrology-and-scaling">
 <h3>Hydrology and scaling<a class="headerlink" href="#hydrology-and-scaling" title="Link to this heading">¶</a></h3>
 <ul class="simple">

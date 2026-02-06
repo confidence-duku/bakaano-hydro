@@ -48,6 +48,14 @@ Training controls
   smoother but can suppress peaks; ``msle`` emphasizes relative errors.
 - ``seed``: Random seed for reproducibility. Fix this to compare experiments.
 
+When to choose ``asym_laplace_nll``
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Use ``loss_function="asym_laplace_nll"`` when you care about cross-basin
+generalization or want the model to express asymmetric uncertainty. It can
+improve transfer to ungauged basins by letting the model adapt its error
+tolerance across regimes, and by treating under- vs over-prediction differently.
+
 Hydrology and scaling
 ^^^^^^^^^^^^^^^^^^^^^
 - ``routing_method``: Routing method used to generate runoff (``mfd``, ``d8``,
@@ -96,4 +104,3 @@ General defaults
 - ``routing_method``: match the method used in runoff routing (``mfd`` recommended)
 - ``catchment_size_threshold``: 1–10 (raise if you want to exclude tiny basins)
 - ``area_normalize``: ``True`` (recommended for multi-basin/generalization)
-
