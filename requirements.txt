@@ -12,7 +12,7 @@ keras>=3.12,<4
 keras-tcn>=3.5,<4
 matplotlib>=3.9,<4
 netCDF4>=1.7,<2
-numpy>=1.26,<2
+numpy>=1.26,<2.1
 nvidia-cublas-cu12==12.5.3.2
 nvidia-cuda-cupti-cu12==12.5.82
 nvidia-cuda-nvcc-cu12==12.5.82
