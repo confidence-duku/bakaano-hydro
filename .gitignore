@@ -8,3 +8,7 @@ README.Docker.md
 overrides.json
 compose.yaml
 .devcontainer
+.venv-test
+build/
+dist/
+*.egg-info/
