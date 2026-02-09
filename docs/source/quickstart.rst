@@ -1,6 +1,19 @@
 Quick Start
 ===========
 
+Colab Notebook (Recommended)
+----------------------------
+
+For the fastest start, run the full workflow notebook in Google Colab:
+
+- Colab launcher:
+  ``https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
+- Notebook source:
+  ``https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
+
+This notebook includes package installation, Google Drive setup, preprocessing,
+runoff/routing, training, evaluation, and simulation in one guided flow.
+
 1) Setup working directory and study area
 -----------------------------------------
 
@@ -45,6 +58,12 @@ Recommended preprocessing order:
 - DEM first, then Tree cover, NDVI, Soil, AlphaEarth, and Meteorology.
 - DEM creates the reference grid (``elevation/dem_clipped.tif``) used to align
   the other raster inputs.
+
+Dataset availability windows:
+
+- Tree cover (MODIS VCF): available from 2001 onward.
+- NDVI (MODIS 16-day): available from 2001 onward.
+- AlphaEarth embeddings: available from 2017 onward.
 
 Google Earth Engine authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -118,6 +137,7 @@ Preprocessing and model use:
   to the DEM grid so it aligns with all other rasters.
 - Produces a static vegetation cover layer used by VegET and the streamflow model
   as a land-surface predictor.
+- Source data availability starts in 2001.
 
 .. code-block:: python
 
@@ -146,6 +166,7 @@ Preprocessing and model use:
 - Downloads 16-day NDVI composites, clips to the basin, and resamples to the DEM grid.
 - Aggregates to climatology or interval stacks (as stored under ``ndvi/``) used by
   VegET to represent vegetation dynamics and seasonal water use.
+- Source data availability starts in 2001.
 
 .. code-block:: python
 
@@ -201,6 +222,7 @@ Preprocessing and model use:
   DEM grid.
 - Stacks the embedding bands as static catchment descriptors used by the streamflow
   model to capture land-surface characteristics beyond basic physiography.
+- Source data availability starts in 2017.
 
 .. code-block:: python
 
