@@ -53,12 +53,12 @@ Start with Colab
 
 Recommended entry point for new users:
 
-- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
-- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
+- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
+- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
 
 .. image:: https://colab.research.google.com/assets/colab-badge.svg
    :alt: Open In Colab
-   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb
+   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb
 
 .. toctree::
    :maxdepth: 2
