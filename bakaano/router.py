@@ -69,10 +69,15 @@ class RunoffRouter:
             str: Path to the temporary runoff GeoTIFF.
         """
 
-        self.dem_profile.update(dtype=rasterio.float32, count=1)
+        profile = self.dem_profile.copy()
+        profile.update(dtype=rasterio.float32, count=1)
+        # GDAL only accepts BLOCKXSIZE/BLOCKYSIZE when TILED=YES.
+        if not profile.get("tiled", False):
+            profile.pop("blockxsize", None)
+            profile.pop("blockysize", None)
         runoff_tiff = f'{self.working_dir}/scratch/runoff_scratch.tif'
-        with rasterio.open(runoff_tiff, 'w', **self.dem_profile) as dst:
-                dst.write(runoff_array, 1)
+        with rasterio.open(runoff_tiff, 'w', **profile) as dst:
+            dst.write(runoff_array, 1)
                 
         return runoff_tiff
     

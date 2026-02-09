@@ -6,6 +6,7 @@ Role: Compute daily runoff and route flow to river network.
 import numpy as np
 import pandas as pd
 import os
+import shutil
 from datetime import datetime
 from bakaano.utils import Utils
 from bakaano.pet import PotentialEvapotranspiration
@@ -107,16 +108,59 @@ class VegET:
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
         self.climate_data_source = climate_data_source
 
-    def compute_veget_runoff_route_flow(self):  
+    def _resume_signature(self):
+        """Return a lightweight signature used to validate resume state."""
+        return {
+            "start_date": self.start_date,
+            "end_date": self.end_date,
+            "routing_method": self.routing_method,
+            "climate_data_source": self.climate_data_source,
+            "study_area": str(self.study_area),
+        }
+
+    def _load_resume_state(self, state_file, expected_signature):
+        """Load and validate resume state. Returns dict or None."""
+        if not os.path.exists(state_file):
+            return None
+        with open(state_file, "rb") as f:
+            state = pickle.load(f)
+        if state.get("signature") != expected_signature:
+            return None
+        return state
+
+    def _save_resume_state(self, state_file, signature, next_index, soil_moisture):
+        """Persist resume state after checkpoint flush."""
+        state = {
+            "signature": signature,
+            "next_index": next_index,
+            "soil_moisture": np.asarray(soil_moisture, dtype=np.float32),
+        }
+        with open(state_file, "wb") as f:
+            pickle.dump(state, f)
+
+    def compute_veget_runoff_route_flow(self, resume=True, checkpoint_days=30):  
         """Compute VegET runoff and route flow to the river network.
 
         This routine loads climate inputs, computes PET, simulates soil moisture
         and runoff, and performs routing to produce daily routed runoff outputs.
 
+        Args:
+            resume (bool): Resume from checkpoint state if available.
+            checkpoint_days (int): Number of simulated days between checkpoints.
+
         Returns:
             None. Writes routed runoff outputs to ``{working_dir}/runoff_output``.
         """
-        if not os.path.exists(f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'):
+        if checkpoint_days < 1:
+            raise ValueError("checkpoint_days must be >= 1.")
+
+        final_file = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
+        state_file = f'{self.working_dir}/runoff_output/wacc_resume_state.pkl'
+        chunks_dir = f'{self.working_dir}/runoff_output/wacc_resume_chunks'
+        os.makedirs(chunks_dir, exist_ok=True)
+        signature = self._resume_signature()
+
+        if not os.path.exists(final_file):
             # Initialize potential evapotranspiration and data preprocessor
             print('Computing VegET runoff and routing flow to river network')
             # Initialize potential evapotranspiration and data preprocessor
@@ -174,11 +218,6 @@ class VegET:
 
             
             
-            # Initial soil moisture condition
-            soil_moisture = rf[0] * 0   #initialize soil moisture
-            soil_moisture = self.uw.align_rasters(soil_moisture, israster=False)
-            soil_moisture = np.asarray(soil_moisture)
-
             pickle_file_path = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
             with open(pickle_file_path, 'rb') as f:
                 ndvi_array = pickle.load(f)
@@ -209,17 +248,37 @@ class VegET:
             facc_thresh = np.nanmax(acc) * 0.0001
             facc_mask = np.where(acc < facc_thresh, 0, 1)
 
-            # Lists for storing results
-            self.wacc_list = []
-            self.mam_ro, self.jja_ro, self.son_ro, self.djf_ro = 0, 0, 0, 0
-            self.mam_wfa, self.jja_wfa, self.son_wfa, self.djf_wfa = 0, 0, 0, 0
-            this_date = datetime.strptime(self.start_date, '%Y-%m-%d')
-
             start = datetime.strptime(self.start_date, "%Y-%m-%d")
             end = datetime.strptime(self.end_date, "%Y-%m-%d")
             date_list = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
                         for i in range((end - start).days + 1)]
-            
+
+            # Initial soil moisture condition
+            init_sm = rf[0] * 0
+            init_sm = self.uw.align_rasters(init_sm, israster=False)
+            init_sm = np.asarray(init_sm, dtype=np.float32)
+
+            if (not resume) and (os.path.exists(state_file) or os.listdir(chunks_dir)):
+                if os.path.exists(state_file):
+                    os.remove(state_file)
+                for name in os.listdir(chunks_dir):
+                    os.remove(os.path.join(chunks_dir, name))
+
+            resume_state = self._load_resume_state(state_file, signature) if resume else None
+            if resume_state is not None:
+                start_idx = int(resume_state.get("next_index", 0))
+                soil_moisture = np.asarray(resume_state["soil_moisture"], dtype=np.float32)
+                print(f"Resuming VegET from day {start_idx + 1} of {len(date_list)}")
+            else:
+                start_idx = 0
+                soil_moisture = init_sm
+                if resume and (os.path.exists(state_file) or os.listdir(chunks_dir)):
+                    print("Resume state invalid or stale; starting from day 1 and clearing old checkpoints.")
+                    if os.path.exists(state_file):
+                        os.remove(state_file)
+                    for name in os.listdir(chunks_dir):
+                        os.remove(os.path.join(chunks_dir, name))
+
             ref_shape = soil_moisture.shape
 
             def _align_or_values(arr):
@@ -230,11 +289,13 @@ class VegET:
                 return np.asarray(aligned, dtype=np.float32)
 
             print('\n')
-            for count, date in tqdm(enumerate(date_list), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
+            chunk_start = start_idx
+            wacc_buffer = []
+            for count in tqdm(range(start_idx, len(date_list)), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
+                date = date_list[count]
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
-                count2 = count+1
                 this_rf = _align_or_values(rf[count])
                 eff_rain = this_rf * one_minus_interception
                 eff_rain = np.where(eff_rain<0, 0, eff_rain)
@@ -292,14 +353,35 @@ class VegET:
             
                 wacc = wacc * facc_mask            
                 wacc = sp.sparse.coo_array(wacc)
-                #sparse_series.append({"time": date, "matrix": sparse_matrix})
-                self.wacc_list.append({"time": date, "matrix": wacc})            
-                
-            # Save station weighted flow accumulation data
-            filename = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
-            
-            with open(filename, 'wb') as f:
+                wacc_buffer.append({"time": date, "matrix": wacc})
+
+                # Flush checkpoint chunk periodically (or at end).
+                flush = (len(wacc_buffer) >= checkpoint_days) or (count == len(date_list) - 1)
+                if flush:
+                    chunk_file = os.path.join(chunks_dir, f"chunk_{chunk_start:07d}_{count:07d}.pkl")
+                    with open(chunk_file, "wb") as f:
+                        pickle.dump(wacc_buffer, f)
+                    wacc_buffer = []
+                    self._save_resume_state(state_file, signature, count + 1, soil_moisture)
+                    chunk_start = count + 1
+
+            # Consolidate chunked outputs into final file.
+            chunk_files = sorted(
+                [os.path.join(chunks_dir, n) for n in os.listdir(chunks_dir) if n.endswith(".pkl")]
+            )
+            self.wacc_list = []
+            for chunk_file in chunk_files:
+                with open(chunk_file, "rb") as f:
+                    self.wacc_list.extend(pickle.load(f))
+
+            with open(final_file, 'wb') as f:
                 pickle.dump(self.wacc_list, f)
-            print(f'Completed. Routed runoff data saved to {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl')
+            print(f'Completed. Routed runoff data saved to {final_file}')
+
+            # Cleanup resume artifacts after successful completion.
+            if os.path.exists(state_file):
+                os.remove(state_file)
+            if os.path.exists(chunks_dir):
+                shutil.rmtree(chunks_dir, ignore_errors=True)
         else:
             print(f'Routed runoff data exists in {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl. Skipping processing')
