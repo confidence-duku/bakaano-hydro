@@ -7,6 +7,7 @@ import ee
 import geemap
 import os
 import glob
+import re
 import numpy as np
 import rasterio
 import rioxarray
@@ -50,6 +51,32 @@ class NDVI:
         self.start_date = start_date
         self.end_date = end_date
 
+    def _extract_file_dates(self, files):
+        """Extract datetime stamps from NDVI GeoTIFF filenames."""
+        dates = []
+        for file in files:
+            name = os.path.basename(file)
+            match = re.search(r"(\d{4})[_-]?(\d{2})[_-]?(\d{2})", name)
+            if not match:
+                continue
+            year, month, day = match.groups()
+            try:
+                dates.append(datetime.strptime(f"{year}-{month}-{day}", "%Y-%m-%d"))
+            except ValueError:
+                continue
+        return dates
+
+    def _raw_ndvi_has_requested_span(self, raw_ndvi):
+        """Check raw NDVI files span requested start/end dates."""
+        if not raw_ndvi:
+            return False
+        dates = self._extract_file_dates(raw_ndvi)
+        if not dates:
+            return False
+        start = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        return min(dates) <= start and max(dates) >= end
+
     def _download_ndvi(self):
         """Download NDVI data from Google Earth Engine.
 
@@ -57,22 +84,53 @@ class NDVI:
             None. Downloads GeoTIFFs to ``{working_dir}/ndvi``.
         """
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
-        if not os.path.exists(ndvi_check):
-            ee.Authenticate()
-            ee.Initialize()
-
-            ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
-
-            i_date = self.start_date
-            f_date = datetime.strptime(self.end_date, "%Y-%m-%d") + timedelta(days=1)
-            df = ndvi.select('NDVI').filterDate(i_date, f_date)
-
-            area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy) 
-            out_path = f'{self.working_dir}/ndvi'
-            geemap.ee_export_image_collection(ee_object=df, out_dir=out_path, scale=1000, region=area, crs='EPSG:4326', file_per_band=True) 
-            print('Download completed')
-        else:
+        raw_ndvi = glob.glob(os.path.join(self.ndvi_folder, '*NDVI.tif'))
+        if os.path.exists(ndvi_check):
             print(f"     - NDVI data already exists in {self.working_dir}/ndvi/daily_ndvi_climatology.pkl; skipping download.")
+            return
+
+        ee.Authenticate()
+        ee.Initialize()
+
+        ndvi = ee.ImageCollection("MODIS/061/MOD13A2")
+        i_date = self.start_date
+        f_date = datetime.strptime(self.end_date, "%Y-%m-%d") + timedelta(days=1)
+        df = ndvi.select('NDVI').filterDate(i_date, f_date)
+
+        ts_list = df.aggregate_array('system:time_start').getInfo() or []
+        expected_dates = sorted({
+            datetime.utcfromtimestamp(ts / 1000).strftime("%Y-%m-%d")
+            for ts in ts_list
+        })
+        if not expected_dates:
+            print("     - No NDVI images found for requested period.")
+            return
+
+        local_dates = {
+            d.strftime("%Y-%m-%d") for d in self._extract_file_dates(raw_ndvi)
+        }
+        missing_dates = [d for d in expected_dates if d not in local_dates]
+        if not missing_dates:
+            print(
+                f"     - Raw NDVI GeoTIFFs in {self.working_dir}/ndvi already cover requested dates; "
+                "skipping download and proceeding to preprocessing."
+            )
+            return
+
+        area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy)
+        for date_str in missing_dates:
+            next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+            img = df.filterDate(date_str, next_day).first()
+            if img is None:
+                continue
+            geemap.ee_export_image(
+                ee_object=img.select('NDVI'),
+                filename=f"{self.working_dir}/ndvi/{date_str}.NDVI.tif",
+                scale=1000,
+                region=area,
+                crs='EPSG:4326'
+            )
+        print("Download completed (missing NDVI files only).")
 
     def _generate_intervals(self, year):
         """
@@ -224,6 +282,11 @@ class NDVI:
         ndvi_check = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         if not os.path.exists(ndvi_check):
             groups = self._group_files_by_intervals()
+            if not groups:
+                raise FileNotFoundError(
+                    "No raw NDVI GeoTIFFs found for preprocessing. "
+                    "Expected files matching '*NDVI.tif' in the ndvi directory."
+                )
             sorted_keys = sorted(groups.keys(), key=lambda k: datetime.strptime(k, '%m-%d'))
             #interval_dates = [datetime.strptime(k, '%m-%d').timetuple().tm_yday for k in sorted_keys]
 

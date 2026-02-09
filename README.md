@@ -19,6 +19,13 @@ The name Bakaano comes from Fante, a language spoken along the southern coast of
 Full documentation is available at:
 https://confidence-duku.github.io/bakaano-hydro/
 
+## Open in Colab
+
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb)
+
+- Open in Colab: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb
+- Notebook source: https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb
+
 ## Conceptual model
 
 Bakaano-Hydro consists of three tightly coupled components:
