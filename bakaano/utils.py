@@ -39,11 +39,19 @@ class Utils:
         self.study_area = study_area
         self.working_dir = working_dir
         reference_data = f'{self.working_dir}/elevation/dem_clipped.tif'
-        self.match = rioxarray.open_rasterio(reference_data)
-        self.match = self.match.rio.write_crs(4326)
-        self.ref_res = self.match.rio.resolution()
-        self.ref_bounds = self.match.rio.bounds()
-        self.ref_shape = self.match.shape[-2:]  # (height, width)
+        if os.path.exists(reference_data):
+            self.match = rioxarray.open_rasterio(reference_data)
+            self.match = self.match.rio.write_crs(4326)
+            self.ref_res = self.match.rio.resolution()
+            self.ref_bounds = self.match.rio.bounds()
+            self.ref_shape = self.match.shape[-2:]  # (height, width)
+        else:
+            # DEM reference is created during preprocessing; allow utility
+            # methods that do not require grid matching to run before it exists.
+            self.match = None
+            self.ref_res = None
+            self.ref_bounds = None
+            self.ref_shape = None
         
     def process_existing_file(self, file_path):
         """Check whether a file already exists.
@@ -123,6 +131,11 @@ class Utils:
         Returns:
             xarray.DataArray: Reprojected data aligned to the DEM grid.
         """
+        if self.match is None:
+            raise FileNotFoundError(
+                f"DEM reference not found: {self.working_dir}/elevation/dem_clipped.tif. "
+                "Run DEM preprocessing first."
+            )
 
         # ---- 1. If array already matches reference grid, return early ----
         if not israster:

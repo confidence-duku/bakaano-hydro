@@ -40,6 +40,12 @@ Run these once per basin. If you change the basin boundary or the DEM
 resolution, re-run the preprocessing steps so all inputs align. For Earth
 Engine-based datasets, the first run will prompt for authentication.
 
+Recommended preprocessing order:
+
+- DEM first, then Tree cover, NDVI, Soil, AlphaEarth, and Meteorology.
+- DEM creates the reference grid (``elevation/dem_clipped.tif``) used to align
+  the other raster inputs.
+
 Google Earth Engine authentication
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -72,6 +78,36 @@ Common pitfalls:
 
 - Missing Earth Engine authentication (NDVI/Tree cover/AlphaEarth).
 - Incomplete downloads (rerun the step).
+
+DEM
+~~~
+
+Preprocessing and model use:
+
+- Run this step first.
+- Downloads a DEM (default 1 km), clips to the basin, and reprojects to match the
+  project grid.
+- Derives slope, flow direction, accumulation, and the river grid used for
+  runoff routing and catchment geometry.
+
+.. code-block:: python
+
+   from bakaano.dem import DEM
+   dd = DEM(
+       working_dir=working_dir,
+       study_area=study_area,
+       local_data=False,
+       local_data_path=None,
+   )
+   dd.get_dem_data()
+   dd.plot_dem()
+
+.. figure:: /_static/quick_start/quick_start_5_2.png
+   :alt: DEM example
+   :align: center
+   :width: 80%
+
+   Example output: clipped DEM.
 
 Tree cover (MODIS VCF)
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -129,35 +165,6 @@ Preprocessing and model use:
    :width: 80%
 
    Example output: NDVI climatology for a 16-day interval.
-
-DEM
-~~~
-
-Preprocessing and model use:
-
-- Downloads a DEM (default 1 km), clips to the basin, and reprojects to match the
-  project grid.
-- Derives slope, flow direction, accumulation, and the river grid used for
-  runoff routing and catchment geometry.
-
-.. code-block:: python
-
-   from bakaano.dem import DEM
-   dd = DEM(
-       working_dir=working_dir,
-       study_area=study_area,
-       local_data=False,
-       local_data_path=None,
-   )
-   dd.get_dem_data()
-   dd.plot_dem()
-
-.. figure:: /_static/quick_start/quick_start_5_2.png
-   :alt: DEM example
-   :align: center
-   :width: 80%
-
-   Example output: clipped DEM.
 
 Soil
 ~~~~
