@@ -132,6 +132,7 @@ class BakaanoHydro:
         date_col="date",
         discharge_col="discharge",
         file_pattern="{id}.csv",
+        model_overwrite=True,
     ):
         """Train the deep learning streamflow prediction model.
 
@@ -159,6 +160,9 @@ class BakaanoHydro:
             date_col (str): Date column in station CSVs.
             discharge_col (str): Discharge column in station CSVs.
             file_pattern (str): Filename pattern for station CSVs.
+            model_overwrite (bool): If True, start a fresh model and overwrite existing
+                checkpoints. If False and a saved model exists, load it and
+                continue training.
         """
 
         rawdata = glob.glob(f'{self.working_dir}/models/*_predictor_response*.pkl')
@@ -288,7 +292,6 @@ class BakaanoHydro:
         print(f'     Training deepstrmm model based on {sn} stations in the GRDC database')
         print(sdp.sim_station_names)
         
-        print(' 3. Building neural network model')
         smodel = StreamflowModel(
             self.working_dir,
             batch_size,
@@ -304,10 +307,18 @@ class BakaanoHydro:
             min_learning_rate=min_learning_rate,
         )
         smodel.prepare_data(self.rawdata)
-        smodel.build_model()
+        model_path = f"{self.working_dir}/models/bakaano_model.keras"
+        if (not model_overwrite) and os.path.exists(model_path):
+            print(f" 3. Loading existing model for continued training: {model_path}")
+            smodel.load_regional_model(model_path)
+        else:
+            if not model_overwrite and not os.path.exists(model_path):
+                print(" 3. No existing model found; starting fresh training run.")
+            print(' 3. Building neural network model')
+            smodel.build_model()
         print(' 4. Training neural network model')
         smodel.train_model()
-        print(f'     Completed! Trained model saved at {self.working_dir}/models/bakaano_model.keras')
+        print(f'     Completed! Trained model saved at {model_path}')
 #========================================================================================================================  
                 
     def evaluate_streamflow_model_interactively(

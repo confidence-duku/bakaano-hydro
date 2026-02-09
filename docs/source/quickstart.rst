@@ -6,12 +6,12 @@ Colab Notebook (Recommended)
 
 For the fastest start, run the full workflow notebook in Google Colab:
 
-- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
-- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
+- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
+- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
 
 .. image:: https://colab.research.google.com/assets/colab-badge.svg
    :alt: Open In Colab
-   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb
+   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb
 
 This notebook includes package installation, Google Drive setup, preprocessing,
 runoff/routing, training, evaluation, and simulation in one guided flow.
@@ -445,6 +445,12 @@ predictors and observed discharge. You can train with GRDC NetCDF stations or
 with per-station CSV files via a lookup table. This step can take hours
 depending on GPU, batch size, and the number of stations.
 
+Model overwrite/resume behavior:
+
+- ``model_overwrite=True``: start a fresh model run and overwrite the saved model file.
+- ``model_overwrite=False``: if ``{working_dir}/models/bakaano_model.keras`` exists,
+  load it and continue training; otherwise start fresh.
+
 Minimal training option (GRDC)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -462,6 +468,7 @@ Minimal training option (GRDC)
        min_learning_rate=1e-5,
        routing_method="mfd",
        area_normalize=True,
+       model_overwrite=True,
    )
 
 Minimal training option (CSV observations)
@@ -505,6 +512,7 @@ Optional column overrides (if your headers differ):
        date_col="date",
        discharge_col="discharge",
        file_pattern="{id}.csv",
+       model_overwrite=True,
    )
 
 Notes:
@@ -526,6 +534,7 @@ Parameter guidance (see :meth:`bakaano.runner.BakaanoHydro.train_streamflow_mode
 - ``routing_method``: must match the runoff routing method used in VegET.
 - ``catchment_size_threshold``: filters very small catchments.
 - ``area_normalize``: toggle area normalization for predictors/response.
+- ``model_overwrite``: ``True`` for fresh training, ``False`` to resume from saved model.
 
 Guidance:
 - Use ``loss_function="asym_laplace_nll"`` for asymmetric uncertainty.
@@ -548,6 +557,7 @@ Guidance:
        routing_method="mfd",
        catchment_size_threshold=1,
        area_normalize=True,
+       model_overwrite=False,
    )
 
 
