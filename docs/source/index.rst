@@ -38,6 +38,16 @@ Bakaano-Hydro consists of three tightly coupled components:
 
 The neural network augments hydrology, it does not replace it.
 
+Start with Colab
+----------------
+
+Recommended entry point for new users:
+
+- Open the full workflow notebook in Colab:
+  ``https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
+- Notebook source:
+  ``https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
+
 .. figure:: https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf
    :alt: Bakaano-Hydro conceptual model diagram
    :align: center

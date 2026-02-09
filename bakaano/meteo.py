@@ -219,6 +219,7 @@ class Meteo:
         # Parse start and end dates
         start = datetime.strptime(self.start_date, "%Y-%m-%d")
         end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        end_exclusive = (end + timedelta(days=1)).strftime("%Y-%m-%d")
 
         area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy)
     
@@ -229,8 +230,8 @@ class Meteo:
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
 
         for year in range(start_year, end_year + 1):
-            i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date
+            i_date = self.start_date if year == start_year else f"{year}-01-01"
+            f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
     
             df = era5.select(
                 'total_precipitation_sum',
@@ -308,6 +309,7 @@ class Meteo:
     
         start = datetime.strptime(self.start_date, "%Y-%m-%d")
         end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        end_exclusive = (end + timedelta(days=1)).strftime("%Y-%m-%d")
         expected_dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end - start).days + 1)]
     
         # Step 1: Bulk download CHIRPS and ERA5 (temperature)
@@ -315,8 +317,8 @@ class Meteo:
         end_year = end.year
     
         for year in range(start_year, end_year + 1):
-            i_date = f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else self.end_date
+            i_date = self.start_date if year == start_year else f"{year}-01-01"
+            f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
     
             # CHIRPS precipitation
             df_chirps = chirps.select('precipitation').filterDate(i_date, f_date)
