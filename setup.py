@@ -29,7 +29,7 @@ setup(
         "keras-tcn>=3.5,<4",
         "matplotlib>=3.9,<4",
         "netCDF4>=1.7,<2",
-        "numpy>=1.26,<2.1",
+        "numpy>=1.26,<2",
         "slicer>=0.0.7,<0.1",
         "pandas>=2.2,<2.4",
         "pysheds>=0.3,<0.4",
