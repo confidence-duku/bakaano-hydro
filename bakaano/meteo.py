@@ -409,6 +409,83 @@ class Meteo:
                 print(f"Failed ERA5 download for {date_str}: {e}")
     
         print("CHIRPS and ERA5 download (with checks) completed.")
+
+    def _build_nc_from_scratch_tifs(self, variable_dirs, output_dir_map):
+        """Create missing NetCDF outputs from existing scratch GeoTIFFs.
+
+        Args:
+            variable_dirs (dict[str, str]): Mapping variable name -> GeoTIFF glob.
+            output_dir_map (dict[str, str | Path]): Mapping variable name -> output dir.
+
+        Returns:
+            list[str]: Variable names still missing required GeoTIFFs.
+        """
+        missing_vars = []
+        for var_name, tif_pattern in variable_dirs.items():
+            output_dir = output_dir_map[var_name]
+            os.makedirs(output_dir, exist_ok=True)
+            nc_path = os.path.join(output_dir, f"{var_name}.nc")
+
+            # Skip variables that already have a NetCDF output.
+            if os.path.exists(nc_path):
+                continue
+
+            tif_files = sorted(glob.glob(tif_pattern))
+            if not tif_files:
+                missing_vars.append(var_name)
+                continue
+
+            missing_dates = self._missing_dates_for_tif_pattern(tif_files)
+            if missing_dates:
+                print(
+                    f"     - Scratch files for '{var_name}' are incomplete "
+                    f"({len(missing_dates)} missing days); download required."
+                )
+                missing_vars.append(var_name)
+                continue
+
+            try:
+                timestamps = [
+                    datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
+                    for f in tif_files
+                ]
+            except ValueError:
+                raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
+
+            data_list = []
+            for i, file in enumerate(tif_files):
+                da = rioxarray.open_rasterio(file, masked=True).squeeze()
+                da = da.expand_dims(dim={"time": [timestamps[i]]})
+                da = da.assign_coords(time=("time", [timestamps[i]]))
+                data_list.append(da)
+
+            data = xr.concat(data_list, dim="time")
+            data.name = var_name
+            data = data.rename({"y": "lat", "x": "lon"})
+            data.to_netcdf(nc_path)
+            print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
+
+        return missing_vars
+
+    def _missing_dates_for_tif_pattern(self, tif_files):
+        """Return missing dates (YYYY-MM-DD) versus requested daily range."""
+        start = datetime.strptime(self.start_date, "%Y-%m-%d")
+        end = datetime.strptime(self.end_date, "%Y-%m-%d")
+        expected_dates = {
+            (start + timedelta(days=i)).strftime("%Y-%m-%d")
+            for i in range((end - start).days + 1)
+        }
+
+        observed_dates = set()
+        for file in tif_files:
+            try:
+                date_str = os.path.basename(file).split('.')[0]
+                date_obj = datetime.strptime(date_str, "%Y%m%d")
+                observed_dates.add(date_obj.strftime("%Y-%m-%d"))
+            except ValueError:
+                continue
+
+        return sorted(expected_dates - observed_dates)
         
     def get_era5_land_meteo_data(self):
         """Download/process ERA5-Land daily data and return datasets.
@@ -418,58 +495,35 @@ class Meteo:
                 prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
         """
         if self.local_data is False:
-            data_check = f'{self.working_dir}/ERA5/prep/pr.nc'
-            if not os.path.exists(data_check):
+            variable_dirs = {
+                'pr': os.path.join(self.era5_scratch, '*total_precipitation_sum*.tif'),
+                'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
+                'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
+                'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
+            }
+
+            output_dir_map = {
+                'pr': self.prep_path,
+                'tasmax': self.tasmax_path,
+                'tasmin': self.tasmin_path,
+                'tas': self.tmean_path
+            }
+
+            missing_vars = self._build_nc_from_scratch_tifs(variable_dirs, output_dir_map)
+            if missing_vars:
+                print(
+                    "     - Missing scratch GeoTIFFs for variables "
+                    f"{missing_vars}; downloading required climate data."
+                )
                 self._download_era5_land_data()
-                variable_dirs = {
-                    'pr': os.path.join(self.era5_scratch, '*total_precipitation_sum*.tif'),
-                    'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
-                    'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
-                    'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
-                }
-
-                output_dir_map = {
-                    'pr': self.prep_path,
-                    'tasmax': self.tasmax_path,
-                    'tasmin': self.tasmin_path,
-                    'tas': self.tmean_path
-                }
-
-                for var_name, tif_pattern in variable_dirs.items():
-                    self.pattern = tif_pattern
-                    output_dir = output_dir_map[var_name]
-                    tif_files = sorted(glob.glob(tif_pattern))
-
-                    # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
-                    try:
-                        timestamps = [
-                            datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
-                            for f in tif_files
-                        ]
-                    except ValueError:
-                        raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
-                    self.timestamps = timestamps
-                    # 📚 Load and stack GeoTIFFs
-                    data_list = []
-                    for i, file in enumerate(tif_files):
-                        da = rioxarray.open_rasterio(file, masked=True).squeeze()  # Remove band dim if present
-                        da = da.expand_dims(dim={"time": [timestamps[i]]})         # ⬅️ Make time a proper dim
-                        da = da.assign_coords(time=("time", [timestamps[i]]))      # ⬅️ Make it a coordinate too
-                        data_list.append(da)
-
-                    # 📈 Combine into a single xarray DataArray
-                    data = xr.concat(data_list, dim="time")
-                    data.name = var_name
-                    data = data.rename({"y": "lat", "x": "lon"})
-
-                    # 💾 Save to NetCDF
-                    os.makedirs(output_dir, exist_ok=True)
-                    nc_path = os.path.join(output_dir, f"{var_name}.nc")
-                    data.to_netcdf(nc_path)
-                    print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
-
+                missing_vars = self._build_nc_from_scratch_tifs(variable_dirs, output_dir_map)
+                if missing_vars:
+                    raise FileNotFoundError(
+                        "Could not build ERA5 NetCDF outputs. Missing scratch GeoTIFFs for: "
+                        f"{missing_vars}"
+                    )
             else:
-                print(f"     - ERA5 Land daily data already exists in {self.working_dir}/era5_land; skipping download.")
+                print("     - ERA5 NetCDF outputs already present (or rebuilt from existing scratch files).")
 
 
             # 🔄 Load datasets for return
@@ -490,58 +544,35 @@ class Meteo:
                 prep_nc, tasmax_nc, tasmin_nc, tmean_nc.
         """
         if self.local_data is False:
-            data_check = f'{self.working_dir}/CHIRPS/prep/pr.nc'
-            if not os.path.exists(data_check):
+            variable_dirs = {
+                'pr': os.path.join(self.chirps_scratch, '*precipitation*.tif'),
+                'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
+                'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
+                'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
+            }
+
+            output_dir_map = {
+                'pr': self.prep_path,
+                'tasmax': self.tasmax_path,
+                'tasmin': self.tasmin_path,
+                'tas': self.tmean_path
+            }
+
+            missing_vars = self._build_nc_from_scratch_tifs(variable_dirs, output_dir_map)
+            if missing_vars:
+                print(
+                    "     - Missing scratch GeoTIFFs for variables "
+                    f"{missing_vars}; downloading required climate data."
+                )
                 self._download_chirps_prep_data()
-                variable_dirs = {
-                    'pr': os.path.join(self.chirps_scratch, '*precipitation*.tif'),
-                    'tasmax': os.path.join(self.era5_scratch, '*temperature_2m_max*.tif'),
-                    'tasmin': os.path.join(self.era5_scratch, '*temperature_2m_min*.tif'),
-                    'tas': os.path.join(self.era5_scratch, '*temperature_2m.tif')
-                }
-
-                output_dir_map = {
-                    'pr': self.prep_path,
-                    'tasmax': self.tasmax_path,
-                    'tasmin': self.tasmin_path,
-                    'tas': self.tmean_path
-                }
-
-                for var_name, tif_pattern in variable_dirs.items():
-                    self.pattern = tif_pattern
-                    output_dir = output_dir_map[var_name]
-                    tif_files = sorted(glob.glob(tif_pattern))
-
-                    # 🕒 Extract timestamps from filenames (e.g., '20210101.tif')
-                    try:
-                        timestamps = [
-                            datetime.strptime(os.path.basename(f).split('.')[0], "%Y%m%d")
-                            for f in tif_files
-                        ]
-                    except ValueError:
-                        raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
-
-                    # 📚 Load and stack GeoTIFFs
-                    data_list = []
-                    for i, file in enumerate(tif_files):
-                        da = rioxarray.open_rasterio(file, masked=True).squeeze()  # Remove band dim if present
-                        da = da.expand_dims(dim={"time": [timestamps[i]]})         # ⬅️ Make time a proper dim
-                        da = da.assign_coords(time=("time", [timestamps[i]]))      # ⬅️ Make it a coordinate too
-                        data_list.append(da)
-
-                    # 📈 Combine into a single xarray DataArray
-                    data = xr.concat(data_list, dim="time")
-                    data.name = var_name
-                    data = data.rename({"y": "lat", "x": "lon"})
-
-                    # 💾 Save to NetCDF
-                    os.makedirs(output_dir, exist_ok=True)
-                    nc_path = os.path.join(output_dir, f"{var_name}.nc")
-                    data.to_netcdf(nc_path)
-                    print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
-
+                missing_vars = self._build_nc_from_scratch_tifs(variable_dirs, output_dir_map)
+                if missing_vars:
+                    raise FileNotFoundError(
+                        "Could not build CHIRPS/ERA5 NetCDF outputs. Missing scratch GeoTIFFs for: "
+                        f"{missing_vars}"
+                    )
             else:
-                print(f"     - CHIRPS daily data already exists in {self.working_dir}/CHIRPS; skipping download.")
+                print("     - CHIRPS/ERA5 NetCDF outputs already present (or rebuilt from existing scratch files).")
 
             # 🔄 Load datasets for return
             prep_nc = xr.open_dataset(os.path.join(self.prep_path, "pr.nc"))
