@@ -9,6 +9,7 @@ import geemap
 import glob
 import numpy as np
 import rioxarray
+import rasterio
 from isimip_client.client import ISIMIPClient
 from bakaano.utils import Utils
 from concurrent.futures import ThreadPoolExecutor
@@ -461,18 +462,8 @@ class Meteo:
                 ]
             except ValueError:
                 raise ValueError(f"Could not parse timestamps from filenames in: {tif_pattern}")
-
-            data_list = []
-            for i, file in enumerate(tif_files):
-                da = rioxarray.open_rasterio(file, masked=True).squeeze()
-                da = da.expand_dims(dim={"time": [timestamps[i]]})
-                da = da.assign_coords(time=("time", [timestamps[i]]))
-                data_list.append(da)
-
-            data = xr.concat(data_list, dim="time")
-            data.name = var_name
-            data = data.rename({"y": "lat", "x": "lon"})
-            data.to_netcdf(nc_path)
+            data = self._stack_tifs_to_dataarray(tif_files, timestamps, var_name)
+            data.to_netcdf(nc_path, encoding={var_name: {"dtype": "float32"}})
             print(f"✅ Saved NetCDF for '{var_name}': {nc_path}")
 
         return missing_vars
@@ -496,6 +487,45 @@ class Meteo:
                 continue
 
         return sorted(expected_dates - observed_dates)
+
+    def _stack_tifs_to_dataarray(self, tif_files, timestamps, var_name):
+        """Read daily GeoTIFFs into a single time-lat-lon DataArray efficiently."""
+        with rasterio.open(tif_files[0]) as src:
+            first = src.read(1).astype(np.float32)
+            nodata = src.nodata
+            transform = src.transform
+            crs = src.crs.to_string() if src.crs else "EPSG:4326"
+
+        if nodata is not None:
+            first = np.where(first == nodata, np.nan, first)
+
+        n_time = len(tif_files)
+        n_lat, n_lon = first.shape
+        stack = np.empty((n_time, n_lat, n_lon), dtype=np.float32)
+        stack[0] = first
+
+        for i, file in enumerate(tif_files[1:], start=1):
+            with rasterio.open(file) as src:
+                arr = src.read(1).astype(np.float32)
+                file_nodata = src.nodata
+                if file_nodata is not None:
+                    arr = np.where(arr == file_nodata, np.nan, arr)
+                stack[i] = arr
+
+        lon = transform.c + (np.arange(n_lon) + 0.5) * transform.a
+        lat = transform.f + (np.arange(n_lat) + 0.5) * transform.e
+
+        return xr.DataArray(
+            stack,
+            dims=("time", "lat", "lon"),
+            coords={
+                "time": np.array(timestamps, dtype="datetime64[ns]"),
+                "lat": lat.astype(np.float32),
+                "lon": lon.astype(np.float32),
+            },
+            name=var_name,
+            attrs={"crs": crs},
+        )
         
     def get_era5_land_meteo_data(self):
         """Download/process ERA5-Land daily data and return datasets.
