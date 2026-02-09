@@ -107,11 +107,13 @@ class Meteo:
                 self.era5_scratch = Path(f'{self.working_dir}/era5_scratch/')
 
     
-    def check_missing_dates(self, variables=None):
+    def check_missing_dates(self, variables=None, scratch_dir=None):
         """Check for missing daily ERA5-Land GeoTIFFs in scratch folder.
 
         Args:
             variables (list[str], optional): Variable names to check.
+            scratch_dir (str | Path, optional): Directory containing raw daily
+                GeoTIFFs for the requested variables.
 
         Returns:
             list[str]: Missing dates in YYYY-MM-DD format.
@@ -133,7 +135,10 @@ class Meteo:
         expected_dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
                           for i in range((end - start).days + 1)]
     
-        files = os.listdir(self.era5_scratch)
+        if scratch_dir is None:
+            scratch_dir = self.era5_scratch
+
+        files = os.listdir(scratch_dir) if os.path.exists(scratch_dir) else []
         var_dates = defaultdict(set)
     
         for fname in files:
@@ -223,33 +228,34 @@ class Meteo:
 
         area = ee.Geometry.BBox(self.uw.minx, self.uw.miny, self.uw.maxx, self.uw.maxy)
     
-        # Step 1: Attempt bulk download by year using image collection
-        start_year = start.year
-        end_year = end.year
-    
         era5 = ee.ImageCollection("ECMWF/ERA5_LAND/DAILY_AGGR")
-
-        for year in range(start_year, end_year + 1):
-            i_date = self.start_date if year == start_year else f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
-    
-            df = era5.select(
-                'total_precipitation_sum',
-                'temperature_2m_min',
-                'temperature_2m_max',
-                'temperature_2m'
-            ).filterDate(i_date, f_date)
-    
-            geemap.ee_export_image_collection(
-                ee_object=df,
-                out_dir=self.era5_scratch,
-                scale=10000,
-                region=area,
-                crs='EPSG:4326',
-                file_per_band=True
-            )
-    
-        print("Bulk download attempt completed. Verifying files...")
+        existing_era5_tifs = glob.glob(os.path.join(self.era5_scratch, "*.tif"))
+        if existing_era5_tifs:
+            print("Existing ERA5 scratch files detected; skipping bulk download and checking for missing dates only.")
+        else:
+            # Step 1: Attempt bulk download by year using image collection
+            start_year = start.year
+            end_year = end.year
+            for year in range(start_year, end_year + 1):
+                i_date = self.start_date if year == start_year else f"{year}-01-01"
+                f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
+        
+                df = era5.select(
+                    'total_precipitation_sum',
+                    'temperature_2m_min',
+                    'temperature_2m_max',
+                    'temperature_2m'
+                ).filterDate(i_date, f_date)
+        
+                geemap.ee_export_image_collection(
+                    ee_object=df,
+                    out_dir=self.era5_scratch,
+                    scale=10000,
+                    region=area,
+                    crs='EPSG:4326',
+                    file_per_band=True
+                )
+            print("Bulk download attempt completed. Verifying files...")
     
 
         variables = [
@@ -258,7 +264,7 @@ class Meteo:
             'temperature_2m_max',
             'temperature_2m'
         ]
-        missing_dates = self.check_missing_dates(variables)
+        missing_dates = self.check_missing_dates(variables, scratch_dir=self.era5_scratch)
     
         print(f"{len(missing_dates)} missing dates detected. Re-downloading...")
     
@@ -312,47 +318,51 @@ class Meteo:
         end_exclusive = (end + timedelta(days=1)).strftime("%Y-%m-%d")
         expected_dates = [(start + timedelta(days=i)).strftime("%Y-%m-%d") for i in range((end - start).days + 1)]
     
-        # Step 1: Bulk download CHIRPS and ERA5 (temperature)
+        # Step 1: Bulk download only when scratch folders are empty.
         start_year = start.year
         end_year = end.year
-    
-        for year in range(start_year, end_year + 1):
-            i_date = self.start_date if year == start_year else f"{year}-01-01"
-            f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
-    
-            # CHIRPS precipitation
-            df_chirps = chirps.select('precipitation').filterDate(i_date, f_date)
-            geemap.ee_export_image_collection(
-                ee_object=df_chirps,
-                out_dir=self.chirps_scratch,
-                scale=5000,
-                region=area,
-                crs='EPSG:4326',
-                file_per_band=True
-            )
-    
-            # ERA5 temperature
-            df_era5 = era5.select(
-                'temperature_2m_min',
-                'temperature_2m_max',
-                'temperature_2m'
-            ).filterDate(i_date, f_date)
-            geemap.ee_export_image_collection(
-                ee_object=df_era5,
-                out_dir=self.era5_scratch,
-                scale=10000,
-                region=area,
-                crs='EPSG:4326',
-                file_per_band=True
-            )
-    
-        print("Bulk CHIRPS and ERA5 download complete. Checking for missing files...")
+        need_bulk_chirps = not glob.glob(os.path.join(self.chirps_scratch, "*.tif"))
+        need_bulk_era5 = not glob.glob(os.path.join(self.era5_scratch, "*.tif"))
+
+        if need_bulk_chirps or need_bulk_era5:
+            for year in range(start_year, end_year + 1):
+                i_date = self.start_date if year == start_year else f"{year}-01-01"
+                f_date = f"{year + 1}-01-01" if year < end_year else end_exclusive
+
+                if need_bulk_chirps:
+                    df_chirps = chirps.select('precipitation').filterDate(i_date, f_date)
+                    geemap.ee_export_image_collection(
+                        ee_object=df_chirps,
+                        out_dir=self.chirps_scratch,
+                        scale=5000,
+                        region=area,
+                        crs='EPSG:4326',
+                        file_per_band=True
+                    )
+
+                if need_bulk_era5:
+                    df_era5 = era5.select(
+                        'temperature_2m_min',
+                        'temperature_2m_max',
+                        'temperature_2m'
+                    ).filterDate(i_date, f_date)
+                    geemap.ee_export_image_collection(
+                        ee_object=df_era5,
+                        out_dir=self.era5_scratch,
+                        scale=10000,
+                        region=area,
+                        crs='EPSG:4326',
+                        file_per_band=True
+                    )
+            print("Bulk CHIRPS/ERA5 download complete. Checking for missing files...")
+        else:
+            print("Existing CHIRPS/ERA5 scratch files detected; skipping bulk download and checking for missing dates only.")
     
         
         variables = [
             'precipitation'
         ]
-        missing_chirps = self.check_missing_dates(variables)
+        missing_chirps = self.check_missing_dates(variables, scratch_dir=self.chirps_scratch)
         print(f"Missing CHIRPS dates: {len(missing_chirps)}")
     
         for date_str in missing_chirps:
@@ -378,7 +388,7 @@ class Meteo:
             'temperature_2m_max',
             'temperature_2m'
         ]
-        missing_era5 = self.check_missing_dates(variables)
+        missing_era5 = self.check_missing_dates(variables, scratch_dir=self.era5_scratch)
         print(f"Missing ERA5 dates: {len(missing_era5)}")
     
         for date_str in missing_era5:
