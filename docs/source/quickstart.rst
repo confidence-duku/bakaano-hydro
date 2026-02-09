@@ -6,10 +6,12 @@ Colab Notebook (Recommended)
 
 For the fastest start, run the full workflow notebook in Google Colab:
 
-- Colab launcher:
-  ``https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
-- Notebook source:
-  ``https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb``
+- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
+- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb>`_
+
+.. image:: https://colab.research.google.com/assets/colab-badge.svg
+   :alt: Open In Colab
+   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/colab_full_workflow.ipynb
 
 This notebook includes package installation, Google Drive setup, preprocessing,
 runoff/routing, training, evaluation, and simulation in one guided flow.
