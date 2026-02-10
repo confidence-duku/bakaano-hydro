@@ -16,6 +16,24 @@ from scipy.spatial.distance import cdist
 import geopandas as gpd
 from bakaano.utils import Utils
 
+
+def _open_dataset_with_fallback(nc_path):
+    """Open NetCDF with a backend fallback for Colab compatibility."""
+    open_errors = []
+    for engine in (None, "h5netcdf"):
+        try:
+            if engine is None:
+                return xr.open_dataset(nc_path)
+            return xr.open_dataset(nc_path, engine=engine)
+        except Exception as e:
+            name = "netcdf4(default)" if engine is None else engine
+            open_errors.append(f"{name}: {str(e)}")
+
+    raise OSError(
+        "Unable to open NetCDF with available backends.\n" + "\n".join(open_errors)
+    )
+
+
 class RoutedRunoff:
     def __init__(self, working_dir, study_area):
         """Role: Provide visualization utilities for routed runoff.
@@ -145,7 +163,7 @@ class RoutedRunoff:
                     la, lo = _snap_coordinates(la, lo, river_grid_path)
                     stations.append((str(sid), la, lo))
             elif grdc_netcdf:
-                ds = xr.open_dataset(grdc_netcdf)
+                ds = _open_dataset_with_fallback(grdc_netcdf)
                 if "id" not in ds.dims:
                     raise ValueError("GRDC NetCDF missing 'id' dimension.")
                 ds_id_vals = ds["id"].values
@@ -257,7 +275,7 @@ class RoutedRunoff:
                 "geo_y": lookup[lat_col].astype(float).values,
             })
         elif grdc_netcdf:
-            ds = xr.open_dataset(grdc_netcdf)
+            ds = _open_dataset_with_fallback(grdc_netcdf)
             if "id" not in ds.dims:
                 raise ValueError("GRDC NetCDF missing 'id' dimension.")
             stations_df = pd.DataFrame({

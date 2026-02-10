@@ -210,7 +210,7 @@ class DataPreprocessor:
         """
     
         try:
-            grdc = xr.open_dataset(grdc_streamflow_nc_file)
+            grdc = self._open_grdc_dataset(grdc_streamflow_nc_file)
     
             # ---- 1. Sanity checks ----
             required_vars = ['runoff_mean', 'geo_x', 'geo_y', 'station_name']
@@ -320,6 +320,25 @@ class DataPreprocessor:
     
     Please verify the input data and try again.
     """.strip())
+
+    def _open_grdc_dataset(self, grdc_streamflow_nc_file):
+        """Open GRDC NetCDF with backend fallback for Colab/Drive compatibility."""
+        open_errors = []
+
+        for engine in (None, "h5netcdf"):
+            try:
+                if engine is None:
+                    return xr.open_dataset(grdc_streamflow_nc_file)
+                return xr.open_dataset(grdc_streamflow_nc_file, engine=engine)
+            except Exception as e:
+                engine_name = "netcdf4(default)" if engine is None else engine
+                open_errors.append(f"{engine_name}: {str(e)}")
+
+        raise OSError(
+            "Unable to open GRDC NetCDF with available backends. "
+            "Install/enable a compatible backend (e.g., h5netcdf) or verify the file.\n"
+            + "\n".join(open_errors)
+        )
 
     
     def load_observed_streamflow_from_csv_dir(

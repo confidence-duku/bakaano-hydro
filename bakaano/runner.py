@@ -21,6 +21,22 @@ import geopandas as gpd
 from datetime import datetime
 from leafmap.foliumap import Map
 
+def _open_dataset_with_fallback(nc_path):
+    """Open NetCDF with backend fallback for Colab/Drive compatibility."""
+    open_errors = []
+    for engine in (None, "h5netcdf"):
+        try:
+            if engine is None:
+                return xr.open_dataset(nc_path)
+            return xr.open_dataset(nc_path, engine=engine)
+        except Exception as e:
+            name = "netcdf4(default)" if engine is None else engine
+            open_errors.append(f"{name}: {str(e)}")
+
+    raise OSError(
+        "Unable to open NetCDF with available backends.\n" + "\n".join(open_errors)
+    )
+
 # Load "copy" modules by filename to avoid import issues with spaces in filenames.
 _here = Path(__file__).resolve().parent
 _trainer_mod_path = _here / "streamflow_trainer copy.py"
@@ -723,7 +739,7 @@ class BakaanoHydro:
         # Process GRDC data if provided
         if grdc_netcdf is not None:
             try:
-                grdc = xr.open_dataset(grdc_netcdf)
+                grdc = _open_dataset_with_fallback(grdc_netcdf)
 
                 stations_df = pd.DataFrame({
                     'station_name': grdc['station_name'].values,
