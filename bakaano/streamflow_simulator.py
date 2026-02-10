@@ -30,6 +30,22 @@ warnings.filterwarnings("ignore", category=FutureWarning)
 tfd = tfp.distributions  # TensorFlow Probability distributions
 #=====================================================================================================================================
 
+def _open_dataset_with_fallback(nc_path):
+    """Open NetCDF with backend fallback for Colab/Drive compatibility."""
+    open_errors = []
+    for engine in (None, "h5netcdf"):
+        try:
+            if engine is None:
+                return xr.open_dataset(nc_path)
+            return xr.open_dataset(nc_path, engine=engine)
+        except Exception as e:
+            name = "netcdf4(default)" if engine is None else engine
+            open_errors.append(f"{name}: {str(e)}")
+
+    raise OSError(
+        "Unable to open NetCDF with available backends.\n" + "\n".join(open_errors)
+    )
+
 
 class PredictDataPreprocessor:
     def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, 
@@ -222,7 +238,7 @@ class PredictDataPreprocessor:
         """
     
         try:
-            grdc = xr.open_dataset(grdc_streamflow_nc_file)
+            grdc = _open_dataset_with_fallback(grdc_streamflow_nc_file)
     
             # ---- 1. Sanity checks ----
             required_vars = ['runoff_mean', 'geo_x', 'geo_y', 'station_name']
