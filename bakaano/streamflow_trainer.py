@@ -97,7 +97,7 @@ class DataPreprocessor:
         Args:
             working_dir (str): The parent working directory where files and outputs will be stored.
             study_area (str): The path to the shapefile defining the study area.
-            grdc_streamflow_nc_file (str): The path to the GRDC streamflow NetCDF file.
+            grdc_streamflow_nc_file (str, optional): Path to GRDC streamflow NetCDF file.
             train_start (str): Training start date (YYYY-MM-DD).
             train_end (str): Training end date (YYYY-MM-DD).
             routing_method (str): Routing method ("mfd", "d8", "dinf").
@@ -122,11 +122,14 @@ class DataPreprocessor:
         
         self.data_list = []
         self.catchment = []    
-        #self.sim_station_names= []
+        self.sim_station_names = []
         self.train_start = train_start
         self.train_end = train_end
-        self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
-        self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
+        self.grdc_subset = None
+        self.station_ids = []
+        if grdc_streamflow_nc_file is not None:
+            self.grdc_subset = self.load_observed_streamflow(grdc_streamflow_nc_file)
+            self.station_ids = np.unique(self.grdc_subset.to_dataframe().index.get_level_values('id'))
         self.catchment_size_threshold = catchment_size_threshold
         self.routing_method = routing_method
     
@@ -399,6 +402,7 @@ class DataPreprocessor:
 
         station_ids = stations_in_region[id_col].astype(str).unique().tolist()
         self.station_ids = station_ids
+        self.sim_station_names = station_ids
         self.station_meta = stations_in_region[[id_col, lat_col, lon_col]].copy()
         self.station_meta_cols = {"id": id_col, "lat": lat_col, "lon": lon_col}
 

@@ -408,6 +408,7 @@ class PredictDataPreprocessor:
 
         station_ids = stations_in_region[id_col].astype(str).unique().tolist()
         self.station_ids = station_ids
+        self.sim_station_names = station_ids
         self.station_meta = stations_in_region[[id_col, lat_col, lon_col]].copy()
         self.station_meta_cols = {"id": id_col, "lat": lat_col, "lon": lon_col}
 

@@ -186,10 +186,25 @@ class BakaanoHydro:
         print('\nTRAINING BAKAANO-HYDRO DEEP LEARNING STREAMFLOW PREDICTION MODEL')
         
             
-        sdp = DataPreprocessor(self.working_dir, self.study_area, grdc_netcdf, train_start, train_end, 
-                               routing_method, catchment_size_threshold)
         print(' 1. Loading observed streamflow')
-        if csv_dir and lookup_csv:
+        csv_mode = bool(csv_dir and lookup_csv)
+        grdc_mode = grdc_netcdf is not None
+        if csv_mode == grdc_mode:
+            raise SystemExit(
+                "Provide exactly one observed-data source: either grdc_netcdf or csv_dir+lookup_csv."
+            )
+
+        sdp = DataPreprocessor(
+            self.working_dir,
+            self.study_area,
+            grdc_netcdf if grdc_mode else None,
+            train_start,
+            train_end,
+            routing_method,
+            catchment_size_threshold,
+        )
+
+        if csv_mode:
             sdp.load_observed_streamflow_from_csv_dir(
                 csv_dir=csv_dir,
                 lookup_csv=lookup_csv,
@@ -200,8 +215,6 @@ class BakaanoHydro:
                 discharge_col=discharge_col,
                 file_pattern=file_pattern,
             )
-        else:
-            sdp.load_observed_streamflow(grdc_netcdf)
         print(' 2. Loading runoff data and other predictors')
         if len(rawdata) > 0:
             with open(rawdata[0], "rb") as f:
