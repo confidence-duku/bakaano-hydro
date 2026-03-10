@@ -440,8 +440,8 @@ working directory and establishes the study area context for later steps.
 Training
 ~~~~~~~~
 
-Training builds the multi-scale TCN model and fits it using routed runoff
-predictors and observed discharge. You can train with GRDC NetCDF stations or
+Training builds the TCN model (365-day input with an internal 180-day slice)
+and fits it using routed runoff predictors and observed discharge. You can train with GRDC NetCDF stations or
 with per-station CSV files via a lookup table. This step can take hours
 depending on GPU, batch size, and the number of stations.
 
@@ -527,7 +527,7 @@ Parameter guidance (see :meth:`bakaano.runner.BakaanoHydro.train_streamflow_mode
 - ``learning_rate``: base optimizer step size; lower if training is unstable.
 - ``loss_function``: training objective (e.g., ``mse``, ``huber``, ``msle``,
   ``asym_laplace_nll``).
-- ``seed``: controls bootstrap sampling reproducibility.
+- ``seed``: controls deterministic behavior where randomization is used.
 - ``lr_schedule``: ``cosine`` or ``exp_decay``; set to ``None`` for fixed LR.
 - ``warmup_epochs``: warmup length before LR schedule ramps to base LR.
 - ``min_learning_rate``: minimum LR for schedules.
@@ -538,6 +538,7 @@ Parameter guidance (see :meth:`bakaano.runner.BakaanoHydro.train_streamflow_mode
 
 Guidance:
 - Use ``loss_function="asym_laplace_nll"`` for asymmetric uncertainty.
+- With ``asym_laplace_nll``, the model outputs 3 parameters; with other losses, it outputs 1 value.
 - Lower ``learning_rate`` if training is unstable.
 
 .. code-block:: python

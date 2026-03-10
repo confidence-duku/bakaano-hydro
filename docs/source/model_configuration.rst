@@ -56,6 +56,10 @@ generalization or want the model to express asymmetric uncertainty. It can
 improve transfer to ungauged basins by letting the model adapt its error
 tolerance across regimes, and by treating under- vs over-prediction differently.
 
+Output behavior:
+- With ``loss_function="asym_laplace_nll"``, the network head emits 3 values per sample.
+- With other losses (for example ``mse``/``huber``), it emits 1 value per sample.
+
 Hydrology and scaling
 ^^^^^^^^^^^^^^^^^^^^^
 - ``routing_method``: Routing method used to generate runoff (``mfd``, ``d8``,

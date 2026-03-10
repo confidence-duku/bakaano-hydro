@@ -4,83 +4,131 @@ Role: Build training datasets and train the TCN-based streamflow model.
 """
 
 import os
+import math
+import glob
+import pickle
+import warnings
+from datetime import datetime
+
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import geopandas as gpd
 import numpy as np
 import pandas as pd
-import xarray as xr
-import tensorflow as tf
-from tensorflow.keras.models import Model # type: ignore
-from tensorflow.keras.layers import Dense, BatchNormalization, Dropout, Concatenate, Input
-from tensorflow.keras.callbacks import ModelCheckpoint # type: ignore
-from tensorflow.keras.utils import register_keras_serializable
-from tensorflow.keras import initializers
-from sklearn.preprocessing import StandardScaler
-import glob
 import pysheds.grid
 import rasterio
 import rioxarray
+import tensorflow as tf
+import xarray as xr
+from keras.models import load_model  # type: ignore
 from rasterio.transform import rowcol
-from tcn import TCN
-from keras.models import load_model # type: ignore
-import pickle
-import warnings
-import geopandas as gpd
 from scipy.spatial.distance import cdist
-from datetime import datetime
+from sklearn.preprocessing import StandardScaler
+from tcn import TCN
+from tensorflow.keras import mixed_precision
+from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint  # type: ignore
+from tensorflow.keras.layers import (
+    Add,
+    BatchNormalization,
+    Concatenate,
+    Dense,
+    Dropout,
+    Input,
+    LeakyReLU,
+    Multiply,
+    Reshape,
+)
+from tensorflow.keras.models import Model  # type: ignore
+from tensorflow.keras.utils import custom_object_scope, register_keras_serializable
+
+mixed_precision.set_global_policy('mixed_bfloat16')
 warnings.filterwarnings("ignore", category=RuntimeWarning)
 warnings.filterwarnings("ignore", category=UserWarning)
 
 #=====================================================================================================================================
 
 
-def asym_laplace_nll(
+@tf.keras.utils.register_keras_serializable()
+def asym_laplace_plus_mse_sqrt(
     y_true,
     params,
-    r_clip=10.0,          # residual clipping (log-space!)
-    scale_clip=(1e-3, 20.0),
-    peak_weight=1.5
+    scale_min=1e-4,
+    mse_weight=0.05
 ):
-    """
-    Stable Asymmetric Laplace NLL for global streamflow modeling.
-
-    Args:
-        y_true: (batch, 1) log-area-normalized discharge
-        params: (batch, 3) [mu, log_b_plus, log_b_minus]
-        r_clip: residual clipping threshold (prevents flood explosions)
-        scale_clip: min/max allowed uncertainty scale
-        peak_weight: mild upweighting of large flows
-
-    Returns:
-        scalar loss
-    """
     import tensorflow as tf
+
+    y_true = tf.cast(y_true, tf.float32)
+    params = tf.cast(params, tf.float32)
 
     mu = params[:, 0:1]
     log_b_plus = params[:, 1:2]
     log_b_minus = params[:, 2:3]
 
-    # Softplus ensures positivity
-    b_plus = tf.nn.softplus(log_b_plus)
-    b_minus = tf.nn.softplus(log_b_minus)
+    b_plus = tf.maximum(tf.nn.softplus(log_b_plus), scale_min)
+    b_minus = tf.maximum(tf.nn.softplus(log_b_minus), scale_min)
 
-    # Prevent pathological scale inflation
-    b_plus = tf.clip_by_value(b_plus, scale_clip[0], scale_clip[1])
-    b_minus = tf.clip_by_value(b_minus, scale_clip[0], scale_clip[1])
-
-    # Residual
     r = y_true - mu
 
-    # Residual clipping (CRITICAL for floods)
-    r = tf.clip_by_value(r, -r_clip, r_clip)
-
-    # Asymmetric Laplace log-likelihood
-    nll = tf.where(
-        r >= 0,
+    ald = tf.where(
+        r >= 0.0,
         tf.math.log(b_plus) + r / b_plus,
         tf.math.log(b_minus) - r / b_minus,
     )
 
-    # Mild peak emphasis (log-space safe)
+    ald = tf.reduce_mean(ald)
+
+    mse = tf.reduce_mean(tf.square(y_true - mu))
+
+    total = ald + mse_weight * mse
+
+    total = tf.where(
+        tf.math.is_finite(total),
+        total,
+        tf.constant(1e6, dtype=tf.float32)
+    )
+
+    return total
+
+
+
+@tf.keras.utils.register_keras_serializable()
+def asym_laplace_nll(
+    y_true,
+    params,
+    r_clip=5.0,
+    scale_clip=(1e-3, 5.0),
+    peak_weight=0.3
+):
+    import tensorflow as tf
+
+    # Ensure float32 for stability
+    y_true = tf.cast(y_true, tf.float32)
+    params = tf.cast(params, tf.float32)
+
+    mu = params[:, 0:1]
+    log_b_plus = params[:, 1:2]
+    log_b_minus = params[:, 2:3]
+
+    # Positive scale
+    b_plus = tf.nn.softplus(log_b_plus)
+    b_minus = tf.nn.softplus(log_b_minus)
+
+    # Clip scale in standardized space
+    b_plus = tf.clip_by_value(b_plus, scale_clip[0], scale_clip[1])
+    b_minus = tf.clip_by_value(b_minus, scale_clip[0], scale_clip[1])
+
+    # Residual (standardized)
+    r = y_true - mu
+    r = tf.clip_by_value(r, -r_clip, r_clip)
+
+    # Asymmetric Laplace NLL
+    nll = tf.where(
+        r >= 0.0,
+        tf.math.log(b_plus) + r / b_plus,
+        tf.math.log(b_minus) - r / b_minus,
+    )
+
+    # Peak emphasis in standardized space
+    # Only weight positive extremes
     weights = 1.0 + peak_weight * tf.nn.relu(y_true)
 
     return tf.reduce_mean(weights * nll)
@@ -583,6 +631,7 @@ class DataPreprocessor:
             
         return self.data_list
 #=====================================================================================================================================                          
+#=====================================================================================================================================
 class StreamflowModel:
     """
     Role: Define and train the multi-scale TCN streamflow model.
@@ -646,6 +695,7 @@ class StreamflowModel:
         self.train_response = None
         self.train_alphaearth = None
         self.train_area = None
+
         self.learning_rate = learning_rate
         self.loss_function = loss_function
         self.seed = seed
@@ -654,11 +704,13 @@ class StreamflowModel:
         self.warmup_epochs = int(warmup_epochs or 0)
         self.min_learning_rate = float(min_learning_rate)
 
+        try:
+            tf.config.optimizer.set_jit(True)
+        except Exception:
+            pass
+
     def _build_lr_callback(self):
         """Create a learning-rate schedule callback with optional warmup."""
-        import math
-        import tensorflow as tf
-
         if not self.lr_schedule:
             return None
 
@@ -694,17 +746,13 @@ class StreamflowModel:
         This materializes all sliding windows (365),
         filters NaNs once, and concatenates across stations.
         """
-        import numpy as np
-        import pickle
-        from sklearn.preprocessing import StandardScaler
-
         train_predictors = list(map(lambda xy: xy[0], data_list))
         train_response = list(map(lambda xy: xy[1], data_list))
         catchment = list(map(lambda xy: xy[2], data_list))
         catchment_arr = np.array(catchment, dtype=np.float32)
 
-        area = catchment_arr[:, 0:1]      # shape (N, 1)
-        alphaearth = catchment_arr[:, 1:] # shape (N, D)
+        area = catchment_arr[:, 0:1]
+        alphaearth = catchment_arr[:, 1:]
 
         train_response = [
             df.loc[self.train_start:self.train_end]
@@ -732,22 +780,25 @@ class StreamflowModel:
         for x, y, z, j in zip(train_predictors, train_response, alphaearth, area):
             this_area = np.expm1(j)
             area_m2 = this_area * 1000000.0
+
             if self.area_normalize:
                 scaled_train_predictor = x.values / this_area
             else:
                 scaled_train_predictor = x.values
-            scaled_train_predictor = np.log1p(scaled_train_predictor)
+            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
             if self.area_normalize:
                 scaled_train_response = (y.values * 86400 * 1000) / area_m2
             else:
                 scaled_train_response = y.values
-            scaled_train_response = np.log1p(scaled_train_response)
+            scaled_train_response = np.sqrt(scaled_train_response)
 
             z2 = z.reshape(-1, 64)
             scaled_alphaearth = alphaearth_scaler.transform(z2)
 
             num_samples = scaled_train_predictor.shape[0] - 365 - 1
+            if num_samples <= 0:
+                continue
 
             p45_samples = []
             p90_samples = []
@@ -794,50 +845,83 @@ class StreamflowModel:
                 full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
                 full_area.append(np.array(area_samples)[timesteps_to_keep])
 
-        self.train_45d = np.concatenate(full_train_45d, axis=0)
-        self.train_90d = np.concatenate(full_train_90d, axis=0)
-        self.train_180d = np.concatenate(full_train_180d, axis=0)
-        self.train_365d = np.concatenate(full_train_365d, axis=0)
+        if not full_train_45d:
+            raise ValueError("No valid training windows were created. Check date range and NaN coverage.")
 
-        self.train_response = np.concatenate(full_train_response, axis=0)
-        self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)
-        self.train_area = np.concatenate(full_area, axis=0).reshape(-1, 1)
+        self.train_45d = np.concatenate(full_train_45d, axis=0).astype("float32")
+        self.train_90d = np.concatenate(full_train_90d, axis=0).astype("float32")
+        self.train_180d = np.concatenate(full_train_180d, axis=0).astype("float32")
+        self.train_365d = np.concatenate(full_train_365d, axis=0).astype("float32")
+
+        self.train_response = np.concatenate(full_train_response, axis=0).astype("float32")
+        self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64).astype("float32")
+        self.train_area = np.concatenate(full_area, axis=0).reshape(-1, 1).astype("float32")
+
+    
     # --------------------------------------------------
     # MODEL DEFINITION
     # --------------------------------------------------
     def build_model(self):
-        """
-        Build and compile the regional model (TCN + FiLM).
-
-        Returns:
-            tensorflow.keras.Model: Compiled model instance.
-        """
-        import tensorflow as tf
-        from tensorflow.keras.layers import (
-            BatchNormalization,
-            Concatenate,
-            Dense,
-            Dropout,
-            Input,
-        )
-        from tensorflow.keras.models import Model
-        from tcn import TCN
-
         strategy = tf.distribute.MirroredStrategy()
         print(f"GPUs in sync: {strategy.num_replicas_in_sync}")
 
         with strategy.scope():
+            custom_loss_names = {"asym_laplace_nll", "asym_laplace_plus_mse_sqrt"}
+            loss_name = (
+                self.loss_function.lower()
+                if isinstance(self.loss_function, str)
+                else getattr(self.loss_function, "__name__", "").lower()
+            )
+            uses_asym_laplace = (
+                self.loss_function in {asym_laplace_nll, asym_laplace_plus_mse_sqrt}
+                or loss_name in custom_loss_names
+            )
+
+            # -------------------------------------------------------
+            # Inputs
+            # -------------------------------------------------------
             in45 = Input((45, 1), name="input_45d")
             in90 = Input((90, 1), name="input_90d")
             in180 = Input((180, 1), name="input_180d")
             in365 = Input((365, 1), name="input_365d")
+
             in_alpha = Input((64,), name="alphaearth")
             in_area = Input((1,), name="area")
 
-            # ----------------------------
-            # TCN blocks
+            # -------------------------------------------------------
+            # Static conditioning branch
+            # -------------------------------------------------------
+            alpha_latent = Dense(64, activation="relu")(in_alpha)
+            alpha_latent = BatchNormalization()(alpha_latent)
+
+            area_latent = Dense(8, activation="relu")(in_area)
+            area_latent = BatchNormalization()(area_latent)
+
+            cond = Concatenate()([alpha_latent, area_latent])
+
+            # -------------------------------------------------------
+            # FiLM generator (per filter)
+            # -------------------------------------------------------
+            def film(alpha, filters):
+                x = Dense(64, activation="relu")(alpha)
+                x = Dense(64, activation="relu")(x)
+
+                gamma = Dense(filters)(x)
+                beta = Dense(filters)(x)
+
+                # small modulation for stability
+                gamma = Dense(filters, activation="tanh")(gamma)
+                beta = Dense(filters, activation="tanh")(beta)
+
+                gamma = Reshape((filters,))(gamma)
+                beta = Reshape((filters,))(beta)
+
+                return gamma, beta
+
+            # -------------------------------------------------------
+            # TCN block
+            # -------------------------------------------------------
             def tcn_block(x, filters, kernel, dilations, name):
-                """Build a single TCN block for a temporal input."""
                 x = TCN(
                     nb_filters=filters,
                     kernel_size=kernel,
@@ -846,100 +930,109 @@ class StreamflowModel:
                     kernel_initializer=tf.keras.initializers.HeNormal(),
                     name=name,
                 )(x)
-                return BatchNormalization()(x)
 
-            b1 = tcn_block(in45, 32, 3, (1, 2, 4, 8), "tcn_45")
+                x = BatchNormalization()(x)
+
+                return x
+
+            # -------------------------------------------------------
+            # Temporal branches
+            # -------------------------------------------------------
+            b1 = tcn_block(in45, 32, 3, (1, 2, 4, 8, 16), "tcn_45")
             b2 = tcn_block(in90, 32, 3, (1, 2, 4, 8, 16), "tcn_90")
-            b3 = tcn_block(in180, 32, 5, (1, 2, 4, 8, 16), "tcn_180")
-            b4 = tcn_block(in365, 64, 7, (1, 2, 4, 8, 16), "tcn_365")
+            b3 = tcn_block(in180, 32, 5, (1, 2, 4, 8, 16, 32), "tcn_180")
+            b4 = tcn_block(in365, 64, 7, (1, 2, 4, 8, 16, 32, 64), "tcn_365")
 
+            # -------------------------------------------------------
+            # FiLM per filter
+            # -------------------------------------------------------
+            g1, b_1 = film(cond, 32)
+            g2, b_2 = film(cond, 32)
+            g3, b_3 = film(cond, 32)
+            g4, b_4 = film(cond, 64)
+
+            b1 = Add()([Multiply()([b1, g1]), b_1])
+            b2 = Add()([Multiply()([b2, g2]), b_2])
+            b3 = Add()([Multiply()([b3, g3]), b_3])
+            b4 = Add()([Multiply()([b4, g4]), b_4])
+
+            b1 = BatchNormalization()(b1)
+            b2 = BatchNormalization()(b2)
+            b3 = BatchNormalization()(b3)
+            b4 = BatchNormalization()(b4)
+
+            # -------------------------------------------------------
+            # Combine temporal features
+            # -------------------------------------------------------
             temporal = Concatenate()([b1, b2, b3, b4])
             temporal = BatchNormalization()(temporal)
-            temporal = Dropout(0.3)(temporal)
+            temporal = Dropout(0.2)(temporal)
 
-            temporal_dim = temporal.shape[-1]
+            # -------------------------------------------------------
+            # Prediction head
+            # -------------------------------------------------------
+            h = Dense(128, activation="relu")(temporal)
+            h = BatchNormalization()(h)
+            h = Dropout(0.2)(h)
 
-            # AlphaEarth + area conditioning (FiLM)
-            alpha_latent = Dense(64, activation="relu")(in_alpha)
-            alpha_latent = BatchNormalization()(alpha_latent)
-            area_latent = Dense(8, activation="relu")(in_area)
-            area_latent = BatchNormalization()(area_latent)
-
-            def film(alpha, dim, gamma_scale=0.1):
-                """Compute FiLM modulation parameters for the temporal features."""
-                x = Dense(64, activation="relu")(alpha)
-                x = Dense(64, activation="relu")(x)
-                gamma = Dense(dim)(x)
-                beta = Dense(dim)(x)
-                gamma = 1.0 + gamma_scale * gamma
-                return gamma, beta
-
-            cond = Concatenate()([alpha_latent, area_latent])
-            gamma, beta = film(cond, temporal_dim)
-            h = gamma * temporal + beta
-
-            # Head
             h = Dense(64, activation="relu")(h)
-            h = Dense(32, activation="relu")(h)
+            h = BatchNormalization()(h)
+            h = Dropout(0.2)(h)
 
-            use_asym_laplace = False
-            if isinstance(self.loss_function, str):
-                loss_key = self.loss_function.lower()
-                use_asym_laplace = loss_key in {"asym_laplace", "asym_laplace_nll"}
-            elif callable(self.loss_function):
-                loss_name = getattr(self.loss_function, "__name__", "").lower()
-                use_asym_laplace = loss_name in {"asym_laplace", "asym_laplace_nll"} or self.loss_function is asym_laplace_nll
+            h = Dense(32)(h)
+            h = LeakyReLU(alpha=0.01)(h)
 
-            if use_asym_laplace:
-                out = Dense(3, name="alaplace_params")(h)
-            else:
-                out = Dense(1, activation=None)(h)
+            out_dim = 3 if uses_asym_laplace else 1
+            out = Dense(out_dim, name="streamflow")(h)
 
+            # -------------------------------------------------------
+            # Model
+            # -------------------------------------------------------
             self.regional_model = Model(
                 inputs=[in45, in90, in180, in365, in_alpha, in_area],
                 outputs=out,
             )
 
-            loss_fn = asym_laplace_nll if use_asym_laplace else self.loss_function
+            optimizer = tf.keras.optimizers.Adam(
+                learning_rate=self.learning_rate
+            )
+
             self.regional_model.compile(
-                optimizer=tf.keras.optimizers.Adam(
-                    learning_rate=self.learning_rate
-                ),
-                loss=loss_fn,
+                optimizer=optimizer,
+                loss=self.loss_function,
+                jit_compile=False,
             )
 
             return self.regional_model
 
     # --------------------------------------------------
-    # TRAINING (FULL ARRAYS)
+    # TRAINING
     # --------------------------------------------------
     def train_model(self):
-        """
-        Train the model using fully materialized arrays.
-
-        Returns:
-            None. Trains the model and writes checkpoints.
-        """
-    
-        from tensorflow.keras.callbacks import ModelCheckpoint
-    
         if self.regional_model is None:
             raise ValueError("Call build_model() before train_model().")
-    
+
         if self.train_response is None:
             raise ValueError("Call prepare_data() before train_model().")
 
         checkpoint = ModelCheckpoint(
             filepath=f"{self.working_dir}/models/bakaano_model.keras",
-            save_best_only=True,
             monitor="loss",
+            save_best_only=True,
             mode="min",
+        )
+
+        early_stop = EarlyStopping(
+            monitor="loss",
+            patience=40,
+            restore_best_weights=True,
         )
 
         callbacks = [checkpoint]
         lr_callback = self._build_lr_callback()
-        if lr_callback is not None:
+        if lr_callback:
             callbacks.append(lr_callback)
+        callbacks.append(early_stop)
 
         self.regional_model.fit(
             x=[
@@ -955,8 +1048,8 @@ class StreamflowModel:
             epochs=self.num_epochs,
             callbacks=callbacks,
             verbose=2,
+            shuffle=True,
         )
-
 
     def load_regional_model(self, path):
         """
@@ -970,12 +1063,11 @@ class StreamflowModel:
         Returns:
             tensorflow.keras.Model: Loaded model instance.
         """
-        import tensorflow as tf
-        from keras.models import load_model  # type: ignore
-        from tensorflow.keras.utils import custom_object_scope  # type: ignore
-        from tcn import TCN
-
-        custom_objects = {"TCN": TCN, "asym_laplace_nll": asym_laplace_nll}
+        custom_objects = {
+            "TCN": TCN,
+            "asym_laplace_nll": asym_laplace_nll,
+            "asym_laplace_plus_mse_sqrt": asym_laplace_plus_mse_sqrt,
+        }
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             with custom_object_scope(custom_objects):

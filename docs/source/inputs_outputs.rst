@@ -47,6 +47,10 @@ Model training is performed on area-normalized targets (mm/day) and uses a
 area normalization. The CSV outputs written to
 ``{working_dir}/predicted_streamflow_data`` are in m³/s.
 
+When ``loss_function="asym_laplace_nll"``, the model predicts 3 values per
+sample (location + asymmetric scales). The runner/simulator uses the first
+value (location term) as discharge prediction for plots and CSV outputs.
+
 If ``area_normalize=False`` is used, the model trains and predicts in raw
 m³/s (after ``log1p``/``expm1``), and no area-based conversion is applied at
 inference time.
