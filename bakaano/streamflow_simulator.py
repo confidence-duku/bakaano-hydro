@@ -48,8 +48,17 @@ def _open_dataset_with_fallback(nc_path):
 
 
 class PredictDataPreprocessor:
-    def __init__(self, working_dir,  study_area,  sim_start, sim_end, routing_method, 
-                 grdc_streamflow_nc_file=None, catchment_size_threshold=None):
+    def __init__(
+        self,
+        working_dir,
+        study_area,
+        sim_start,
+        sim_end,
+        routing_method,
+        grdc_streamflow_nc_file=None,
+        catchment_size_threshold=None,
+        runoff_output_dir=None,
+    ):
         """
         Role: Build predictors for simulation/inference.
 
@@ -77,6 +86,7 @@ class PredictDataPreprocessor:
         self.study_area = study_area
         self.working_dir = working_dir
         self.routing_method = routing_method
+        self.runoff_output_dir = runoff_output_dir or f"{self.working_dir}/runoff_output"
         
         self.data_list = []
         self.catchment = []  
@@ -501,7 +511,7 @@ class PredictDataPreprocessor:
         start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
         end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
 
-        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.runoff_output_dir}/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -723,7 +733,7 @@ class PredictDataPreprocessor:
         start_dt = datetime.strptime(self.sim_start, "%Y-%m-%d")
         end_dt = datetime.strptime(self.sim_end, "%Y-%m-%d")
 
-        all_years_wfa = sorted(glob.glob(f'{self.working_dir}/runoff_output/*.pkl'))
+        all_years_wfa = sorted(glob.glob(f'{self.runoff_output_dir}/*.pkl'))
         wfa_list = []
         for year in all_years_wfa:
             with open(year, 'rb') as f:
@@ -880,9 +890,20 @@ class PredictStreamflow:
         self.scaled_trained_catchment = None
         self.working_dir = working_dir
         self.area_normalize = area_normalize
+        self.sim_45d = None
+        self.sim_90d = None
+        self.sim_180d = None
+        self.sim_365d = None
+        self.sim_alphaearth = None
+        self.sim_area = None
+        self.catch_area = None
+        self.catch_area_list = []
+        self.station_window_counts = []
+        self.valid_entry_indices = []
 
     def prepare_data(self, data_list):
-        
+        from numpy.lib.stride_tricks import sliding_window_view
+
         """
         Prepare flow accumulation and streamflow data extracted from GRDC database for input in the model. Preparation involves dividing time-series data into desired short sequences based on specified timesteps and reshaping into desired tensor shape.
         
@@ -895,94 +916,87 @@ class PredictStreamflow:
             None. Populates model input arrays on the instance.
         """
 
-        predictors = list(map(lambda xy: xy[0], data_list))
-        catchment = list(map(lambda xy: xy[2], data_list))
-        catchment_arr = np.array(catchment)
+        predictors = [xy[0] for xy in data_list]
+        catchment = [xy[2] for xy in data_list]
+        catchment_arr = np.array(catchment, dtype=np.float32)
 
-        area = catchment_arr[:, 0:1]      # shape (N, 1)
-        alphaearth = catchment_arr[:, 1:] # shape (N, D)
-     
-        full_train_45d = []
-        full_train_90d = []
-        full_train_180d = []
-        full_train_365d = []
-        full_alphaearth = []
-        full_area = []
+        area = catchment_arr[:, 0:1]
+        alphaearth = catchment_arr[:, 1:]
 
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
             alphaearth_scaler = pickle.load(file)
 
         if len(catchment) <= 0:
-            return
+            raise ValueError("No catchment data available for prediction.")
 
-        alphaearth = alphaearth.reshape(-1,64)
-        scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
+        alphaearth = alphaearth.reshape(-1, 64)
+        scaled_alphaearth = alphaearth_scaler.transform(alphaearth)
 
+        all_45d = []
+        all_90d = []
+        all_180d = []
+        all_365d = []
+        all_alpha = []
+        all_area = []
         self.catch_area_list = []
-        for x, z, j in zip(predictors, scaled_alphaearth, area):
+        self.station_window_counts = []
+        self.valid_entry_indices = []
+        for idx, (x, z, j) in enumerate(zip(predictors, scaled_alphaearth, area)):
             this_area = np.expm1(j)
-            self.catch_area_list.append(this_area)
+
             if self.area_normalize:
                 scaled_train_predictor = x.values / this_area
             else:
                 scaled_train_predictor = x.values
-            scaled_train_predictor = np.log1p(scaled_train_predictor)
 
-            num_samples = scaled_train_predictor.shape[0] - 365
-            p45_samples = []
-            p90_samples = []
-            p180_samples = []
-            p365_samples = []
-            alphaearth_samples = []
-            area_samples = []
+            if scaled_train_predictor.ndim == 1:
+                scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
+            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
-            self.catch_area = np.expm1(j)
-            
-            for i in range(num_samples):
-                full_window = scaled_train_predictor[i : i + 365, :]
-                
-                p45_samples.append(full_window[-45:, :])
-                p90_samples.append(full_window[-90:, :])
-                p180_samples.append(full_window[-180:, :])
-                p365_samples.append(full_window)
-        
-                alphaearth_samples.append(z)
-                area_samples.append(j.reshape(1))
-            
-            # --- FILER NAANS ---
-            timesteps_to_keep = []
-            for i in range(num_samples):
-                if (
-                    not np.isnan(p45_samples[i]).any()
-                    and not np.isnan(p90_samples[i]).any()
-                    and not np.isnan(p180_samples[i]).any()
-                    and not np.isnan(p365_samples[i]).any()
-                ):
-                    timesteps_to_keep.append(i)
+            num_samples = scaled_train_predictor.shape[0] - 365 - 1
+            if num_samples <= 0:
+                continue
 
-            timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            if len(timesteps_to_keep) > 0:
-                full_train_45d.append(np.array(p45_samples)[timesteps_to_keep])
-                full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
-                full_train_180d.append(np.array(p180_samples)[timesteps_to_keep])
-                full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
-                full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
-                full_area.append(np.array(area_samples)[timesteps_to_keep])
-            
-        self.sim_45d = np.concatenate(full_train_45d, axis=0)
-        self.sim_90d = np.concatenate(full_train_90d, axis=0)
-        self.sim_180d = np.concatenate(full_train_180d, axis=0)
-        self.sim_365d = np.concatenate(full_train_365d, axis=0)
-        self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_area = np.concatenate(full_area, axis=0).reshape(-1, 1)
+            windows_raw = sliding_window_view(
+                scaled_train_predictor,
+                (365, scaled_train_predictor.shape[1]),
+            )[:, 0]
+            full_windows = windows_raw[:num_samples]
+            mask = ~np.isnan(full_windows).any(axis=(1, 2))
+            if not np.any(mask):
+                continue
+
+            n_valid = int(np.sum(mask))
+            valid_windows = full_windows[mask]
+            all_45d.append(valid_windows[:, -45:, :])
+            all_90d.append(valid_windows[:, -90:, :])
+            all_180d.append(valid_windows[:, -180:, :])
+            all_365d.append(valid_windows)
+            all_alpha.append(np.tile(z.reshape(1, -1), (n_valid, 1)))
+            all_area.append(np.tile(j.reshape(1, -1), (n_valid, 1)))
+            self.catch_area_list.append(this_area)
+            self.station_window_counts.append(n_valid)
+            self.valid_entry_indices.append(idx)
+
+        if not all_365d:
+            raise ValueError("No valid simulation windows were created.")
+
+        self.sim_45d = np.concatenate(all_45d, axis=0).astype("float32")
+        self.sim_90d = np.concatenate(all_90d, axis=0).astype("float32")
+        self.sim_180d = np.concatenate(all_180d, axis=0).astype("float32")
+        self.sim_365d = np.concatenate(all_365d, axis=0).astype("float32")
+        self.sim_alphaearth = np.concatenate(all_alpha, axis=0).astype("float32")
+        self.sim_area = np.concatenate(all_area, axis=0).astype("float32")
+        self.catch_area = self.catch_area_list[0] if self.catch_area_list else None
     
     def prepare_data_latlng(self, data_list):
-        
+        from numpy.lib.stride_tricks import sliding_window_view
+
         """
         Prepare model inputs for user-defined latitude/longitude points.
 
         This uses routed runoff time series at specified lat/lon points (not GRDC
-        stations), slices multi-scale windows, and reshapes tensors for inference.
+        stations), builds 365-day windows, and reshapes tensors for inference.
         
         Parameters:
         -----------
@@ -993,89 +1007,77 @@ class PredictStreamflow:
             None. Populates model input arrays on the instance.
         """
 
-        predictors = list(map(lambda xy: xy[0], data_list[0]))
-        catchment = list(map(lambda xy: xy[1], data_list[0]))
-        catchment_arr = np.array(catchment)
+        predictors = [xy[0] for xy in data_list[0]]
+        catchment = [xy[1] for xy in data_list[0]]
+        catchment_arr = np.array(catchment, dtype=np.float32)
 
-        area = catchment_arr[:, 0:1]      # shape (N, 1)
-        alphaearth = catchment_arr[:, 1:] # shape (N, D)
-     
-        full_train_45d = []
-        full_train_90d = []
-        full_train_180d = []
-        full_train_365d = []
-        full_alphaearth = []
-        full_area = []
-                
-        
+        area = catchment_arr[:, 0:1]
+        alphaearth = catchment_arr[:, 1:]
+
         with open(f'{self.working_dir}/models/alpha_earth_scaler.pkl', 'rb') as file:
             alphaearth_scaler = pickle.load(file)
 
         if len(catchment) <= 0:
-            return
-        
-        alphaearth = alphaearth.reshape(-1,64)
-        scaled_alphaearth = alphaearth_scaler.transform(alphaearth) 
+            raise ValueError("No catchment data available for prediction.")
 
+        alphaearth = alphaearth.reshape(-1, 64)
+        scaled_alphaearth = alphaearth_scaler.transform(alphaearth)
+
+        all_45d = []
+        all_90d = []
+        all_180d = []
+        all_365d = []
+        all_alpha = []
+        all_area = []
         self.catch_area_list = []
-        for x, z, j in zip(predictors, scaled_alphaearth, area):
+        self.station_window_counts = []
+        self.valid_entry_indices = []
+        for idx, (x, z, j) in enumerate(zip(predictors, scaled_alphaearth, area)):
             this_area = np.expm1(j)
-            self.catch_area_list.append(this_area)
+
             if self.area_normalize:
                 scaled_train_predictor = x.values / this_area
             else:
                 scaled_train_predictor = x.values
             if scaled_train_predictor.ndim == 1:
                 scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
-            scaled_train_predictor = np.log1p(scaled_train_predictor)
+            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
-            num_samples = scaled_train_predictor.shape[0] - 365
-            p45_samples = []
-            p90_samples = []
-            p180_samples = []
-            p365_samples = []
-            alphaearth_samples = []
-            area_samples = []
+            num_samples = scaled_train_predictor.shape[0] - 365 - 1
+            if num_samples <= 0:
+                continue
 
-            #self.catch_area = np.expm1(j)
-            
-            for i in range(num_samples):
-                full_window = scaled_train_predictor[i : i + 365, :]
-                
-                p45_samples.append(full_window[-45:, :])
-                p90_samples.append(full_window[-90:, :])
-                p180_samples.append(full_window[-180:, :])
-                p365_samples.append(full_window)
-        
-                alphaearth_samples.append(z)
-                area_samples.append(j.reshape(1))
-            
-            # --- FILER NAANS ---
-            timesteps_to_keep = []
-            for i in range(num_samples):
-                if (
-                    not np.isnan(p45_samples[i]).any()
-                    and not np.isnan(p90_samples[i]).any()
-                    and not np.isnan(p180_samples[i]).any()
-                    and not np.isnan(p365_samples[i]).any()
-                ):
-                    timesteps_to_keep.append(i)
+            windows_raw = sliding_window_view(
+                scaled_train_predictor,
+                (365, scaled_train_predictor.shape[1]),
+            )[:, 0]
+            full_windows = windows_raw[:num_samples]
+            mask = ~np.isnan(full_windows).any(axis=(1, 2))
+            if not np.any(mask):
+                continue
 
-            timesteps_to_keep = np.array(timesteps_to_keep, dtype=np.int64)
-            if len(timesteps_to_keep) > 0:
-                full_train_45d.append(np.array(p45_samples)[timesteps_to_keep])
-                full_train_90d.append(np.array(p90_samples)[timesteps_to_keep])
-                full_train_180d.append(np.array(p180_samples)[timesteps_to_keep])
-                full_train_365d.append(np.array(p365_samples)[timesteps_to_keep])
-                full_alphaearth.append(np.array(alphaearth_samples)[timesteps_to_keep])
-                full_area.append(np.array(area_samples)[timesteps_to_keep])
-            
-        self.sim_45d = np.concatenate(full_train_45d, axis=0)
-        self.sim_90d = np.concatenate(full_train_90d, axis=0)
-        self.sim_180d = np.concatenate(full_train_180d, axis=0)
-        self.sim_365d = np.concatenate(full_train_365d, axis=0)
-        self.sim_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64)  
-        self.sim_area = np.concatenate(full_area, axis=0).reshape(-1, 1)
+            n_valid = int(np.sum(mask))
+            valid_windows = full_windows[mask]
+            all_45d.append(valid_windows[:, -45:, :])
+            all_90d.append(valid_windows[:, -90:, :])
+            all_180d.append(valid_windows[:, -180:, :])
+            all_365d.append(valid_windows)
+            all_alpha.append(np.tile(z.reshape(1, -1), (n_valid, 1)))
+            all_area.append(np.tile(j.reshape(1, -1), (n_valid, 1)))
+            self.catch_area_list.append(this_area)
+            self.station_window_counts.append(n_valid)
+            self.valid_entry_indices.append(idx)
+
+        if not all_365d:
+            raise ValueError("No valid simulation windows were created.")
+
+        self.sim_45d = np.concatenate(all_45d, axis=0).astype("float32")
+        self.sim_90d = np.concatenate(all_90d, axis=0).astype("float32")
+        self.sim_180d = np.concatenate(all_180d, axis=0).astype("float32")
+        self.sim_365d = np.concatenate(all_365d, axis=0).astype("float32")
+        self.sim_alphaearth = np.concatenate(all_alpha, axis=0).astype("float32")
+        self.sim_area = np.concatenate(all_area, axis=0).astype("float32")
+        self.catch_area = self.catch_area_list[0] if self.catch_area_list else None
     
             
     def load_model(self, path):
@@ -1088,11 +1090,17 @@ class PredictStreamflow:
         Returns:
             tensorflow.keras.Model: Loaded model instance.
         """
-        from tcn import TCN  # Make sure to import TCN
         from tensorflow.keras.utils import custom_object_scope
 
-        from bakaano.streamflow_trainer import asym_laplace_nll
-        custom_objects = {"TCN": TCN, "asym_laplace_nll": asym_laplace_nll}
+        from bakaano.streamflow_trainer import (
+            asym_laplace_nll,
+            asym_laplace_plus_mse_sqrt,
+        )
+        custom_objects = {
+            "TCN": TCN,
+            "asym_laplace_nll": asym_laplace_nll,
+            "asym_laplace_plus_mse_sqrt": asym_laplace_plus_mse_sqrt,
+        }
         strategy = tf.distribute.MirroredStrategy()
         with strategy.scope():
             with custom_object_scope(custom_objects):  

@@ -10,6 +10,8 @@ from bakaano.utils import Utils
 import importlib.util
 from pathlib import Path
 from bakaano.router import RunoffRouter
+from bakaano.veget import VegET
+from bakaano.scenario import ScenarioManager
 import hydroeval
 import matplotlib.pyplot as plt
 import xarray as xr
@@ -19,6 +21,7 @@ import pickle
 import pandas as pd
 import geopandas as gpd
 from datetime import datetime
+from collections.abc import Iterable
 from leafmap.foliumap import Map
 
 def _open_dataset_with_fallback(nc_path):
@@ -120,8 +123,13 @@ class BakaanoHydro:
         os.makedirs(f'{self.working_dir}/shapes', exist_ok=True)
         os.makedirs(f'{self.working_dir}/catchment', exist_ok=True)
         os.makedirs(f'{self.working_dir}/predicted_streamflow_data', exist_ok=True)
+        self._scenario_draw_map = None
       
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
+
+    def _invert_sqrt_response(self, predicted_streamflow):
+        """Invert trainer target transform (sqrt) back to linear streamflow units."""
+        return np.square(predicted_streamflow)
 
 #=========================================================================================================================================
     def train_streamflow_model(
@@ -131,15 +139,15 @@ class BakaanoHydro:
         grdc_netcdf,
         batch_size,
         num_epochs,
-        learning_rate=0.0001,
-        loss_function="mse",
+        learning_rate=0.0005,
+        loss_function="asym_laplace_nll",
         seed=100,
         routing_method="mfd",
         catchment_size_threshold=1,
         area_normalize=True,
-        lr_schedule=None,
-        warmup_epochs=0,
-        min_learning_rate=1e-5,
+        lr_schedule='cosine',
+        warmup_epochs=1,
+        min_learning_rate=5e-5,
         csv_dir=None,
         lookup_csv=None,
         id_col="id",
@@ -159,12 +167,12 @@ class BakaanoHydro:
             batch_size (int): Training batch size.
             num_epochs (int): Number of training epochs.
             learning_rate (float): Optimizer learning rate.
-            loss_function (str): Loss name (e.g., "mse").
+            loss_function (str): Loss name (default: "asym_laplace_nll").
             seed (int): Random seed for sampling.
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             catchment_size_threshold (float): Minimum catchment size for stations.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, responses are modeled in raw m³/s (after log1p).
+                If False, responses are modeled as sqrt(raw m³/s) without area normalization.
             lr_schedule (str, optional): Learning-rate schedule ("cosine", "exp_decay").
             warmup_epochs (int): Number of warmup epochs before scheduling.
             min_learning_rate (float): Minimum learning rate for schedules.
@@ -223,11 +231,22 @@ class BakaanoHydro:
             self.rawdata = sdp.get_data()
         sn = str(len(sdp.sim_station_names))
 
-        # Normalize station_ids to a set (supports single int or iterable)
-        if isinstance(sdp.station_ids, (list, tuple, set)):
-            target_ids = set(sdp.station_ids)
+        # Normalize station_ids to a set (supports numpy/pandas containers and scalars)
+        station_ids = sdp.station_ids
+        if isinstance(station_ids, (str, bytes)):
+            target_ids = {station_ids}
+        elif np.isscalar(station_ids):
+            target_ids = {station_ids.item() if isinstance(station_ids, np.generic) else station_ids}
+        elif hasattr(station_ids, "tolist"):
+            values = station_ids.tolist()
+            if isinstance(values, list):
+                target_ids = set(values)
+            else:
+                target_ids = {values}
+        elif isinstance(station_ids, Iterable):
+            target_ids = set(station_ids)
         else:
-            target_ids = {sdp.station_ids}
+            target_ids = {station_ids}
         
         filtered = [
             item for item in self.rawdata
@@ -367,6 +386,7 @@ class BakaanoHydro:
         date_col="date",
         discharge_col="discharge",
         file_pattern="{id}.csv",
+        runoff_output_dir=None,
     ):
         """Interactively evaluate a trained streamflow model.
 
@@ -378,7 +398,7 @@ class BakaanoHydro:
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             catchment_size_threshold (float): Minimum catchment size for stations.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, predictions are interpreted in raw m³/s after log inversion.
+                If False, predictions are interpreted in raw m³/s after square-root inversion.
             csv_dir (str, optional): Directory of per-station CSVs.
             lookup_csv (str, optional): CSV lookup file with station coords.
             id_col (str): Station id column in lookup CSV.
@@ -397,6 +417,7 @@ class BakaanoHydro:
             routing_method,
             grdc_netcdf,
             catchment_size_threshold,
+            runoff_output_dir=runoff_output_dir,
         )
 
         if csv_dir and lookup_csv:
@@ -447,22 +468,15 @@ class BakaanoHydro:
 
         self.vmodel.load_model(model_path)
 
-        predicted_streamflow = self.vmodel.model.predict(
-            [
-                self.vmodel.sim_45d,
-                self.vmodel.sim_90d,
-                self.vmodel.sim_180d,
-                self.vmodel.sim_365d,
-                self.vmodel.sim_alphaearth,
-                self.vmodel.sim_area,
-            ]
-        )
+        predicted_streamflow = self.vmodel.model.predict([self.vmodel.sim_45d, self.vmodel.sim_90d, self.vmodel.sim_180d, self.vmodel.sim_365d,
+                                                          self.vmodel.sim_alphaearth, self.vmodel.sim_area])
         if predicted_streamflow.ndim == 2 and predicted_streamflow.shape[1] == 3:
             predicted_streamflow = predicted_streamflow[:, 0:1]
 
-        predicted_streamflow = np.expm1(predicted_streamflow)
+        predicted_streamflow = self._invert_sqrt_response(predicted_streamflow)
         if area_normalize:
-            predicted_streamflow = (predicted_streamflow * self.vmodel.catch_area * 1_000_000.0) / (86400 * 1000)
+            catch_area = self.vmodel.catch_area if self.vmodel.catch_area is not None else self.vmodel.catch_area_list[0]
+            predicted_streamflow = (predicted_streamflow * catch_area * 1_000_000.0) / (86400 * 1000)
         else:
             predicted_streamflow = predicted_streamflow
         predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow) 
@@ -471,7 +485,7 @@ class BakaanoHydro:
         
 #==============================================================================================================================
     def simulate_streamflow(self, model_path, sim_start, sim_end, latlist, lonlist, 
-                            routing_method='mfd', area_normalize=True):
+                            routing_method='mfd', area_normalize=True, runoff_output_dir=None):
         """Simulate streamflow for given coordinates using a trained model.
 
         Args:
@@ -482,10 +496,17 @@ class BakaanoHydro:
             lonlist (list[float]): List of longitudes.
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, outputs are raw m³/s after log inversion.
+                If False, outputs are raw m³/s after square-root inversion.
         """
         print(' 1. Loading runoff data and other predictors')
-        vdp = PredictDataPreprocessor(self.working_dir, self.study_area, sim_start, sim_end, routing_method)
+        vdp = PredictDataPreprocessor(
+            self.working_dir,
+            self.study_area,
+            sim_start,
+            sim_end,
+            routing_method,
+            runoff_output_dir=runoff_output_dir,
+        )
         rawdata = vdp.get_data_latlng(latlist, lonlist)
 
         self.vmodel = PredictStreamflow(self.working_dir, area_normalize=area_normalize)
@@ -493,26 +514,19 @@ class BakaanoHydro:
         batch_size = len(latlist)
         self.vmodel.load_model(model_path)
         print(' 2. Batch prediction')
-        predicted_streamflows = self.vmodel.model.predict(
-            [
-                self.vmodel.sim_45d,
-                self.vmodel.sim_90d,
-                self.vmodel.sim_180d,
-                self.vmodel.sim_365d,
-                self.vmodel.sim_alphaearth,
-                self.vmodel.sim_area,
-            ],
-            batch_size=batch_size,
-        )
+        predicted_streamflows = self.vmodel.model.predict([self.vmodel.sim_45d, self.vmodel.sim_90d, self.vmodel.sim_180d, self.vmodel.sim_365d,
+                                                          self.vmodel.sim_alphaearth, self.vmodel.sim_area], batch_size=batch_size)
         if predicted_streamflows.ndim == 2 and predicted_streamflows.shape[1] == 3:
             predicted_streamflows = predicted_streamflows[:, 0:1]
 
-        predicted_streamflows = np.expm1(predicted_streamflows)
-        seq = int(len(predicted_streamflows)/batch_size)
-        predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
+        predicted_streamflows = self._invert_sqrt_response(predicted_streamflows)
+        station_preds = self._split_predictions_by_station(
+            predicted_streamflows,
+            self.vmodel.station_window_counts,
+        )
 
         predicted_streamflow_list = []
-        for predicted_streamflow, catch_area in zip(predicted_streamflows, self.vmodel.catch_area_list):
+        for predicted_streamflow, catch_area in zip(station_preds, self.vmodel.catch_area_list):
             if area_normalize:
                 predicted_streamflow = (predicted_streamflow * catch_area * 1_000_000.0) / (86400 * 1000)
             else:
@@ -521,7 +535,8 @@ class BakaanoHydro:
             
             predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')
-        for predicted_streamflow, lat, lon in zip(predicted_streamflow_list, latlist, lonlist):
+        valid_pairs = [(latlist[i], lonlist[i]) for i in self.vmodel.valid_entry_indices]
+        for predicted_streamflow, (lat, lon) in zip(predicted_streamflow_list, valid_pairs):
             predicted_streamflow = predicted_streamflow.reshape(-1)
 
             adjusted_start_date = pd.to_datetime(sim_start) + pd.DateOffset(days=365)
@@ -552,6 +567,7 @@ class BakaanoHydro:
         discharge_col="discharge",
         file_pattern="{id}.csv",
         area_normalize=True,
+        runoff_output_dir=None,
     ):
         """Simulate streamflow for GRDC or CSV stations in batch.
 
@@ -570,7 +586,7 @@ class BakaanoHydro:
             discharge_col (str): Discharge column in station CSVs.
             file_pattern (str): Filename pattern for station CSVs.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, outputs are raw m³/s after log inversion.
+                If False, outputs are raw m³/s after square-root inversion.
         """
         print(' 1. Loading runoff data and other predictors')
         vdp = PredictDataPreprocessor(
@@ -580,6 +596,7 @@ class BakaanoHydro:
             sim_end,
             routing_method,
             grdc_netcdf,
+            runoff_output_dir=runoff_output_dir,
         )
     
         if csv_dir and lookup_csv:
@@ -607,26 +624,19 @@ class BakaanoHydro:
         batch_size = len(vdp.station_ids)
         self.vmodel.load_model(model_path)
         print(' 2. Batch prediction')
-        predicted_streamflows = self.vmodel.model.predict(
-            [
-                self.vmodel.sim_45d,
-                self.vmodel.sim_90d,
-                self.vmodel.sim_180d,
-                self.vmodel.sim_365d,
-                self.vmodel.sim_alphaearth,
-                self.vmodel.sim_area,
-            ],
-            batch_size=batch_size,
-        )
+        predicted_streamflows = self.vmodel.model.predict([self.vmodel.sim_45d, self.vmodel.sim_90d, self.vmodel.sim_180d, self.vmodel.sim_365d,
+                                                          self.vmodel.sim_alphaearth, self.vmodel.sim_area], batch_size=batch_size)
         if predicted_streamflows.ndim == 2 and predicted_streamflows.shape[1] == 3:
             predicted_streamflows = predicted_streamflows[:, 0:1]
 
-        predicted_streamflows = np.expm1(predicted_streamflows)
-        seq = int(len(predicted_streamflows)/batch_size)
-        predicted_streamflows = predicted_streamflows.reshape(batch_size, seq, 1)
+        predicted_streamflows = self._invert_sqrt_response(predicted_streamflows)
+        station_preds = self._split_predictions_by_station(
+            predicted_streamflows,
+            self.vmodel.station_window_counts,
+        )
 
         predicted_streamflow_list = []
-        for predicted_streamflow, catch_area in zip(predicted_streamflows, self.vmodel.catch_area_list):
+        for predicted_streamflow, catch_area in zip(station_preds, self.vmodel.catch_area_list):
             if area_normalize:
                 predicted_streamflow = (predicted_streamflow * catch_area * 1000000.0) / (86400 * 1000)
             else:
@@ -635,7 +645,9 @@ class BakaanoHydro:
             
             predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')
-        for predicted_streamflow, snames, sids in zip(predicted_streamflow_list, vdp.sim_station_names, vdp.station_ids):
+        valid_station_names = [vdp.sim_station_names[i] for i in self.vmodel.valid_entry_indices]
+        valid_station_ids = [vdp.station_ids[i] for i in self.vmodel.valid_entry_indices]
+        for predicted_streamflow, snames, sids in zip(predicted_streamflow_list, valid_station_names, valid_station_ids):
             predicted_streamflow = predicted_streamflow.reshape(-1)
 
             adjusted_start_date = pd.to_datetime(sim_start) + pd.DateOffset(days=365)
@@ -650,7 +662,187 @@ class BakaanoHydro:
         print(f' COMPLETED! csv files available at {out_folder}')
 
 #========================================================================================================================  
-            
+
+    def create_land_cover_scenario(
+        self,
+        scenario_name,
+        geometry=None,
+        percent_change=0,
+        change_type="deforestation",
+        map_obj=None,
+        open_map_if_missing=True,
+    ):
+        """Create scenario rasters from geometry or the latest drawn polygon on map.
+
+        If ``geometry`` is None, this tries to read the last drawn geometry from
+        ``map_obj`` (if provided) or the last map from ``explore_scenario_draw_map``.
+        If nothing is drawn and ``open_map_if_missing=True``, it returns a draw map.
+        """
+        manager = ScenarioManager(self.working_dir, self.study_area)
+
+        if geometry is None:
+            active_map = map_obj or self._scenario_draw_map
+            if active_map is not None:
+                geometry = manager.get_last_drawn_geometry(active_map)
+
+        if geometry is None:
+            if open_map_if_missing:
+                self._scenario_draw_map = manager.build_draw_map()
+                print("Draw a polygon on the returned map, then call create_land_cover_scenario(...) again.")
+                return self._scenario_draw_map
+            raise ValueError("No geometry provided and no drawn polygon found.")
+
+        metadata = manager.create_tree_cover_scenario(
+            scenario_name=scenario_name,
+            geometry=geometry,
+            percent_change=percent_change,
+            change_type=change_type,
+        )
+        print(f"Scenario created: {scenario_name}")
+        print(f"Scenario rasters: {metadata['tree_cover_tif']}, {metadata['herb_cover_tif']}")
+        return metadata
+
+    def recompute_scenario_runoff(
+        self,
+        scenario_name,
+        sim_start,
+        sim_end,
+        routing_method="mfd",
+        climate_data_source=None,
+        force=False,
+        resume=False,
+    ):
+        """Recompute routed runoff for a scenario."""
+        manager = ScenarioManager(self.working_dir, self.study_area)
+        paths = manager.get_paths(scenario_name)
+
+        final_file = paths["runoff_dir"] / "wacc_sparse_arrays.pkl"
+        if force and final_file.exists():
+            os.remove(final_file)
+
+        veg = VegET(
+            self.working_dir,
+            self.study_area,
+            sim_start,
+            sim_end,
+            climate_data_source or self.climate_data_source,
+            routing_method=routing_method,
+            runoff_output_dir=str(paths["runoff_dir"]),
+            tree_cover_tiff=str(paths["tree_cover"]),
+            herb_cover_tiff=str(paths["herb_cover"]),
+        )
+        veg.compute_veget_runoff_route_flow(resume=resume)
+        return str(final_file)
+
+    def simulate_scenario_streamflow(
+        self,
+        scenario_name,
+        model_path,
+        sim_start,
+        sim_end,
+        latlist,
+        lonlist,
+        routing_method="mfd",
+        area_normalize=True,
+        recompute_runoff=False,
+    ):
+        """Run point-based streamflow simulation using scenario runoff outputs."""
+        manager = ScenarioManager(self.working_dir, self.study_area)
+        paths = manager.get_paths(scenario_name)
+        runoff_file = paths["runoff_dir"] / "wacc_sparse_arrays.pkl"
+
+        if recompute_runoff or (not runoff_file.exists()):
+            self.recompute_scenario_runoff(
+                scenario_name=scenario_name,
+                sim_start=sim_start,
+                sim_end=sim_end,
+                routing_method=routing_method,
+                climate_data_source=self.climate_data_source,
+                force=recompute_runoff,
+                resume=False,
+            )
+
+        return self.simulate_streamflow(
+            model_path=model_path,
+            sim_start=sim_start,
+            sim_end=sim_end,
+            latlist=latlist,
+            lonlist=lonlist,
+            routing_method=routing_method,
+            area_normalize=area_normalize,
+            runoff_output_dir=str(paths["runoff_dir"]),
+        )
+
+    def simulate_scenario_grdc_csv_stations(
+        self,
+        scenario_name,
+        model_path,
+        sim_start,
+        sim_end,
+        grdc_netcdf,
+        routing_method="mfd",
+        csv_dir=None,
+        lookup_csv=None,
+        id_col="id",
+        lat_col="latitude",
+        lon_col="longitude",
+        date_col="date",
+        discharge_col="discharge",
+        file_pattern="{id}.csv",
+        area_normalize=True,
+        recompute_runoff=False,
+    ):
+        """Run station-based streamflow simulation using scenario runoff outputs."""
+        manager = ScenarioManager(self.working_dir, self.study_area)
+        paths = manager.get_paths(scenario_name)
+        runoff_file = paths["runoff_dir"] / "wacc_sparse_arrays.pkl"
+
+        if recompute_runoff or (not runoff_file.exists()):
+            self.recompute_scenario_runoff(
+                scenario_name=scenario_name,
+                sim_start=sim_start,
+                sim_end=sim_end,
+                routing_method=routing_method,
+                climate_data_source=self.climate_data_source,
+                force=recompute_runoff,
+                resume=False,
+            )
+
+        return self.simulate_grdc_csv_stations(
+            model_path=model_path,
+            sim_start=sim_start,
+            sim_end=sim_end,
+            grdc_netcdf=grdc_netcdf,
+            routing_method=routing_method,
+            csv_dir=csv_dir,
+            lookup_csv=lookup_csv,
+            id_col=id_col,
+            lat_col=lat_col,
+            lon_col=lon_col,
+            date_col=date_col,
+            discharge_col=discharge_col,
+            file_pattern=file_pattern,
+            area_normalize=area_normalize,
+            runoff_output_dir=str(paths["runoff_dir"]),
+        )
+
+    def _split_predictions_by_station(self, flat_predictions, station_window_counts):
+        """Split flat model predictions into station-aligned chunks."""
+        total = int(np.sum(station_window_counts))
+        if total != len(flat_predictions):
+            raise ValueError(
+                "Prediction/window mismatch: "
+                f"predictions={len(flat_predictions)} vs expected={total}"
+            )
+
+        chunks = []
+        start = 0
+        for count in station_window_counts:
+            end = start + int(count)
+            chunks.append(flat_predictions[start:end])
+            start = end
+        return chunks
+
     def _plot_grdc_streamflow(self, observed_streamflow, predicted_streamflow, val_start):
         """Plot the observed and predicted streamflow data.
 
@@ -672,7 +864,7 @@ class BakaanoHydro:
         print(f"Nash-Sutcliffe Efficiency (NSE): {nse}")
         print(f"Kling-Gupta Efficiency (KGE): {kge1}")
         plt.plot(date_range, predicted_streamflow[:], color='blue', label='Predicted Streamflow')
-        plt.plot(date_range, observed_streamflow[0]['station_discharge'][365:].values[:], color='red', label='Observed Streamflow')
+        plt.plot(date_range, observed_streamflow[0]['station_discharge'][365:-1].values[:], color='red', label='Observed Streamflow')
         plt.title('Comparison of observed and simulated streamflow')  # Add a title
         plt.xlabel('Date')  # Label the x-axis
         plt.ylabel('River Discharge (m³/s)')
@@ -691,7 +883,7 @@ class BakaanoHydro:
         Returns:
             tuple: (nse, kge) metric values from hydroeval.
         """
-        observed = observed_streamflow[0]['station_discharge'][365:].values
+        observed = observed_streamflow[0]['station_discharge'][365:-1].values
         predicted = predicted_streamflow[:, 0].flatten()
         nan_indices = np.isnan(observed) | np.isnan(predicted)
         observed = observed[~nan_indices]
@@ -809,3 +1001,9 @@ class BakaanoHydro:
                 print(f"❌ Failed to process GRDC NetCDF: {e}")
 
         return m
+
+    def explore_scenario_draw_map(self):
+        """Launch an interactive draw map for scenario polygon creation."""
+        manager = ScenarioManager(self.working_dir, self.study_area)
+        self._scenario_draw_map = manager.build_draw_map()
+        return self._scenario_draw_map

@@ -65,7 +65,19 @@ def update_soil_and_runoff(soil_moisture, eff_rain, ETa, max_allowable_depletion
 
 class VegET:
     """Role: Orchestrate VegET runoff generation and routing."""
-    def __init__(self, working_dir, study_area, start_date, end_date, climate_data_source, routing_method='mfd'):
+    def __init__(
+        self,
+        working_dir,
+        study_area,
+        start_date,
+        end_date,
+        climate_data_source,
+        routing_method='mfd',
+        runoff_output_dir=None,
+        tree_cover_tiff=None,
+        herb_cover_tiff=None,
+        ndvi_pickle_path=None,
+    ):
         """Initialize a VegET object.
 
         Args:
@@ -107,6 +119,11 @@ class VegET:
 
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
         self.climate_data_source = climate_data_source
+        self.runoff_output_dir = runoff_output_dir or f'{self.working_dir}/runoff_output'
+        self.tree_cover_tiff = tree_cover_tiff or f'{self.working_dir}/vcf/mean_tree_cover.tif'
+        self.herb_cover_tiff = herb_cover_tiff or f'{self.working_dir}/vcf/mean_herb_cover.tif'
+        self.ndvi_pickle_path = ndvi_pickle_path or f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
+        os.makedirs(self.runoff_output_dir, exist_ok=True)
 
     def _resume_signature(self):
         """Return a lightweight signature used to validate resume state."""
@@ -154,9 +171,9 @@ class VegET:
         if checkpoint_days < 1:
             raise ValueError("checkpoint_days must be >= 1.")
 
-        final_file = f'{self.working_dir}/runoff_output/wacc_sparse_arrays.pkl'
-        state_file = f'{self.working_dir}/runoff_output/wacc_resume_state.pkl'
-        chunks_dir = f'{self.working_dir}/runoff_output/wacc_resume_chunks'
+        final_file = f'{self.runoff_output_dir}/wacc_sparse_arrays.pkl'
+        state_file = f'{self.runoff_output_dir}/wacc_resume_state.pkl'
+        chunks_dir = f'{self.runoff_output_dir}/wacc_resume_chunks'
         os.makedirs(chunks_dir, exist_ok=True)
         signature = self._resume_signature()
 
@@ -218,7 +235,7 @@ class VegET:
 
             
             
-            pickle_file_path = f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
+            pickle_file_path = self.ndvi_pickle_path
             with open(pickle_file_path, 'rb') as f:
                 ndvi_array = pickle.load(f)
             
@@ -227,8 +244,8 @@ class VegET:
             max_allowable_depletion = 0.5 * water_holding_capacity
             #max_allowable_depletion = np.asarray(max_allowable_depletion)
 
-            tree_cover_tiff = f'{self.working_dir}/vcf/mean_tree_cover.tif'
-            herb_cover_tiff = f'{self.working_dir}/vcf/mean_herb_cover.tif'
+            tree_cover_tiff = self.tree_cover_tiff
+            herb_cover_tiff = self.herb_cover_tiff
             tree_cover = self.uw.align_rasters(tree_cover_tiff, israster=True)[0]
             herb_cover = self.uw.align_rasters(herb_cover_tiff, israster=True)[0]
 
@@ -384,4 +401,4 @@ class VegET:
             if os.path.exists(chunks_dir):
                 shutil.rmtree(chunks_dir, ignore_errors=True)
         else:
-            print(f'Routed runoff data exists in {self.working_dir}/runoff_output/wacc_sparse_arrays.pkl. Skipping processing')
+            print(f'Routed runoff data exists in {final_file}. Skipping processing')
