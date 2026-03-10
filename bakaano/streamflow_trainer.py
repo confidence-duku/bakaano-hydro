@@ -636,22 +636,20 @@ class StreamflowModel:
     """
     Role: Define and train the multi-scale TCN streamflow model.
 
-    Streamed training variant of the regional streamflow model.
+    Full-materialization training variant of the regional streamflow model.
 
     Key characteristics (actual behavior):
-    - Prepares per-station scaled series and streams sliding windows via a generator.
-    - Samples windows stochastically each epoch (bootstrapped training).
-    - Uses tf.data.Dataset.from_generator with batching + prefetch.
+    - Prepares per-station scaled series using area normalization (optional) + sqrt transform.
+    - Materializes all valid 365-day sliding windows in memory.
+    - Trains directly with in-memory NumPy arrays.
     - Enables XLA globally via tf.config.optimizer.set_jit(True).
-
-    Note: This class does not materialize all windows in memory.
     """
 
     def __init__(self, working_dir, batch_size, num_epochs,
                  learning_rate=1e-4, loss_function="huber", train_start=None, train_end=None, seed=100,
                  area_normalize=True, lr_schedule=None, warmup_epochs=3, min_learning_rate=1e-5):
         """
-        Initialize the streamed training model configuration.
+        Initialize the full-materialization training model configuration.
 
         Parameters
         ----------
@@ -672,7 +670,7 @@ class StreamflowModel:
         seed : int or None
             Random seed for reproducible sampling. If None, sampling is random.
         area_normalize : bool
-            Whether to area-normalize predictors/response before log1p.
+            Whether to area-normalize predictors/response before sqrt transform.
         lr_schedule : str or None
             Learning-rate schedule ("cosine", "exp_decay", or None).
         warmup_epochs : int
@@ -857,7 +855,7 @@ class StreamflowModel:
         self.train_alphaearth = np.concatenate(full_alphaearth, axis=0).reshape(-1, 64).astype("float32")
         self.train_area = np.concatenate(full_area, axis=0).reshape(-1, 1).astype("float32")
 
-    
+
     # --------------------------------------------------
     # MODEL DEFINITION
     # --------------------------------------------------
@@ -884,44 +882,41 @@ class StreamflowModel:
             in90 = Input((90, 1), name="input_90d")
             in180 = Input((180, 1), name="input_180d")
             in365 = Input((365, 1), name="input_365d")
-
+    
             in_alpha = Input((64,), name="alphaearth")
             in_area = Input((1,), name="area")
-
+    
             # -------------------------------------------------------
             # Static conditioning branch
             # -------------------------------------------------------
             alpha_latent = Dense(64, activation="relu")(in_alpha)
             alpha_latent = BatchNormalization()(alpha_latent)
-
+    
             area_latent = Dense(8, activation="relu")(in_area)
             area_latent = BatchNormalization()(area_latent)
-
+    
             cond = Concatenate()([alpha_latent, area_latent])
-
+    
             # -------------------------------------------------------
-            # FiLM generator (per filter)
+            # FiLM generator
             # -------------------------------------------------------
-            def film(alpha, filters):
+            def film(alpha, dim, gamma_scale=0.1, beta_scale=0.1):
                 x = Dense(64, activation="relu")(alpha)
                 x = Dense(64, activation="relu")(x)
-
-                gamma = Dense(filters)(x)
-                beta = Dense(filters)(x)
-
-                # small modulation for stability
-                gamma = Dense(filters, activation="tanh")(gamma)
-                beta = Dense(filters, activation="tanh")(beta)
-
-                gamma = Reshape((filters,))(gamma)
-                beta = Reshape((filters,))(beta)
-
+    
+                gamma = Dense(dim)(x)
+                beta = Dense(dim)(x)
+    
+                gamma = 1.0 + gamma_scale * gamma
+                beta = beta_scale * beta
+    
                 return gamma, beta
-
+    
             # -------------------------------------------------------
             # TCN block
             # -------------------------------------------------------
             def tcn_block(x, filters, kernel, dilations, name):
+    
                 x = TCN(
                     nb_filters=filters,
                     kernel_size=kernel,
@@ -930,55 +925,55 @@ class StreamflowModel:
                     kernel_initializer=tf.keras.initializers.HeNormal(),
                     name=name,
                 )(x)
-
+    
                 x = BatchNormalization()(x)
-
+    
                 return x
-
+    
             # -------------------------------------------------------
             # Temporal branches
             # -------------------------------------------------------
-            b1 = tcn_block(in45, 32, 3, (1, 2, 4, 8, 16), "tcn_45")
-            b2 = tcn_block(in90, 32, 3, (1, 2, 4, 8, 16), "tcn_90")
-            b3 = tcn_block(in180, 32, 5, (1, 2, 4, 8, 16, 32), "tcn_180")
-            b4 = tcn_block(in365, 64, 7, (1, 2, 4, 8, 16, 32, 64), "tcn_365")
-
+            b1 = tcn_block(in45, 32, 3, (1,2,4,8,16), "tcn_45")
+            b2 = tcn_block(in90, 32, 3, (1,2,4,8,16), "tcn_90")
+            b3 = tcn_block(in180, 32, 5, (1,2,4,8,16,32), "tcn_180")
+            b4 = tcn_block(in365, 64, 7, (1,2,4,8,16,32,64), "tcn_365")
+    
             # -------------------------------------------------------
-            # FiLM per filter
+            # FiLM modulation per branch
             # -------------------------------------------------------
-            g1, b_1 = film(cond, 32)
-            g2, b_2 = film(cond, 32)
-            g3, b_3 = film(cond, 32)
-            g4, b_4 = film(cond, 64)
-
-            b1 = Add()([Multiply()([b1, g1]), b_1])
-            b2 = Add()([Multiply()([b2, g2]), b_2])
-            b3 = Add()([Multiply()([b3, g3]), b_3])
-            b4 = Add()([Multiply()([b4, g4]), b_4])
-
+            g1, b_1 = film(cond, b1.shape[-1])
+            g2, b_2 = film(cond, b2.shape[-1])
+            g3, b_3 = film(cond, b3.shape[-1])
+            g4, b_4 = film(cond, b4.shape[-1])
+    
+            b1 = g1 * b1 + b_1
+            b2 = g2 * b2 + b_2
+            b3 = g3 * b3 + b_3
+            b4 = g4 * b4 + b_4
+    
             b1 = BatchNormalization()(b1)
             b2 = BatchNormalization()(b2)
             b3 = BatchNormalization()(b3)
             b4 = BatchNormalization()(b4)
-
+    
             # -------------------------------------------------------
             # Combine temporal features
             # -------------------------------------------------------
             temporal = Concatenate()([b1, b2, b3, b4])
             temporal = BatchNormalization()(temporal)
             temporal = Dropout(0.2)(temporal)
-
+    
             # -------------------------------------------------------
             # Prediction head
             # -------------------------------------------------------
             h = Dense(128, activation="relu")(temporal)
             h = BatchNormalization()(h)
             h = Dropout(0.2)(h)
-
+    
             h = Dense(64, activation="relu")(h)
             h = BatchNormalization()(h)
             h = Dropout(0.2)(h)
-
+    
             h = Dense(32)(h)
             h = LeakyReLU(alpha=0.01)(h)
 
