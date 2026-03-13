@@ -269,6 +269,21 @@ class VegET:
             end = datetime.strptime(self.end_date, "%Y-%m-%d")
             date_list = [(start + timedelta(days=i)).strftime("%Y-%m-%d")
                         for i in range((end - start).days + 1)]
+            available_days = min(
+                len(date_list),
+                int(rf.sizes.get("time", len(rf))),
+                int(self.pet_params.sizes.get("time", len(self.pet_params))),
+                len(doys),
+            )
+            if available_days <= 0:
+                raise ValueError("No overlapping daily climate inputs were found for the requested simulation period.")
+            if available_days != len(date_list):
+                print(
+                    "Warning: requested simulation spans "
+                    f"{len(date_list)} days, but climate inputs provide only {available_days} daily steps. "
+                    "Simulation will stop at the last aligned day."
+                )
+            sim_dates = date_list[:available_days]
 
             # Initial soil moisture condition
             init_sm = rf[0] * 0
@@ -285,7 +300,12 @@ class VegET:
             if resume_state is not None:
                 start_idx = int(resume_state.get("next_index", 0))
                 soil_moisture = np.asarray(resume_state["soil_moisture"], dtype=np.float32)
-                print(f"Resuming VegET from day {start_idx + 1} of {len(date_list)}")
+                if start_idx > available_days:
+                    raise ValueError(
+                        f"Resume state points to day {start_idx + 1}, but only {available_days} aligned days are available. "
+                        "Delete the resume files or rerun with resume=False."
+                    )
+                print(f"Resuming VegET from day {start_idx + 1} of {available_days}")
             else:
                 start_idx = 0
                 soil_moisture = init_sm
@@ -308,8 +328,8 @@ class VegET:
             print('\n')
             chunk_start = start_idx
             wacc_buffer = []
-            for count in tqdm(range(start_idx, len(date_list)), desc="     Simulating and routing runoff", unit="day", total=len(date_list)):
-                date = date_list[count]
+            for count in tqdm(range(start_idx, available_days), desc="     Simulating and routing runoff", unit="day", total=available_days):
+                date = sim_dates[count]
                 if count % 365 == 0:
                     year_num = (count // 365) + 1
                     print(f'    Computing surface runoff and routing flow to river channels in year {year_num}')
@@ -373,7 +393,7 @@ class VegET:
                 wacc_buffer.append({"time": date, "matrix": wacc})
 
                 # Flush checkpoint chunk periodically (or at end).
-                flush = (len(wacc_buffer) >= checkpoint_days) or (count == len(date_list) - 1)
+                flush = (len(wacc_buffer) >= checkpoint_days) or (count == available_days - 1)
                 if flush:
                     chunk_file = os.path.join(chunks_dir, f"chunk_{chunk_start:07d}_{count:07d}.pkl")
                     with open(chunk_file, "wb") as f:
