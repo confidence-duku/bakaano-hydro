@@ -65,12 +65,19 @@ Hydrology and scaling
 - ``routing_method``: Routing method used to generate runoff (``mfd``, ``d8``,
   or ``dinf``). Must match the method used in VegET routing; mismatches will
   cause inconsistent predictors.
+- ``climate_data_source``: VegET forcing source (``CHELSA``, ``ERA5``, or
+  ``CHIRPS``). Invalid values now raise an explicit error before runoff
+  computation starts.
 - ``catchment_size_threshold``: Minimum catchment size filter for stations.
   Increase it to exclude very small basins or to reduce noise from tiny catchments.
 - ``area_normalize``: If ``True`` (recommended), the model trains on area-normalized
   depth (mm/day) and converts outputs back to m³/s. Set to ``False`` if you need
-  raw discharge units during training, evaluation, and simulation. Make sure you
-  use the same value for training and inference.
+  raw discharge units during training, evaluation, and simulation. The current
+  pipeline uses linear values; no additional sqrt/log response transform is
+  applied. Make sure you use the same value for training and inference.
+- ``resume`` / ``checkpoint_days``: VegET routing controls for long runs.
+  ``resume=True`` reuses matching checkpoint state if present; ``checkpoint_days``
+  sets how many simulated days are buffered before a checkpoint chunk is flushed.
 
 CSV observation options (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

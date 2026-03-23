@@ -41,10 +41,10 @@ Notes:
 Predicted streamflow units
 --------------------------
 
-Model training is performed on area-normalized targets (mm/day) and uses a
-``log1p`` transform during training. Predictions are inverse-transformed with
-``expm1`` and converted back to volumetric discharge (m³/s) by reversing the
-area normalization. The CSV outputs written to
+Model training is performed on linear targets. When ``area_normalize=True``,
+the target is area-normalized discharge depth (mm/day), and predictions are
+converted back to volumetric discharge (m³/s) by reversing the area
+normalization. The CSV outputs written to
 ``{working_dir}/predicted_streamflow_data`` are in m³/s.
 
 When ``loss_function="asym_laplace_nll"``, the model predicts 3 values per
@@ -52,8 +52,7 @@ sample (location + asymmetric scales). The runner/simulator uses the first
 value (location term) as discharge prediction for plots and CSV outputs.
 
 If ``area_normalize=False`` is used, the model trains and predicts in raw
-m³/s (after ``log1p``/``expm1``), and no area-based conversion is applied at
-inference time.
+m³/s, and no area-based conversion is applied at inference time.
 
 Note: Prediction time series start after a one-year warmup period. The first 365
 days of the simulation window are used as model context and are not written to
@@ -135,9 +134,16 @@ VegET + routing (bakaano.veget.VegET)
 Inputs:
 - DEM, soil, NDVI, tree cover, meteo
 - routing_method: mfd, d8, dinf
+- climate_data_source: CHELSA, ERA5, or CHIRPS
+- resume / checkpoint_days (optional): resume interrupted routing runs and
+  control checkpoint frequency
 
 Outputs:
-- Routed runoff in ``{working_dir}/runoff_output/*.pkl``
+- Routed runoff in ``{working_dir}/runoff_output/wacc_sparse_arrays.pkl``
+- Resume state during interrupted runs:
+  ``{working_dir}/runoff_output/wacc_resume_state.pkl``
+- Temporary checkpoint chunks during interrupted runs:
+  ``{working_dir}/runoff_output/wacc_resume_chunks/*.pkl``
 - River grid in ``{working_dir}/catchment/river_grid.tif`` (if generated)
 
 Streamflow training (bakaano.streamflow_trainer)

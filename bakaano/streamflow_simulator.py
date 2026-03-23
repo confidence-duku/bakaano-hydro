@@ -951,7 +951,6 @@ class PredictStreamflow:
 
             if scaled_train_predictor.ndim == 1:
                 scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
-            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
             num_samples = scaled_train_predictor.shape[0] - 365 - 1
             if num_samples <= 0:
@@ -1041,7 +1040,6 @@ class PredictStreamflow:
                 scaled_train_predictor = x.values
             if scaled_train_predictor.ndim == 1:
                 scaled_train_predictor = scaled_train_predictor.reshape(-1, 1)
-            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
             num_samples = scaled_train_predictor.shape[0] - 365 - 1
             if num_samples <= 0:

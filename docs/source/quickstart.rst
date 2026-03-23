@@ -297,6 +297,7 @@ Common pitfalls:
 
 - DEM missing or not clipped to basin.
 - Missing NDVI/tree cover/soil inputs.
+- Unsupported ``climate_data_source`` value. Use ``"CHELSA"``, ``"ERA5"``, or ``"CHIRPS"``.
 
 .. code-block:: python
 
@@ -310,6 +311,22 @@ Common pitfalls:
        routing_method="mfd",
    )
    vg.compute_veget_runoff_route_flow()
+
+Long runs can be resumed:
+
+.. code-block:: python
+
+   vg.compute_veget_runoff_route_flow(
+       resume=True,
+       checkpoint_days=30,
+   )
+
+Notes:
+
+- ``resume=True`` reuses matching checkpoint state in ``runoff_output/`` if an
+  earlier run was interrupted.
+- ``checkpoint_days`` controls how often routed runoff chunks are flushed to disk.
+- The final routed runoff product is ``runoff_output/wacc_sparse_arrays.pkl``.
 
 Visualize routed runoff
 
@@ -518,6 +535,8 @@ Optional column overrides (if your headers differ):
 Notes:
 - Training saves scalers to ``{working_dir}/models`` (AlphaEarth).
 - Set ``area_normalize=False`` to train directly on raw m³/s instead of area-normalized depth (mm/day).
+- The current streamflow pipeline uses linear predictors/targets; there is no
+  extra sqrt or log response transform in training or inference.
 
 Advanced training option (model configuration)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -590,6 +609,7 @@ Required for model configuration:
 
 Guidance:
 - Use ``csv_dir`` and ``lookup_csv`` to evaluate with station CSVs.
+- Use the same ``area_normalize`` setting that was used when training the model.
 
 .. code-block:: python
 
@@ -628,6 +648,8 @@ Outputs start after a one-year warmup period; the first 365 days of the
 simulation window are used as model context and are not written to the CSVs.
 Example: if ``sim_start="1981-01-01"`` and ``sim_end="2020-12-31"``, the first
 timestamp in the output CSV is ``1982-01-01`` (one year after the start date).
+Predictions are written in m³/s. If ``area_normalize=True``, the model internally
+predicts area-normalized discharge and converts it back to m³/s before writing CSVs.
 
 .. code-block:: python
 

@@ -127,9 +127,18 @@ class BakaanoHydro:
       
         self.clipped_dem = f'{self.working_dir}/elevation/dem_clipped.tif'
 
-    def _invert_sqrt_response(self, predicted_streamflow):
-        """Invert trainer target transform (sqrt) back to linear streamflow units."""
-        return np.square(predicted_streamflow)
+    def _restore_response_scale(self, predicted_streamflow):
+        """Return predictions in the same linear scale used during training."""
+        return predicted_streamflow
+
+    def _coerce_prediction_array(self, predicted_streamflow):
+        """Convert model outputs to a NumPy float array safe for NumPy ops."""
+        return np.asarray(predicted_streamflow, dtype=np.float32)
+
+    def _clip_negative_predictions(self, predicted_streamflow):
+        """Clamp negative predictions to zero after normalizing dtype."""
+        predicted_streamflow = self._coerce_prediction_array(predicted_streamflow)
+        return np.maximum(predicted_streamflow, 0.0)
 
 #=========================================================================================================================================
     def train_streamflow_model(
@@ -172,7 +181,7 @@ class BakaanoHydro:
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             catchment_size_threshold (float): Minimum catchment size for stations.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, responses are modeled as sqrt(raw m³/s) without area normalization.
+                If False, responses are modeled as raw m³/s without area normalization.
             lr_schedule (str, optional): Learning-rate schedule ("cosine", "exp_decay").
             warmup_epochs (int): Number of warmup epochs before scheduling.
             min_learning_rate (float): Minimum learning rate for schedules.
@@ -398,7 +407,7 @@ class BakaanoHydro:
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             catchment_size_threshold (float): Minimum catchment size for stations.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, predictions are interpreted in raw m³/s after square-root inversion.
+                If False, predictions are interpreted in raw m³/s.
             csv_dir (str, optional): Directory of per-station CSVs.
             lookup_csv (str, optional): CSV lookup file with station coords.
             id_col (str): Station id column in lookup CSV.
@@ -473,13 +482,12 @@ class BakaanoHydro:
         if predicted_streamflow.ndim == 2 and predicted_streamflow.shape[1] == 3:
             predicted_streamflow = predicted_streamflow[:, 0:1]
 
-        predicted_streamflow = self._invert_sqrt_response(predicted_streamflow)
+        predicted_streamflow = self._coerce_prediction_array(predicted_streamflow)
+        predicted_streamflow = self._restore_response_scale(predicted_streamflow)
         if area_normalize:
             catch_area = self.vmodel.catch_area if self.vmodel.catch_area is not None else self.vmodel.catch_area_list[0]
             predicted_streamflow = (predicted_streamflow * catch_area * 1_000_000.0) / (86400 * 1000)
-        else:
-            predicted_streamflow = predicted_streamflow
-        predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow) 
+        predicted_streamflow = self._clip_negative_predictions(predicted_streamflow)
 
         self._plot_grdc_streamflow(observed_streamflow, predicted_streamflow,  val_start)
         
@@ -496,7 +504,7 @@ class BakaanoHydro:
             lonlist (list[float]): List of longitudes.
             routing_method (str): Routing method ("mfd", "d8", "dinf").
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, outputs are raw m³/s after square-root inversion.
+                If False, outputs are raw m³/s.
         """
         print(' 1. Loading runoff data and other predictors')
         vdp = PredictDataPreprocessor(
@@ -519,7 +527,8 @@ class BakaanoHydro:
         if predicted_streamflows.ndim == 2 and predicted_streamflows.shape[1] == 3:
             predicted_streamflows = predicted_streamflows[:, 0:1]
 
-        predicted_streamflows = self._invert_sqrt_response(predicted_streamflows)
+        predicted_streamflows = self._coerce_prediction_array(predicted_streamflows)
+        predicted_streamflows = self._restore_response_scale(predicted_streamflows)
         station_preds = self._split_predictions_by_station(
             predicted_streamflows,
             self.vmodel.station_window_counts,
@@ -529,9 +538,7 @@ class BakaanoHydro:
         for predicted_streamflow, catch_area in zip(station_preds, self.vmodel.catch_area_list):
             if area_normalize:
                 predicted_streamflow = (predicted_streamflow * catch_area * 1_000_000.0) / (86400 * 1000)
-            else:
-                predicted_streamflow = predicted_streamflow
-            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+            predicted_streamflow = self._clip_negative_predictions(predicted_streamflow)
             
             predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')
@@ -586,7 +593,7 @@ class BakaanoHydro:
             discharge_col (str): Discharge column in station CSVs.
             file_pattern (str): Filename pattern for station CSVs.
             area_normalize (bool): Whether to area-normalize predictors/response.
-                If False, outputs are raw m³/s after square-root inversion.
+                If False, outputs are raw m³/s.
         """
         print(' 1. Loading runoff data and other predictors')
         vdp = PredictDataPreprocessor(
@@ -629,7 +636,8 @@ class BakaanoHydro:
         if predicted_streamflows.ndim == 2 and predicted_streamflows.shape[1] == 3:
             predicted_streamflows = predicted_streamflows[:, 0:1]
 
-        predicted_streamflows = self._invert_sqrt_response(predicted_streamflows)
+        predicted_streamflows = self._coerce_prediction_array(predicted_streamflows)
+        predicted_streamflows = self._restore_response_scale(predicted_streamflows)
         station_preds = self._split_predictions_by_station(
             predicted_streamflows,
             self.vmodel.station_window_counts,
@@ -639,9 +647,7 @@ class BakaanoHydro:
         for predicted_streamflow, catch_area in zip(station_preds, self.vmodel.catch_area_list):
             if area_normalize:
                 predicted_streamflow = (predicted_streamflow * catch_area * 1000000.0) / (86400 * 1000)
-            else:
-                predicted_streamflow = predicted_streamflow
-            predicted_streamflow = np.where(predicted_streamflow < 0, 0, predicted_streamflow)
+            predicted_streamflow = self._clip_negative_predictions(predicted_streamflow)
             
             predicted_streamflow_list.append(predicted_streamflow)
         print(' 3. Generating csv file for each coordinate')

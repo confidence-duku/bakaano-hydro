@@ -125,6 +125,16 @@ class VegET:
         self.ndvi_pickle_path = ndvi_pickle_path or f'{self.working_dir}/ndvi/daily_ndvi_climatology.pkl'
         os.makedirs(self.runoff_output_dir, exist_ok=True)
 
+    def _validate_climate_data_source(self):
+        """Raise a clear error for unsupported climate input sources."""
+        valid_sources = {"CHELSA", "ERA5", "CHIRPS"}
+        if self.climate_data_source not in valid_sources:
+            valid_str = ", ".join(sorted(valid_sources))
+            raise ValueError(
+                f"Unsupported climate_data_source '{self.climate_data_source}'. "
+                f"Expected one of: {valid_str}."
+            )
+
     def _resume_signature(self):
         """Return a lightweight signature used to validate resume state."""
         return {
@@ -170,6 +180,7 @@ class VegET:
         """
         if checkpoint_days < 1:
             raise ValueError("checkpoint_days must be >= 1.")
+        self._validate_climate_data_source()
 
         final_file = f'{self.runoff_output_dir}/wacc_sparse_arrays.pkl'
         state_file = f'{self.runoff_output_dir}/wacc_resume_state.pkl'
@@ -240,7 +251,9 @@ class VegET:
                 ndvi_array = pickle.load(f)
             
             water_holding_capacity = self.uw.align_rasters(f'{self.working_dir}/soil/clipped_AWCh3_M_sl6_1km_ll.tif', israster=True) * 10
-            water_holding_capacity = np.asarray(water_holding_capacity[0])
+            water_holding_capacity = np.asarray(water_holding_capacity[0], dtype=np.float32)
+            water_holding_capacity[~np.isfinite(water_holding_capacity)] = 0.0
+            water_holding_capacity = np.maximum(water_holding_capacity, 0.0)
             max_allowable_depletion = 0.5 * water_holding_capacity
             #max_allowable_depletion = np.asarray(max_allowable_depletion)
 
@@ -349,18 +362,15 @@ class VegET:
                 this_kcp += 0.2 * (ndvi_day > 0.4)
 
                 #ks = np.where(pks <0, (soil_moisture/max_allowable_depletion), 1)
-                ks = np.minimum(soil_moisture / max_allowable_depletion, 1.0)
+                ks = np.divide(
+                    soil_moisture,
+                    max_allowable_depletion,
+                    out=np.zeros_like(soil_moisture, dtype=np.float32),
+                    where=max_allowable_depletion > 0,
+                )
+                ks = np.clip(ks, 0.0, 1.0)
 
                 ETa = this_et * ks * this_kcp
-                soil_moisture = soil_moisture + eff_rain - ETa
-                #soil_moisture = soil_moisture.values
-                # soil_moisture[np.isinf(soil_moisture) | np.isnan(soil_moisture)] = 0
-                
-                
-                
-
-                # pp = soil_moisture - water_holding_capacity
-                # q_surf = np.where(pp>0, pp, 0)
 
                 soil_moisture, q_surf = update_soil_and_runoff(
                     soil_moisture,
