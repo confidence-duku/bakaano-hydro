@@ -639,7 +639,7 @@ class StreamflowModel:
     Full-materialization training variant of the regional streamflow model.
 
     Key characteristics (actual behavior):
-    - Prepares per-station scaled series using area normalization (optional) + sqrt transform.
+    - Prepares per-station scaled series using area normalization (optional).
     - Materializes all valid 365-day sliding windows in memory.
     - Trains directly with in-memory NumPy arrays.
     - Enables XLA globally via tf.config.optimizer.set_jit(True).
@@ -670,7 +670,7 @@ class StreamflowModel:
         seed : int or None
             Random seed for reproducible sampling. If None, sampling is random.
         area_normalize : bool
-            Whether to area-normalize predictors/response before sqrt transform.
+            Whether to area-normalize predictors/response before model fitting.
         lr_schedule : str or None
             Learning-rate schedule ("cosine", "exp_decay", or None).
         warmup_epochs : int
@@ -783,13 +783,11 @@ class StreamflowModel:
                 scaled_train_predictor = x.values / this_area
             else:
                 scaled_train_predictor = x.values
-            scaled_train_predictor = np.sqrt(scaled_train_predictor)
 
             if self.area_normalize:
                 scaled_train_response = (y.values * 86400 * 1000) / area_m2
             else:
                 scaled_train_response = y.values
-            scaled_train_response = np.sqrt(scaled_train_response)
 
             z2 = z.reshape(-1, 64)
             scaled_alphaearth = alphaearth_scaler.transform(z2)

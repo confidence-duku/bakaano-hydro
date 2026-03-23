@@ -102,8 +102,7 @@ working_dir/
 ├── models/                          # Trained Bakaano-Hydro models & scalers
 │   ├── bakaano_model.keras
 │   ├── alpha_earth_scaler.pkl
-│   ├── runoff_scaler.pkl
-│   └── response_scaler.pkl
+│   └── ...
 │
 ├── ndvi/                            # MODIS NDVI products
 │   └── daily_ndvi_climatology.pkl
@@ -113,7 +112,9 @@ working_dir/
 │   └── bakaano_{station_id}.csv
 │
 ├── runoff_output/                   # Distributed runoff & routed flow tensors
-│   └── wacc_sparse_arrays.pkl
+│   ├── wacc_sparse_arrays.pkl
+│   ├── wacc_resume_state.pkl        # Present only during resumable runs
+│   └── wacc_resume_chunks/          # Present only during resumable runs
 │
 ├── scratch/                         # Temporary working files (safe to delete)
 │   └── *.tmp

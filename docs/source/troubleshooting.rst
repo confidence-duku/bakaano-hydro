@@ -53,6 +53,8 @@ Fix:
 - Check that training targets are correctly scaled and not dominated by zeros.
 - Verify loss settings and learning rate are reasonable for the data range.
 - Inspect a few stations to confirm the observed discharge has non-zero values.
+- Re-train the model if you recently changed preprocessing or scaling options
+  such as ``area_normalize``.
 
 Missing or empty raster inputs
 ------------------------------
@@ -94,6 +96,20 @@ Fix:
 - Use the same ``routing_method`` (e.g., ``mfd``/``d8``/``dinf``) in VegET and
   in training/simulation calls.
 
+Unsupported climate data source
+-------------------------------
+
+Symptoms:
+
+- VegET fails immediately with ``Unsupported climate_data_source ...``.
+
+Fix:
+
+- Use one of the supported values exactly as implemented:
+  ``CHELSA``, ``ERA5``, or ``CHIRPS``.
+- Pass the same source consistently when preprocessing forcing data and when
+  launching runoff generation from the high-level runner.
+
 AlphaEarth scaling or missing scaler
 ------------------------------------
 
@@ -106,19 +122,6 @@ Fix:
 - Ensure ``models/alpha_earth_scaler.pkl`` exists in the training workspace.
 - Re-train if the AlphaEarth inputs changed.
 
-Runoff/response scaler missing
-------------------------------
-
-Symptoms:
-
-- Predictions look shifted or unstable after scaling changes.
-- Inference fails to find scaler files.
-
-Fix:
-
-- Ensure ``models/alpha_earth_scaler.pkl`` exists and matches the model inputs.
-- Re-train the model to regenerate scalers if missing.
-
 Model outputs in unexpected units
 ---------------------------------
 
@@ -128,6 +131,8 @@ Symptoms:
 
 Fix:
 
-- Outputs are written in m³/s. Verify that the response scaler is being
-  inverse-transformed before reversing area normalization, and that basin area
-  and input runoff units are consistent.
+- Outputs are written in m³/s.
+- If ``area_normalize=True``, verify that training and inference both use the
+  same setting so the area-based unit conversion is reversed consistently.
+- If ``area_normalize=False``, outputs stay in raw discharge units throughout
+  training and inference.
