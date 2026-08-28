@@ -44,8 +44,9 @@ Training controls
   Use 3 to stabilize early training; increase if the loss spikes in the
   first few epochs.
 - ``min_learning_rate``: Floor learning rate when using a schedule (e.g., 1e-5).
-- ``loss_function``: Training objective. ``huber`` is a stable default; ``mse`` is
-  smoother but can suppress peaks; ``msle`` emphasizes relative errors.
+- ``loss_function``: Training objective. ``asym_laplace_nll`` is the default and
+  trains the uncertainty head. Standard Keras losses such as ``huber`` and
+  ``mse`` train only the point-estimate output.
 - ``seed``: Random seed for reproducibility. Fix this to compare experiments.
 
 When to choose ``asym_laplace_nll``
@@ -72,12 +73,25 @@ Hydrology and scaling
   Increase it to exclude very small basins or to reduce noise from tiny catchments.
 - ``area_normalize``: If ``True`` (recommended), the model trains on area-normalized
   depth (mm/day) and converts outputs back to m³/s. Set to ``False`` if you need
-  raw discharge units during training, evaluation, and simulation. The current
-  pipeline uses linear values; no additional sqrt/log response transform is
-  applied. Make sure you use the same value for training and inference.
+  raw discharge units during training, evaluation, and simulation. Make sure you
+  use the same value for training and inference.
+- ``log_transform``: If ``True`` (default), temporal predictors and streamflow
+  targets are transformed with ``log1p`` before model training/inference, and
+  predictions are converted back with ``expm1`` before any area-based unit
+  conversion. Set to ``False`` to keep the neural-network target/predictors in
+  linear space. Training saves this setting with the model and inference loads
+  it automatically.
+- ``rainfall_sparse_arrays.pkl`` (optional): If present for the requested date
+  range, routed rainfall is appended automatically as an extra temporal feature
+  during both training and simulation. The temporal input channel count is
+  inferred from the prepared predictors, so runoff-only and runoff-plus-rainfall
+  checkpoints are both valid. A checkpoint trained with rainfall should also see
+  it at inference time.
 - ``resume`` / ``checkpoint_days``: VegET routing controls for long runs.
   ``resume=True`` reuses matching checkpoint state if present; ``checkpoint_days``
   sets how many simulated days are buffered before a checkpoint chunk is flushed.
+  Smaller values reduce recomputation after interruption at the cost of more
+  frequent disk writes.
 
 CSV observation options (optional)
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -109,7 +123,7 @@ General defaults
 - ``min_learning_rate``: 1e-5
 - ``warmup_epochs``: 3
 - ``lr_schedule``: ``cosine``
-- ``loss_function``: ``huber``
+- ``loss_function``: ``asym_laplace_nll``
 - ``batch_size``: 32–64 (GPU), 8–16 (CPU)
 - ``num_epochs``: 150–300
 - ``routing_method``: match the method used in runoff routing (``mfd`` recommended)

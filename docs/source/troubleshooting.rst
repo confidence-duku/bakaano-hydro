@@ -54,7 +54,7 @@ Fix:
 - Verify loss settings and learning rate are reasonable for the data range.
 - Inspect a few stations to confirm the observed discharge has non-zero values.
 - Re-train the model if you recently changed preprocessing or scaling options
-  such as ``area_normalize``.
+  such as ``area_normalize`` or ``log_transform``.
 
 Missing or empty raster inputs
 ------------------------------
@@ -110,6 +110,46 @@ Fix:
 - Pass the same source consistently when preprocessing forcing data and when
   launching runoff generation from the high-level runner.
 
+VegET rerun starts from day 1 after interruption
+------------------------------------------------
+
+Symptoms:
+
+- An interrupted VegET run is launched again, but the log starts from day 1.
+- The output does not show ``Resuming VegET from day ...``.
+
+Fix:
+
+- Keep ``resume=True`` when calling ``compute_veget_runoff_route_flow``.
+- Confirm the earlier run had reached a checkpoint flush. With the default
+  ``checkpoint_days=30``, interruptions before day 30 cannot resume.
+- Check that ``{working_dir}/runoff_output/wacc_resume_state.pkl`` and
+  ``{working_dir}/runoff_output/wacc_resume_chunks/`` still exist before rerunning.
+- Reuse the same ``start_date``, ``end_date``, ``routing_method``,
+  ``climate_data_source``, ``study_area``, NDVI path, and vegetation cover paths;
+  changing these invalidates the saved resume signature.
+- Do not pass ``resume=False`` unless you intend to discard existing checkpoints.
+
+Model expects routed rainfall but simulation only has runoff
+------------------------------------------------------------
+
+Symptoms:
+
+- Simulation fails with a feature-count mismatch.
+- The error says the trained model expects more temporal features than the
+  prepared inputs.
+
+Fix:
+
+- If the model was trained while ``runoff_output/rainfall_sparse_arrays.pkl``
+  was available, provide the same routed-rainfall file for the requested
+  simulation period.
+- If you want to run without routed rainfall, retrain the model without
+  ``rainfall_sparse_arrays.pkl`` present.
+- Older one-channel models remain supported; if rainfall is present at
+  inference time, Bakaano automatically drops the extra rainfall feature for
+  those models.
+
 AlphaEarth scaling or missing scaler
 ------------------------------------
 
@@ -134,5 +174,8 @@ Fix:
 - Outputs are written in m³/s.
 - If ``area_normalize=True``, verify that training and inference both use the
   same setting so the area-based unit conversion is reversed consistently.
+- New models save ``area_normalize`` and ``log_transform`` beside the Keras
+  checkpoint. If you are using an older checkpoint without that JSON sidecar,
+  pass the same settings used during training.
 - If ``area_normalize=False``, outputs stay in raw discharge units throughout
   training and inference.

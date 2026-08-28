@@ -1,12 +1,43 @@
 import os
 import sys
+from pathlib import Path
+from unittest.mock import MagicMock
 
 project = "Bakaano-Hydro"
 author = "Confidence Duku"
-release = "1.3.1"
+
+
+def _package_version():
+    namespace = {}
+    init_path = Path(__file__).resolve().parents[2] / "bakaano" / "__init__.py"
+    exec(init_path.read_text(encoding="utf-8"), namespace)
+    return namespace["__version__"]
+
+
+release = _package_version()
+version = release
 
 # Add project root to sys.path for autodoc
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "../..")))
+
+# Keras can initialize an installed TensorFlow runtime before autodoc's import
+# hook takes effect. Pre-seeding these modules keeps API documentation builds
+# deterministic and independent of CUDA availability.
+for module_name in (
+    "tensorflow",
+    "tensorflow.keras",
+    "tensorflow.keras.callbacks",
+    "tensorflow.keras.layers",
+    "tensorflow.keras.models",
+    "tensorflow.keras.utils",
+    "tensorflow_probability",
+    "tf_keras",
+    "keras",
+    "keras.models",
+    "keras.utils",
+    "tcn",
+):
+    sys.modules[module_name] = MagicMock(name=module_name)
 
 extensions = [
     "sphinx.ext.autodoc",
@@ -72,6 +103,7 @@ html_theme = "press"
 html_static_path = ["_static"]
 html_theme_options = {}
 html_css_files = ["press_custom.css"]
+html_baseurl = os.environ.get("DOCS_BASE_URL", "").strip()
 
 
 def _ensure_press_toc_dict(app, env):
