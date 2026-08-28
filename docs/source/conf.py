@@ -1,4 +1,5 @@
 import os
+import re
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -8,10 +9,12 @@ author = "Confidence Duku"
 
 
 def _package_version():
-    namespace = {}
     init_path = Path(__file__).resolve().parents[2] / "bakaano" / "__init__.py"
-    exec(init_path.read_text(encoding="utf-8"), namespace)
-    return namespace["__version__"]
+    init_text = init_path.read_text(encoding="utf-8")
+    match = re.search(r'^__version__\s*=\s*["\']([^"\']+)["\']', init_text, re.MULTILINE)
+    if match is None:
+        raise RuntimeError(f"Could not find __version__ in {init_path}")
+    return match.group(1)
 
 
 release = _package_version()
