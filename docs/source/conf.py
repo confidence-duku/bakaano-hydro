@@ -80,6 +80,8 @@ autodoc_mock_imports = [
     "geopandas",
     "pysheds",
     "pysheds.grid",
+    "pyproj",
+    "whitebox",
     "xarray",
     "netCDF4",
     "scipy",
