@@ -1,42 +1,9 @@
 Bakaano-Hydro Documentation
 ===========================
 
-Introduction
-------------
-
-Bakaano-Hydro is a distributed hydrology-guided neural network model for streamflow prediction.
-It uniquely integrates physically based hydrological principles with the generalization capacity
-of machine learning in a spatially explicit and physically meaningful way. This makes it
-particularly valuable in data-scarce regions, where traditional hydrological models often
-struggle due to sparse observations and calibration limitations, and where current
-state-of-the-art data-driven models are constrained by lumped modeling approaches that overlook
-spatial heterogeneity and the inability to capture hydrological connectivity.
-
-By learning spatially distributed, physically meaningful runoff and routing dynamics,
-Bakaano-Hydro is able to generalize across diverse catchments and hydro-climatic regimes. This
-hybrid design enables the model to simulate streamflow more accurately and reliably—even in
-ungauged or poorly monitored basins—while retaining interpretability grounded in hydrological
-processes.
-
-The name Bakaano comes from Fante, a language spoken along the southern coast of Ghana. Loosely
-translated as "by the river side" or "stream-side", it reflects the lived reality of many
-vulnerable riverine communities across the Global South - those most exposed to flood risk and
-often least equipped to adapt.
-
-Bakaano-Hydro consists of three tightly coupled components:
-
-1. Distributed runoff generation
-   Vegetation, soil, and meteorological drivers are used to compute grid-cell runoff using a
-   VegET-based approach.
-2. Physically informed routing
-   Runoff is routed through the river network using flow-direction-based routing (e.g. MFD/WFA),
-   preserving spatial connectivity.
-3. Neural network
-   A Temporal Convolutional Network (TCN), conditioned on static catchment descriptors, learns
-   hydrological dynamics from physically routed runoff, enabling robust generalization across
-   diverse basins.
-
-The neural network augments hydrology, it does not replace it.
+Bakaano-Hydro is a distributed hydrology-guided neural network model for
+streamflow prediction. The documentation below is organized by user task first,
+then by module reference.
 
 .. figure:: https://github.com/user-attachments/assets/8cc1a447-c625-4278-924c-1697e6d10fbf
    :alt: Bakaano-Hydro conceptual model diagram
@@ -45,30 +12,68 @@ The neural network augments hydrology, it does not replace it.
 
    Conceptual overview of the Bakaano-Hydro pipeline.
 
-Contents
---------
+Start Here
+----------
+
+Common tasks
+~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+
+   * - I want to...
+     - Go here
+   * - Set up a project and check required files
+     - :doc:`project_setup`
+   * - Run one end-to-end minimal example
+     - :doc:`quickstart`
+   * - Train a model
+     - :doc:`training`
+   * - Validate a trained model
+     - :doc:`evaluation`
+   * - Simulate stations or lat/lon points
+     - :doc:`simulation`
+   * - Understand package layout and data flow
+     - :doc:`overview`
+   * - Use scenario or flood extensions
+     - :doc:`extensions`
+   * - Migrate from older package paths
+     - :doc:`migration`
 
 Start with Colab
 ~~~~~~~~~~~~~~~~
 
 Recommended entry point for new users:
 
-- `Open in Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
-- `Notebook source on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb>`_
+- `Open Beginner Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20Beginner%20Colab.ipynb>`_
+- `Open Advanced Colab <https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20Advanced%20Colab.ipynb>`_
+- `Notebook sources on GitHub <https://github.com/confidence-duku/bakaano-hydro/blob/main/>`_
+
+Advanced workflow notebooks:
+
+- `Scenario workflow notebook <https://github.com/confidence-duku/bakaano-hydro/blob/main/scenario_quickstart.ipynb>`_
+- `Flood-mapping workflow notebook <https://github.com/confidence-duku/bakaano-hydro/blob/main/flood_mapper_quickstart.ipynb>`_
 
 .. image:: https://colab.research.google.com/assets/colab-badge.svg
    :alt: Open In Colab
-   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20on%20Google%20Colab.ipynb
+   :target: https://colab.research.google.com/github/confidence-duku/bakaano-hydro/blob/main/Bakaano-Hydro%20Beginner%20Colab.ipynb
 
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
 
    installation
+   overview
+   project_setup
    quickstart
+   training
+   evaluation
+   simulation
+   extensions
    inputs_outputs
    model_configuration
    troubleshooting
+   migration
 
 .. toctree::
    :maxdepth: 2

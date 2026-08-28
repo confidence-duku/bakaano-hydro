@@ -33,6 +33,28 @@ Install (CPU)
 
 CPU training is supported but can be slow for large basins.
 
+Preview docs locally
+--------------------
+
+To build and live-preview the documentation while editing:
+
+.. code-block:: bash
+
+   pip install -r docs/requirements.txt
+   sphinx-autobuild docs/source docs/_build/html
+
+Then open the URL shown in the terminal, usually:
+
+.. code-block:: text
+
+   http://127.0.0.1:8000
+
+For a one-off static build instead of live preview:
+
+.. code-block:: bash
+
+   python -m sphinx -b html docs/source docs/_build/html
+
 Data requirements
 -----------------
 

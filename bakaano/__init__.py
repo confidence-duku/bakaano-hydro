@@ -6,4 +6,4 @@ import numpy as np
 if not hasattr(np, "bool8"):
     np.bool8 = np.bool_
 
-__version__ = "1.3.8"
+__version__ = "2.0"

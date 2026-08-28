@@ -18,9 +18,15 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      DOCS_DOMAIN: ${{ vars.DOCS_DOMAIN }}
+      DOCS_BASE_URL: ${{ vars.DOCS_DOMAIN != '' && format('https://{0}', vars.DOCS_DOMAIN) || format('https://{0}.github.io/{1}/', github.repository_owner, github.event.repository.name) }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -33,7 +39,14 @@ jobs:
           pip install -r docs/requirements.txt
 
       - name: Build Sphinx docs
-        run: python -m sphinx -b html docs/source docs/_build/html
+        run: python -m sphinx -W --keep-going -b html docs/source docs/_build/html
+
+      - name: Write GitHub Pages support files
+        run: |
+          touch docs/_build/html/.nojekyll
+          if [ -n "${DOCS_DOMAIN}" ]; then
+            printf '%s\n' "${DOCS_DOMAIN}" > docs/_build/html/CNAME
+          fi
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

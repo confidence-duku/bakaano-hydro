@@ -1,7 +1,6 @@
 common_data
 **/*.pyc
 **/__pycache__
-**/tests
 Dockerfile
 README.Docker.md
 .dockerignore
@@ -9,6 +8,13 @@ overrides.json
 compose.yaml
 .devcontainer
 .venv-test
+.codex
+.vscode
+.agents
+flood_mapper_quickstart.ipynb
 build/
 dist/
 *.egg-info/
+docs/_build/
+bakaano/extensions/flood_mapper_old.py
+
